@@ -10,6 +10,7 @@ import traceback
 app = Flask(__name__)
 CORS(app)
 
+
 UPLOAD_FOLDER = tempfile.gettempdir()
 ALLOWED_EXTENSIONS = {'docx'}
 
