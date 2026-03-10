@@ -12,6 +12,9 @@ from docx.shared import Pt, Inches
 from docx.enum.text import WD_COLOR_INDEX, WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx2pdf import convert
+import uuid
+import pythoncom
 
 
 # ================== FLASK SETUP ==================
@@ -88,15 +91,6 @@ button:disabled { background:#ccc; cursor: not-allowed; }
 <div id="loadingMsg" class="loading" style="display:none;">Analyzing document structure...</div>
 <div id="analysisResults" style="display:none;">
   <h2>Document Analysis Complete</h2>
-  <div class="info-box">
-    <h3>Detected Elements:</h3>
-    <ul id="elementsList" class="element-list"></ul>
-    <div id="bulletsByHeadingBox" class="subbox" style="display:none;">
-      <h4>List items (bullets + numbered) by Heading</h4>
-      <div class="small">List items are categorized under their nearest preceding heading.</div>
-      <ul id="bulletsByHeadingList" class="element-list" style="margin-top:8px;"></ul>
-    </div>
-  </div>
   <div id="hierarchyInfo" class="hierarchy-info" style="display:none;">
     <strong>Document Structure:</strong> <span id="hierarchyText"></span>
   </div>
@@ -115,6 +109,47 @@ button:disabled { background:#ccc; cursor: not-allowed; }
   <button type="button" onclick="formatDoc()">Format Document</button>
 </div>
 </div>
+<div id="previewModal" style="
+display:none;
+position:fixed;
+left:0;
+top:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.6);
+z-index:999;
+">
+
+<div style="
+background:white;
+width:80%;
+height:85%;
+margin:3% auto;
+border-radius:10px;
+position:relative;
+padding:10px;
+">
+
+<span onclick="document.getElementById('previewModal').style.display='none'"
+style="
+position:absolute;
+top:10px;
+right:15px;
+font-size:28px;
+cursor:pointer;
+">✕</span>
+
+<iframe id="previewFrame" style="
+width:100%;
+height:100%;
+border:none;
+"></iframe>
+
+</div>
+
+</div>
+
+<div id="resultButtons"></div>
 <script>
 let analysisData = null;
 async function analyzeDoc(){
@@ -147,96 +182,10 @@ function formatElementName(type) {
   return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 }
 function displayAnalysis(data) {
-  let list = document.getElementById("elementsList");
-  list.innerHTML = "";
-  let tocElements = {};
-  let listElements = {};
-  let coverElements = {};
-  let regularElements = {};
-  for(let [elemType, count] of Object.entries(data.element_counts)) {
-    if(elemType.startsWith("TOC_")) tocElements[elemType] = count;
-    else if(elemType === "BULLET_ITEM" || elemType === "NUMBERED_ITEM" || elemType === "LIST_ITEM") listElements[elemType] = count;
-    else if(elemType === "TITLE" || elemType === "COVER_PAGE") coverElements[elemType] = count;
-    else regularElements[elemType] = count;
+ 
   }
-  // Cover page items
-  if(Object.keys(coverElements).length > 0) {
-    let li = document.createElement("li");
-    li.style.color = "#b45309"; li.style.fontWeight = "500";
-    li.innerHTML = `<strong>Cover / Title Page Detected:</strong>`;
-    list.appendChild(li);
-    for(let [elemType, count] of Object.entries(coverElements)) {
-      let subLi = document.createElement("li");
-      subLi.style.paddingLeft = "20px"; subLi.style.color = "#b45309";
-      subLi.innerHTML = `→ ${formatElementName(elemType)}: ${count} found`;
-      list.appendChild(subLi);
-    }
-  }
-  for(let [elemType, count] of Object.entries(regularElements)) {
-    let li = document.createElement("li");
-    li.innerHTML = `<strong>${formatElementName(elemType)}:</strong> ${count} found`;
-    list.appendChild(li);
-  }
-  if(Object.keys(listElements).length > 0) {
-    let li = document.createElement("li");
-    li.className = "list-item";
-    li.innerHTML = `<strong>Lists Detected:</strong>`;
-    list.appendChild(li);
-    for(let [elemType, count] of Object.entries(listElements)) {
-      let subLi = document.createElement("li");
-      subLi.className = "list-item";
-      subLi.style.paddingLeft = "20px";
-      subLi.innerHTML = `→ ${formatElementName(elemType)}: ${count} found`;
-      list.appendChild(subLi);
-    }
-  }
-  if(Object.keys(tocElements).length > 0) {
-    let li = document.createElement("li");
-    li.className = "toc-item";
-    li.innerHTML = `<strong>Table of Contents Detected:</strong>`;
-    list.appendChild(li);
-    for(let [elemType, count] of Object.entries(tocElements)) {
-      let subLi = document.createElement("li");
-      subLi.className = "toc-item";
-      subLi.style.paddingLeft = "20px";
-      subLi.innerHTML = `→ ${formatElementName(elemType)}: ${count} found`;
-      list.appendChild(subLi);
-    }
-  }
-  // Lists by heading (bullets + numbered)
-  let box = document.getElementById("bulletsByHeadingBox");
-  let ul = document.getElementById("bulletsByHeadingList");
-  ul.innerHTML = "";
-  if (data.list_items_by_heading && Object.keys(data.list_items_by_heading).length > 0) {
-    box.style.display = "block";
-    const keys = Object.keys(data.list_items_by_heading).sort((a,b) => {
-      if (a === "NO_HEADING") return 1;
-      if (b === "NO_HEADING") return -1;
-      const na = parseInt(a.split("_").pop(), 10);
-      const nb = parseInt(b.split("_").pop(), 10);
-      return (na||99) - (nb||99);
-    });
-    for (const k of keys) {
-      const c = data.list_items_by_heading[k];
-      const label = (k === "NO_HEADING") ? "No Heading" : formatElementName(k);
-      const li = document.createElement("li");
-      li.innerHTML = `<strong>${label}:</strong> ${c} list items`;
-      ul.appendChild(li);
-    }
-  } else {
-    box.style.display = "none";
-  }
-  if(data.has_toc || data.has_indented_hierarchy || data.cover_page_end >= 0) {
-    let hierarchyDiv = document.getElementById("hierarchyInfo");
-    let hierarchyText = document.getElementById("hierarchyText");
-    let messages = [];
-    if(data.cover_page_end >= 0) messages.push(`Cover page detected (${data.cover_page_end + 1} paragraph(s))`);
-    if(data.has_toc) messages.push(`Table of Contents with ${data.toc_indent_levels} hierarchy levels`);
-    if(data.has_indented_hierarchy) messages.push(`${data.indent_levels} indentation levels in document body`);
-    hierarchyText.textContent = messages.join(" • ");
-    hierarchyDiv.style.display = "block";
-  }
-}
+  
+
 function escapeHtml(text) {
   return (text || "")
     .replace(/&/g, "&amp;")
@@ -380,36 +329,104 @@ function updatePreview(elem) {
   else preview.style.background = "transparent";
 }
 async function formatDoc(){
-  let file = document.getElementById("file").files[0];
-  if(!file || !analysisData){ alert("Please analyze document first"); return; }
-  let config = {
-    bold_titles: document.getElementById("bold_titles").checked,
-    bold_headings: document.getElementById("bold_headings").checked,
-    bold_toc: document.getElementById("bold_toc").checked,
-    bold_lists: document.getElementById("bold_lists") ? document.getElementById("bold_lists").checked : false,
-    highlight: document.getElementById("highlight").checked,
-    preserve_indentation: document.getElementById("preserve_indentation").checked
-  };
-  for(let elem of analysisData.detected_elements) {
-    let fontEl = document.getElementById(elem + "_font");
-    let sizeEl = document.getElementById(elem + "_size");
-    if (fontEl) config[elem.toLowerCase() + "_font"] = fontEl.value;
-    if (sizeEl) config[elem.toLowerCase() + "_size"] = sizeEl.value;
-  }
-  let fd = new FormData();
-  fd.append("file", file);
-  fd.append("config", JSON.stringify(config));
-  let res = await fetch("/format", {method:"POST", body:fd});
-  if (!res.ok) {
-    let t = await res.text();
-    alert("Format failed: " + t);
-    return;
-  }
-  let blob = await res.blob();
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = file.name.replace(".docx","_formatted.docx");
-  a.click();
+
+let file = document.getElementById("file").files[0];
+if(!file || !analysisData){
+alert("Please analyze document first");
+return;
+}
+
+let config = {
+bold_titles: document.getElementById("bold_titles").checked,
+bold_headings: document.getElementById("bold_headings").checked,
+bold_toc: document.getElementById("bold_toc").checked,
+bold_lists: document.getElementById("bold_lists") ? document.getElementById("bold_lists").checked : false,
+highlight: document.getElementById("highlight").checked,
+preserve_indentation: document.getElementById("preserve_indentation").checked
+};
+
+for(let elem of analysisData.detected_elements){
+let fontEl = document.getElementById(elem + "_font");
+let sizeEl = document.getElementById(elem + "_size");
+
+if(fontEl) config[elem.toLowerCase() + "_font"] = fontEl.value;
+if(sizeEl) config[elem.toLowerCase() + "_size"] = sizeEl.value;
+}
+
+window.savedConfig = config;
+
+document.getElementById("resultButtons").innerHTML = `
+<div style="display:flex;gap:10px;margin-top:20px">
+
+<button style="flex:1" onclick="previewOriginal()">Preview Original Doc</button>
+
+<button style="flex:1" onclick="previewFormatted()">Preview Formatted Doc</button>
+
+<button style="flex:1" onclick="downloadFormatted()">Download Formatted Doc</button>
+
+</div>
+`;
+
+}
+async function previewOriginal(){
+
+let file = document.getElementById("file").files[0];
+
+let fd = new FormData();
+fd.append("file",file);
+
+let res = await fetch("/preview_original",{method:"POST",body:fd});
+let blob = await res.blob();
+
+openPreview(blob);
+
+}
+
+async function previewFormatted(){
+
+let file = document.getElementById("file").files[0];
+
+let fd = new FormData();
+
+fd.append("file",file);
+fd.append("config",JSON.stringify(window.savedConfig));
+
+let res = await fetch("/preview_formatted",{method:"POST",body:fd});
+
+let blob = await res.blob();
+
+openPreview(blob);
+
+}
+
+async function downloadFormatted(){
+
+let file = document.getElementById("file").files[0];
+
+let fd = new FormData();
+
+fd.append("file",file);
+fd.append("config",JSON.stringify(window.savedConfig));
+
+let res = await fetch("/format",{method:"POST",body:fd});
+
+let blob = await res.blob();
+
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download=file.name.replace(".docx","_formatted.docx");
+a.click();
+
+}
+
+function openPreview(blob){
+
+let url = URL.createObjectURL(blob);
+
+document.getElementById("previewFrame").src=url;
+
+document.getElementById("previewModal").style.display="block";
+
 }
 </script>
 </body>
@@ -475,19 +492,22 @@ def is_bullet_list(para) -> bool:
 
                 numId_val = numId_nodes[0].get(qn("w:val"), "0")
                 ilvl_nodes = para._element.xpath(".//w:numPr/w:ilvl")
-                ilvl_val = ilvl_nodes[0].get(qn("w:val"), "0") if ilvl_nodes else "0"
+                ilvl_val = ilvl_nodes[0].get(
+                    qn("w:val"), "0") if ilvl_nodes else "0"
 
                 # Look up the abstract num
                 num_elements = numbering_part._element.xpath(
                     f".//w:num[@w:numId='{numId_val}']",
-                    namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                    namespaces={
+                        "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
                 )
                 if not num_elements:
                     return False
 
                 abstractNumId_nodes = num_elements[0].xpath(
                     ".//w:abstractNumId",
-                    namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                    namespaces={
+                        "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
                 )
                 if not abstractNumId_nodes:
                     return False
@@ -495,14 +515,16 @@ def is_bullet_list(para) -> bool:
                 abstract_id = abstractNumId_nodes[0].get(qn("w:val"), "0")
                 abstract_num = numbering_part._element.xpath(
                     f".//w:abstractNum[@w:abstractNumId='{abstract_id}']",
-                    namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                    namespaces={
+                        "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
                 )
                 if not abstract_num:
                     return False
 
                 lvl_elements = abstract_num[0].xpath(
                     f".//w:lvl[@w:ilvl='{ilvl_val}']/w:numFmt",
-                    namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                    namespaces={
+                        "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
                 )
                 if lvl_elements:
                     fmt = lvl_elements[0].get(qn("w:val"), "")
@@ -548,18 +570,21 @@ def is_numbered_list(para) -> bool:
 
             numId_val = numId_nodes[0].get(qn("w:val"), "0")
             ilvl_nodes = para._element.xpath(".//w:numPr/w:ilvl")
-            ilvl_val = ilvl_nodes[0].get(qn("w:val"), "0") if ilvl_nodes else "0"
+            ilvl_val = ilvl_nodes[0].get(
+                qn("w:val"), "0") if ilvl_nodes else "0"
 
             num_elements = numbering_part._element.xpath(
                 f".//w:num[@w:numId='{numId_val}']",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                namespaces={
+                    "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
             )
             if not num_elements:
                 return False
 
             abstractNumId_nodes = num_elements[0].xpath(
                 ".//w:abstractNumId",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                namespaces={
+                    "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
             )
             if not abstractNumId_nodes:
                 return False
@@ -567,14 +592,16 @@ def is_numbered_list(para) -> bool:
             abstract_id = abstractNumId_nodes[0].get(qn("w:val"), "0")
             abstract_num = numbering_part._element.xpath(
                 f".//w:abstractNum[@w:abstractNumId='{abstract_id}']",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                namespaces={
+                    "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
             )
             if not abstract_num:
                 return False
 
             lvl_elements = abstract_num[0].xpath(
                 f".//w:lvl[@w:ilvl='{ilvl_val}']/w:numFmt",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+                namespaces={
+                    "w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
             )
             if lvl_elements:
                 fmt = lvl_elements[0].get(qn("w:val"), "")
@@ -628,7 +655,8 @@ def get_list_type(para) -> str:
 NUMBERED_HEADING_RE = re.compile(r"^\s*(\d+(?:\.\d+)+)\s+(.*\S.*)$")
 
 # --- detect manual numbered list items like "1. Item" or "a) Item" ---
-MANUAL_NUMBERED_LIST_RE = re.compile(r"^\s*(\d+[\.\)]\s+|[a-zA-Z][\.\)]\s+|[ivxIVX]+[\.\)]\s+)(.*\S.*)$")
+MANUAL_NUMBERED_LIST_RE = re.compile(
+    r"^\s*(\d+[\.\)]\s+|[a-zA-Z][\.\)]\s+|[ivxIVX]+[\.\)]\s+)(.*\S.*)$")
 
 
 def detect_numbered_heading(text: str):
@@ -735,7 +763,8 @@ def detect_cover_page(doc) -> int:
         r"september|october|november|december|\d{4})\b",
         re.IGNORECASE,
     )
-    non_empty = [(i, p) for i, p in enumerate(paragraphs) if (p.text or "").strip()]
+    non_empty = [(i, p) for i, p in enumerate(
+        paragraphs) if (p.text or "").strip()]
     cover_candidate = -1
     for rank, (i, para) in enumerate(non_empty[:25]):
         text = (para.text or "").strip()
@@ -882,7 +911,8 @@ def detect_toc_section(doc):
         return toc_start, last_toc_style_idx, True
 
     # ── Strategy 2: heuristic (Normal-style TOC) ──────────────────────────────
-    TOC_TITLE_RE = re.compile(r"^\s*(table\s+of\s+contents|contents)\s*$", re.IGNORECASE)
+    TOC_TITLE_RE = re.compile(
+        r"^\s*(table\s+of\s+contents|contents)\s*$", re.IGNORECASE)
     toc_start = -1
 
     # Search up to paragraph 100 — cover page can be long
@@ -973,7 +1003,8 @@ def detect_hierarchy_by_indentation(doc, exclude_range=None):
 
         if indent > 0:
             rounded_indent = round(indent * 4) / 4
-            indent_levels[rounded_indent] = indent_levels.get(rounded_indent, 0) + 1
+            indent_levels[rounded_indent] = indent_levels.get(
+                rounded_indent, 0) + 1
 
     sorted_indents = sorted(indent_levels.keys())
     indent_to_level = {}
@@ -1000,7 +1031,8 @@ def analyze_document_structure(docx_path):
     toc_indent_to_level = {}
     toc_indent_levels = 0
     if has_toc:
-        toc_indent_to_level, toc_indent_levels = analyze_toc_hierarchy(doc, toc_start, toc_end)
+        toc_indent_to_level, toc_indent_levels = analyze_toc_hierarchy(
+            doc, toc_start, toc_end)
 
     indent_to_level, total_indent_levels = detect_hierarchy_by_indentation(
         doc, exclude_range=(toc_start, toc_end) if has_toc else None
@@ -1049,7 +1081,7 @@ def analyze_document_structure(docx_path):
             ptype = "COVER_PAGE"
         # Cover-metadata styles that Oracle/corporate templates commonly use
         elif style_base in ("Author", "Date", "Company", "Abstract",
-                             "Document Label", "Revision", "Version"):
+                            "Document Label", "Revision", "Version"):
             ptype = "COVER_PAGE"
         # Word built-in TOC entry styles — most reliable TOC signal
         elif re.match(r"^TOC \d+$", style_base):
@@ -1147,7 +1179,8 @@ def analyze_document_structure(docx_path):
 
         # Store manual heading pieces if applicable
         if not in_toc_section and not in_cover_page and ptype and ptype.startswith("HEADING_"):
-            lvl2, num2, title2 = detect_numbered_heading((para.text or "").strip())
+            lvl2, num2, title2 = detect_numbered_heading(
+                (para.text or "").strip())
             if num2 and title2:
                 item["heading_number"] = num2
                 item["heading_title"] = title2
@@ -1174,13 +1207,20 @@ def analyze_document_structure(docx_path):
                         break
 
     def sort_key(x):
-        if x == "TITLE": return 0
-        if x == "COVER_PAGE": return 1
-        if x == "TOC_TITLE": return 2
-        if x.startswith("TOC_HEADING_"): return 3
-        if x.startswith("HEADING_"): return 4
-        if x in ("BULLET_ITEM", "NUMBERED_ITEM", "LIST_ITEM"): return 5
-        if x == "PARAGRAPH": return 6
+        if x == "TITLE":
+            return 0
+        if x == "COVER_PAGE":
+            return 1
+        if x == "TOC_TITLE":
+            return 2
+        if x.startswith("TOC_HEADING_"):
+            return 3
+        if x.startswith("HEADING_"):
+            return 4
+        if x in ("BULLET_ITEM", "NUMBERED_ITEM", "LIST_ITEM"):
+            return 5
+        if x == "PARAGRAPH":
+            return 6
         return 7
 
     detected_elements = sorted(detected_types, key=sort_key)
@@ -1370,7 +1410,6 @@ def apply_para_direct_format(para, font_name, font_size_pt, bold, highlight_colo
         hl.set(qn("w:val"), highlight_color_name)
 
 
-
 def _get_all_runs(para):
     """
     Return ALL w:r elements inside a paragraph, including those nested inside
@@ -1501,9 +1540,11 @@ def get_config_for_type(ptype, config):
     # Fallback chains
     if not font_name:
         if ptype == "COVER_PAGE":
-            font_name = config.get("title_font") or config.get("paragraph_font") or "Calibri"
+            font_name = config.get("title_font") or config.get(
+                "paragraph_font") or "Calibri"
         elif ptype in ("BULLET_ITEM", "NUMBERED_ITEM"):
-            font_name = config.get("list_item_font") or config.get("paragraph_font") or "Calibri"
+            font_name = config.get("list_item_font") or config.get(
+                "paragraph_font") or "Calibri"
         else:
             font_name = config.get("paragraph_font") or "Calibri"
 
@@ -1511,7 +1552,8 @@ def get_config_for_type(ptype, config):
         if ptype == "COVER_PAGE":
             font_size_raw = config.get("title_size") or 12
         elif ptype in ("BULLET_ITEM", "NUMBERED_ITEM"):
-            font_size_raw = config.get("list_item_size") or config.get("paragraph_size") or 12
+            font_size_raw = config.get(
+                "list_item_size") or config.get("paragraph_size") or 12
         else:
             font_size_raw = config.get("paragraph_size") or 12
 
@@ -1552,10 +1594,10 @@ def format_docx(input_path, elements, output_path, config):
         "TITLE":        ["Title"],
         "COVER_PAGE":   ["Subtitle"],
         "TOC_TITLE":    ["TOC Heading"],
-        "TOC_HEADING_1":["TOC 1"],
-        "TOC_HEADING_2":["TOC 2"],
-        "TOC_HEADING_3":["TOC 3"],
-        "TOC_HEADING_4":["TOC 4"],
+        "TOC_HEADING_1": ["TOC 1"],
+        "TOC_HEADING_2": ["TOC 2"],
+        "TOC_HEADING_3": ["TOC 3"],
+        "TOC_HEADING_4": ["TOC 4"],
         "HEADING_1":    ["Heading 1"],
         "HEADING_2":    ["Heading 2"],
         "HEADING_3":    ["Heading 3"],
@@ -1564,7 +1606,7 @@ def format_docx(input_path, elements, output_path, config):
         "HEADING_6":    ["Heading 6"],
         "PARAGRAPH":    ["Normal"],
         "BULLET_ITEM":  ["List Bullet", "List Paragraph"],
-        "NUMBERED_ITEM":["List Number", "List Paragraph"],
+        "NUMBERED_ITEM": ["List Number", "List Paragraph"],
     }
     patched_styles = set()
     for ptype, style_names in STYLE_TYPE_MAP.items():
@@ -1573,7 +1615,8 @@ def format_docx(input_path, elements, output_path, config):
             (ptype.startswith("HEADING_") and config.get("bold_headings", True)) or
             (ptype in ("TITLE", "COVER_PAGE") and config.get("bold_titles", True)) or
             (ptype == "TOC_TITLE" and config.get("bold_toc", True)) or
-            (ptype in ("BULLET_ITEM", "NUMBERED_ITEM", "LIST_ITEM") and config.get("bold_lists", False))
+            (ptype in ("BULLET_ITEM", "NUMBERED_ITEM", "LIST_ITEM")
+             and config.get("bold_lists", False))
         )
         for sname in style_names:
             if sname not in patched_styles:
@@ -1612,7 +1655,8 @@ def format_docx(input_path, elements, output_path, config):
 
         # ── 1. Paragraph-level pPr/rPr override ───────────────────────────────
         # Sits between style and run in cascade. Covers paragraphs with no runs.
-        apply_para_direct_format(para, font_name, font_size, bold_run, highlight_color_name)
+        apply_para_direct_format(
+            para, font_name, font_size, bold_run, highlight_color_name)
 
         # ── 2. Rewrite manual numbered headings ────────────────────────────────
         if is_heading:
@@ -1697,7 +1741,7 @@ def format_docx(input_path, elements, output_path, config):
                     for para in cell.paragraphs:
                         # Patch paragraph-level too
                         apply_para_direct_format(para, font_name, font_size, False,
-                                                  "cyan" if config.get("highlight") else None)
+                                                 "cyan" if config.get("highlight") else None)
                         for r_el in _get_all_runs(para):
                             if r_el.xpath(".//w:drawing"):
                                 continue
@@ -1775,6 +1819,59 @@ def format_document():
     format_docx(input_path, analysis["elements"], output_path, config)
 
     return send_file(output_path, as_attachment=True, download_name=output_filename)
+
+
+@app.route("/preview_original", methods=["POST"])
+def preview_original():
+
+    pythoncom.CoInitialize()
+
+    file = request.files["file"]
+
+    input_path = os.path.join(
+        app.config["UPLOAD_FOLDER"], secure_filename(file.filename))
+    file.save(input_path)
+
+    pdf_path = os.path.join(
+        app.config["OUTPUT_FOLDER"],
+        str(uuid.uuid4()) + ".pdf"
+    )
+
+    convert(input_path, pdf_path)
+
+    pythoncom.CoUninitialize()
+
+    return send_file(pdf_path)
+
+
+@app.route("/preview_formatted", methods=["POST"])
+def preview_formatted():
+
+    pythoncom.CoInitialize()   # IMPORTANT
+
+    file = request.files["file"]
+    config = json.loads(request.form["config"])
+
+    input_path = os.path.join(
+        app.config["UPLOAD_FOLDER"], secure_filename(file.filename))
+    file.save(input_path)
+
+    analysis = analyze_document_structure(input_path)
+
+    formatted_doc = os.path.join(
+        app.config["OUTPUT_FOLDER"],
+        "formatted_" + str(uuid.uuid4()) + ".docx"
+    )
+
+    format_docx(input_path, analysis["elements"], formatted_doc, config)
+
+    pdf_path = formatted_doc.replace(".docx", ".pdf")
+
+    convert(formatted_doc, pdf_path)
+
+    pythoncom.CoUninitialize()   # IMPORTANT
+
+    return send_file(pdf_path)
 
 
 if __name__ == "__main__":
