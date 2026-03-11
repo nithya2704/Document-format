@@ -1,7 +1,7 @@
 from flask import Flask, render_template
 from alignment import alignment_bp
 from grammar import grammar_bp
-# from font import font_bp        ← Step 1: import when ready
+from font1 import font_bp
 
 app = Flask(__name__, template_folder="templates")
 
@@ -17,7 +17,7 @@ app = Flask(__name__, template_folder="templates")
 #
 app.register_blueprint(grammar_bp)       # /grammar/*
 app.register_blueprint(alignment_bp)     # /alignment/*
-# app.register_blueprint(font_bp)        ← Step 2: uncomment when ready
+app.register_blueprint(font_bp)          # /font/*
 
 
 @app.route("/")

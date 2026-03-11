@@ -2,8 +2,9 @@ import os
 import re
 import json
 import uuid
+import platform
 
-from flask import Flask, request, jsonify, send_file
+from flask import Blueprint, Flask, request, jsonify, send_file, render_template
 from werkzeug.utils import secure_filename
 
 from docx import Document
@@ -12,8 +13,7 @@ from docx.enum.text import WD_COLOR_INDEX, WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
-# ── Platform / optional deps ────────────────────────────────────────────────
-import platform
+# ── Platform / optional deps ─────────────────────────────────────────────────
 IS_WINDOWS = platform.system() == "Windows"
 WORD_AVAILABLE = False
 if IS_WINDOWS:
@@ -25,28 +25,24 @@ if IS_WINDOWS:
     except ImportError:
         pass
 
-# ── Blueprint ────────────────────────────────────────────────────────────────
+# ── Blueprint ─────────────────────────────────────────────────────────────────
+font_bp = Blueprint(
+    "font",
+    __name__,
+    url_prefix="/font",
+    template_folder="templates"
+)
+
+# ── Folders ───────────────────────────────────────────────────────────────────
+UPLOAD = "uploads/font"
+OUTPUT = "outputs/font"
+os.makedirs(UPLOAD, exist_ok=True)
+os.makedirs(OUTPUT, exist_ok=True)
 
 
-app = Flask(__name__)
-
-UPLOAD_FOLDER = "uploads"
-OUTPUT_FOLDER = "outputs"
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
-
-# ============================================================================
-#  SHARED UTILITIES  (imported from the main module via a small shim below)
-# ============================================================================
-# To avoid circular imports we re-implement the tiny helpers we need rather
-# than importing from docformatternew.  The full versions live there; these
-# are identical copies.
-
-def _qn(tag):
-    return qn(tag)
-
+# =============================================================================
+#  SHARED UTILITIES
+# =============================================================================
 
 def is_in_footer_or_header(para, *args) -> bool:
     _FH_TAGS = {qn("w:hdr"), qn("w:ftr")}
@@ -139,32 +135,79 @@ def is_numbered_list(para) -> bool:
             ilvl_nodes = para._element.xpath(".//w:numPr/w:ilvl")
             ilvl_val = ilvl_nodes[0].get(
                 qn("w:val"), "0") if ilvl_nodes else "0"
+            ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
             num_elements = numbering_part._element.xpath(
-                f".//w:num[@w:numId='{numId_val}']",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"})
+                f".//w:num[@w:numId='{numId_val}']", namespaces=ns)
             if not num_elements:
                 return False
             abstractNumId_nodes = num_elements[0].xpath(
-                ".//w:abstractNumId",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"})
+                ".//w:abstractNumId", namespaces=ns)
             if not abstractNumId_nodes:
                 return False
             abstract_id = abstractNumId_nodes[0].get(qn("w:val"), "0")
             abstract_num = numbering_part._element.xpath(
-                f".//w:abstractNum[@w:abstractNumId='{abstract_id}']",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"})
+                f".//w:abstractNum[@w:abstractNumId='{abstract_id}']", namespaces=ns)
             if not abstract_num:
                 return False
             lvl_elements = abstract_num[0].xpath(
-                f".//w:lvl[@w:ilvl='{ilvl_val}']/w:numFmt",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"})
+                f".//w:lvl[@w:ilvl='{ilvl_val}']/w:numFmt", namespaces=ns)
             if lvl_elements:
                 fmt = lvl_elements[0].get(qn("w:val"), "")
-                if fmt in ("decimal", "lowerLetter", "upperLetter", "lowerRoman", "upperRoman",
-                           "ordinal", "cardinalText", "decimalZero"):
+                if fmt in ("decimal", "lowerLetter", "upperLetter", "lowerRoman",
+                           "upperRoman", "ordinal", "cardinalText", "decimalZero"):
                     return True
         except Exception:
             pass
+    except Exception:
+        pass
+    return False
+
+
+def _is_bullet_list(para) -> bool:
+    try:
+        style_name = para.style.name if para.style else ""
+        if "List Bullet" in style_name:
+            return True
+        numPr_list = para._element.xpath(".//w:numPr")
+        if not numPr_list:
+            return False
+        numId_nodes = para._element.xpath(".//w:numPr/w:numId")
+        if not numId_nodes:
+            return False
+        try:
+            numbering_part = para.part.numbering_part
+            if numbering_part is None:
+                return True
+            numId_val = numId_nodes[0].get(qn("w:val"), "0")
+            ilvl_nodes = para._element.xpath(".//w:numPr/w:ilvl")
+            ilvl_val = ilvl_nodes[0].get(
+                qn("w:val"), "0") if ilvl_nodes else "0"
+            ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+            num_elements = numbering_part._element.xpath(
+                f".//w:num[@w:numId='{numId_val}']", namespaces=ns)
+            if not num_elements:
+                return False
+            abstractNumId_nodes = num_elements[0].xpath(
+                ".//w:abstractNumId", namespaces=ns)
+            if not abstractNumId_nodes:
+                return False
+            abstract_id = abstractNumId_nodes[0].get(qn("w:val"), "0")
+            abstract_num = numbering_part._element.xpath(
+                f".//w:abstractNum[@w:abstractNumId='{abstract_id}']", namespaces=ns)
+            if not abstract_num:
+                return False
+            lvl_elements = abstract_num[0].xpath(
+                f".//w:lvl[@w:ilvl='{ilvl_val}']/w:numFmt", namespaces=ns)
+            if lvl_elements:
+                fmt = lvl_elements[0].get(qn("w:val"), "")
+                if fmt in ("bullet", "none"):
+                    return True
+                if fmt in ("decimal", "lowerLetter", "upperLetter", "lowerRoman",
+                           "upperRoman", "ordinal", "cardinalText", "decimalZero"):
+                    return False
+                return True
+        except Exception:
+            return False
     except Exception:
         pass
     return False
@@ -195,62 +238,9 @@ def get_list_type(para) -> str:
     return None
 
 
-def _is_bullet_list(para) -> bool:
-    try:
-        style_name = para.style.name if para.style else ""
-        if "List Bullet" in style_name:
-            return True
-        numPr_list = para._element.xpath(".//w:numPr")
-        if not numPr_list:
-            return False
-        numId_nodes = para._element.xpath(".//w:numPr/w:numId")
-        if not numId_nodes:
-            return False
-        try:
-            numbering_part = para.part.numbering_part
-            if numbering_part is None:
-                return True
-            numId_val = numId_nodes[0].get(qn("w:val"), "0")
-            ilvl_nodes = para._element.xpath(".//w:numPr/w:ilvl")
-            ilvl_val = ilvl_nodes[0].get(
-                qn("w:val"), "0") if ilvl_nodes else "0"
-            num_elements = numbering_part._element.xpath(
-                f".//w:num[@w:numId='{numId_val}']",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"})
-            if not num_elements:
-                return False
-            abstractNumId_nodes = num_elements[0].xpath(
-                ".//w:abstractNumId",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"})
-            if not abstractNumId_nodes:
-                return False
-            abstract_id = abstractNumId_nodes[0].get(qn("w:val"), "0")
-            abstract_num = numbering_part._element.xpath(
-                f".//w:abstractNum[@w:abstractNumId='{abstract_id}']",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"})
-            if not abstract_num:
-                return False
-            lvl_elements = abstract_num[0].xpath(
-                f".//w:lvl[@w:ilvl='{ilvl_val}']/w:numFmt",
-                namespaces={"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"})
-            if lvl_elements:
-                fmt = lvl_elements[0].get(qn("w:val"), "")
-                if fmt in ("bullet", "none"):
-                    return True
-                if fmt in ("decimal", "lowerLetter", "upperLetter", "lowerRoman", "upperRoman",
-                           "ordinal", "cardinalText", "decimalZero"):
-                    return False
-                return True
-        except Exception:
-            return False
-    except Exception:
-        pass
-    return False
-
-
-# ============================================================================
+# =============================================================================
 #  HIGHLIGHT COLOURS
-# ============================================================================
+# =============================================================================
 
 HIGHLIGHT_COLORS = {
     "TITLE":         WD_COLOR_INDEX.YELLOW,
@@ -272,22 +262,22 @@ HIGHLIGHT_COLORS = {
 }
 
 _COLOR_MAP = {
-    WD_COLOR_INDEX.YELLOW:      "yellow",
+    WD_COLOR_INDEX.YELLOW:       "yellow",
     WD_COLOR_INDEX.BRIGHT_GREEN: "green",
-    WD_COLOR_INDEX.TURQUOISE:   "cyan",
-    WD_COLOR_INDEX.PINK:        "magenta",
-    WD_COLOR_INDEX.VIOLET:      "magenta",
-    WD_COLOR_INDEX.TEAL:        "cyan",
-    WD_COLOR_INDEX.DARK_BLUE:   "darkBlue",
-    WD_COLOR_INDEX.GRAY_25:     "lightGray",
-    WD_COLOR_INDEX.GRAY_50:     "darkGray",
-    WD_COLOR_INDEX.DARK_YELLOW: "darkYellow",
+    WD_COLOR_INDEX.TURQUOISE:    "cyan",
+    WD_COLOR_INDEX.PINK:         "magenta",
+    WD_COLOR_INDEX.VIOLET:       "magenta",
+    WD_COLOR_INDEX.TEAL:         "cyan",
+    WD_COLOR_INDEX.DARK_BLUE:    "darkBlue",
+    WD_COLOR_INDEX.GRAY_25:      "lightGray",
+    WD_COLOR_INDEX.GRAY_50:      "darkGray",
+    WD_COLOR_INDEX.DARK_YELLOW:  "darkYellow",
 }
 
 
-# ============================================================================
-#  TOC / COVER-PAGE DETECTION  (font-tab versions)
-# ============================================================================
+# =============================================================================
+#  TOC / COVER-PAGE DETECTION
+# =============================================================================
 
 def _ft_get_style_base(para) -> str:
     try:
@@ -347,6 +337,7 @@ def _ft_detect_toc_section(doc):
             if text:
                 break
         return toc_start, last_toc_style_idx, True
+
     TOC_TITLE_RE = re.compile(
         r"^\s*(table\s+of\s+contents|contents)\s*$", re.IGNORECASE)
     toc_start = -1
@@ -361,13 +352,15 @@ def _ft_detect_toc_section(doc):
             break
     if toc_start == -1:
         return -1, -1, False
+
     toc_end = toc_start
     consec = 0
     for i in range(toc_start + 1, min(len(paragraphs), toc_start + 300)):
         text = (paragraphs[i].text or "").strip()
         if not text:
             continue
-        if _ft_is_toc_entry_by_heuristic(paragraphs[i]) or _ft_is_toc_entry_by_style(paragraphs[i]):
+        if (_ft_is_toc_entry_by_heuristic(paragraphs[i]) or
+                _ft_is_toc_entry_by_style(paragraphs[i])):
             toc_end = i
             consec = 0
         else:
@@ -408,18 +401,11 @@ def _ft_detect_cover_page(doc) -> int:
     return cover_candidate
 
 
-# ============================================================================
+# =============================================================================
 #  DOCUMENT STRUCTURE ANALYSIS
-# ============================================================================
+# =============================================================================
 
 def ft_analyze_document_structure(docx_path: str) -> dict:
-    """
-    Analyse a .docx and return a dict with:
-      - elements           : list of {type, para_idx, indent, [on_cover]}
-      - detected_elements  : sorted list of unique element type strings
-      - element_counts     : {type: count}
-      - sample_texts       : {type: sample_string}
-    """
     doc = Document(docx_path)
     footer_ids = get_footer_paragraph_ids(doc)
     header_ids = get_header_paragraph_ids(doc)
@@ -446,7 +432,6 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
         in_toc = has_toc and toc_start <= idx <= toc_end
         in_cover = cover_end >= 0 and idx <= cover_end
 
-        # ── Style-based detection ──────────────────────────────────────────
         if style_base == "Title":
             ptype = "TITLE"
         elif style_base == "TOC Heading":
@@ -461,7 +446,6 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
                 level = 1
             ptype = f"TOC_HEADING_{level}"
 
-        # ── TOC section ───────────────────────────────────────────────────
         if ptype is None and in_toc:
             text_lower = para.text.strip().lower()
             if (_ft_get_style_base(para) == "TOC Heading" or
@@ -472,11 +456,9 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
                        _ft_toc_level_from_heuristic((para.text or "").strip()))
                 ptype = f"TOC_HEADING_{lvl}"
 
-        # ── Cover page ────────────────────────────────────────────────────
         if ptype is None and in_cover and not in_toc:
             ptype = "TITLE" if idx == first_content_idx else "COVER_PAGE"
 
-        # ── Heading / list / paragraph fallback ───────────────────────────
         if ptype is None:
             raw_text = (para.text or "").strip()
             if style_base.startswith("Heading"):
@@ -506,7 +488,6 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
             if t:
                 sample_texts[ptype] = t[:250]
 
-    # ── Tables ────────────────────────────────────────────────────────────
     body_children = list(doc.element.body)
     body_elem_to_pos = {id(child): pos for pos,
                         child in enumerate(body_children)}
@@ -551,18 +532,17 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
             return 6
         return 7
 
-    detected_elements = sorted(detected_types, key=_sort_key)
     return {
         "elements":          elements,
-        "detected_elements": detected_elements,
+        "detected_elements": sorted(detected_types, key=_sort_key),
         "element_counts":    element_counts,
         "sample_texts":      sample_texts,
     }
 
 
-# ============================================================================
+# =============================================================================
 #  FONT FORMATTING HELPERS
-# ============================================================================
+# =============================================================================
 
 def _ft_get_config_for_type(ptype: str, config: dict):
     font_name = config.get(ptype.lower() + "_font")
@@ -570,12 +550,12 @@ def _ft_get_config_for_type(ptype: str, config: dict):
     if not font_name:
         if ptype == "COVER_PAGE":
             font_name = config.get("title_font") or config.get(
-                "paragraph_font") or "Oracle Sans"
+                "paragraph_font") or "Arial"
         elif ptype in ("BULLET_ITEM", "NUMBERED_ITEM"):
             font_name = config.get("list_item_font") or config.get(
-                "paragraph_font") or "Oracle Sans"
+                "paragraph_font") or "Arial"
         else:
-            font_name = config.get("paragraph_font") or "Oracle Sans"
+            font_name = config.get("paragraph_font") or "Arial"
     if not font_size_raw:
         if ptype == "COVER_PAGE":
             font_size_raw = config.get("title_size") or 12
@@ -706,17 +686,11 @@ def set_table_heading_bg(table, hex_color: str):
         shd.set(qn("w:fill"), rgb)
 
 
-# ============================================================================
+# =============================================================================
 #  MAIN FORMATTING FUNCTION
-# ============================================================================
+# =============================================================================
 
-def ft_format_docx(input_path: str, elements: list, output_path: str,
-                   config: dict):
-    """
-    Apply font/size/bold/highlight formatting to every body paragraph and
-    table in the document, then save to output_path.
-    Headers and footers are never touched.
-    """
+def ft_format_docx(input_path: str, elements: list, output_path: str, config: dict):
     doc = Document(input_path)
     footer_ids = get_footer_paragraph_ids(doc)
     header_ids = get_header_paragraph_ids(doc)
@@ -755,7 +729,6 @@ def ft_format_docx(input_path: str, elements: list, output_path: str,
         _ft_apply_para_direct_format(para, font_name, font_size, bold_run,
                                      highlight_color_name)
 
-        # Restore numbered-heading text as "num\ttitle"
         if is_heading:
             text = (para.text or "").strip()
             lvl, num, title = detect_numbered_heading(text)
@@ -764,7 +737,6 @@ def ft_format_docx(input_path: str, elements: list, output_path: str,
                 para.add_run(f"{num}\t")
                 para.add_run(title)
 
-        # Apply to every run in the paragraph
         for r_el in _ft_get_all_runs(para):
             if r_el.xpath(".//w:drawing"):
                 continue
@@ -810,7 +782,6 @@ def ft_format_docx(input_path: str, elements: list, output_path: str,
                 original_indent and original_indent > 0):
             para.paragraph_format.left_indent = Inches(original_indent)
 
-    # ── Tables ────────────────────────────────────────────────────────────
     for e in elements:
         if e["type"] != "TABLE":
             continue
@@ -862,9 +833,9 @@ def ft_format_docx(input_path: str, elements: list, output_path: str,
     doc.save(output_path)
 
 
-# ============================================================================
-#  HTML PREVIEW  (shared helper — also used by alignment tab)
-# ============================================================================
+# =============================================================================
+#  HTML PREVIEW  (fallback for non-Windows / no Word installed)
+# =============================================================================
 
 def _run_font_css(run):
     styles = []
@@ -886,16 +857,16 @@ def _run_font_css(run):
             pass
         if run.font.highlight_color:
             _HL_CSS = {
-                WD_COLOR_INDEX.YELLOW:      "#fff59d",
+                WD_COLOR_INDEX.YELLOW:       "#fff59d",
                 WD_COLOR_INDEX.BRIGHT_GREEN: "#b9f6ca",
-                WD_COLOR_INDEX.TURQUOISE:   "#b2ebf2",
-                WD_COLOR_INDEX.PINK:        "#f8bbd0",
-                WD_COLOR_INDEX.VIOLET:      "#e1bee7",
-                WD_COLOR_INDEX.TEAL:        "#b2dfdb",
-                WD_COLOR_INDEX.DARK_BLUE:   "#1a237e",
-                WD_COLOR_INDEX.GRAY_25:     "#f5f5f5",
-                WD_COLOR_INDEX.GRAY_50:     "#e0e0e0",
-                WD_COLOR_INDEX.DARK_YELLOW: "#fff9c4",
+                WD_COLOR_INDEX.TURQUOISE:    "#b2ebf2",
+                WD_COLOR_INDEX.PINK:         "#f8bbd0",
+                WD_COLOR_INDEX.VIOLET:       "#e1bee7",
+                WD_COLOR_INDEX.TEAL:         "#b2dfdb",
+                WD_COLOR_INDEX.DARK_BLUE:    "#1a237e",
+                WD_COLOR_INDEX.GRAY_25:      "#f5f5f5",
+                WD_COLOR_INDEX.GRAY_50:      "#e0e0e0",
+                WD_COLOR_INDEX.DARK_YELLOW:  "#fff9c4",
             }
             bg = _HL_CSS.get(run.font.highlight_color)
             if bg:
@@ -951,7 +922,6 @@ def _style_tag(style_name):
 
 
 def docx_to_html_preview(docx_path: str) -> str:
-    """Convert a .docx to a self-contained HTML string for in-browser preview."""
     import html as _html
     doc = Document(docx_path)
     footer_ids = get_footer_paragraph_ids(doc)
@@ -962,7 +932,7 @@ def docx_to_html_preview(docx_path: str) -> str:
 
     page_css = (
         '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
-        'body{font-family:"Oracle Sans",Arial,sans-serif;margin:0;padding:0;background:#e0e0e0;}'
+        'body{font-family:Arial,sans-serif;margin:0;padding:0;background:#e0e0e0;}'
         '.page{background:white;width:794px;min-height:1123px;margin:30px auto;'
         'padding:72px 80px;box-shadow:0 2px 12px rgba(0,0,0,0.18);box-sizing:border-box;}'
         'h1,h2,h3,h4,h5,h6{margin:0.4em 0 0.2em;}'
@@ -1071,7 +1041,6 @@ def docx_to_html_preview(docx_path: str) -> str:
                 close_list()
                 parts.append(
                     "<{0}{1}>{2}</{0}>".format(htag, style_attr, inner))
-
         elif tag == qn("w:tbl"):
             close_list()
             table = table_map.get(id(child))
@@ -1083,20 +1052,24 @@ def docx_to_html_preview(docx_path: str) -> str:
     return "".join(parts)
 
 
-# ============================================================================
+# =============================================================================
 #  FLASK ROUTES
-# ============================================================================
-@app.route("/")
+# =============================================================================
+
+@font_bp.route("/")
 def home():
-    return "Font formatting API is running"
+    return render_template("fontUI.html")
 
 
-@app.route("/ft_analyse", methods=["POST"])
+@font_bp.route("/analyse", methods=["POST"])
 def ft_analyse():
     f = request.files.get("file")
     if not f:
-        return jsonify({"error": "No file"}), 400
-    path = os.path.join(UPLOAD_FOLDER, f.filename)
+        return jsonify({"error": "No file uploaded"}), 400
+    ext = os.path.splitext(secure_filename(f.filename))[1].lower()
+    if ext != ".docx":
+        return jsonify({"error": "Only .docx files are supported"}), 400
+    path = os.path.join(UPLOAD, f"{uuid.uuid4()}{ext}")
     f.save(path)
     try:
         data = ft_analyze_document_structure(path)
@@ -1105,50 +1078,73 @@ def ft_analyse():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/ft_format", methods=["POST"])
+@font_bp.route("/preview", methods=["POST"])
+def ft_preview():
+    """
+    Preview logic mirrors alignment.py:
+      - On Windows with Word installed → convert docx → PDF → stream PDF
+      - Otherwise → convert docx → HTML → stream HTML
+    """
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"error": "No file uploaded"}), 400
+    cfg = json.loads(request.form.get("config", "{}"))
+    ext = os.path.splitext(secure_filename(f.filename))[1].lower()
+    in_path = os.path.join(UPLOAD, f"{uuid.uuid4()}{ext}")
+    f.save(in_path)
+
+    out_docx = os.path.join(OUTPUT, f"ft_preview_{uuid.uuid4()}.docx")
+    data = ft_analyze_document_structure(in_path)
+    ft_format_docx(in_path, data["elements"], out_docx, cfg)
+
+    # ── Windows + Word: return PDF (same as alignment.py) ─────────────────
+    if IS_WINDOWS and WORD_AVAILABLE:
+        try:
+            pythoncom.CoInitialize()
+            pdf_path = os.path.join(OUTPUT, f"ft_preview_{uuid.uuid4()}.pdf")
+            convert(out_docx, pdf_path)
+            pythoncom.CoUninitialize()
+            return send_file(pdf_path, mimetype="application/pdf")
+        except Exception as e:
+            try:
+                pythoncom.CoUninitialize()
+            except Exception:
+                pass
+            # fall through to HTML preview on failure
+
+    # ── Fallback: return HTML preview ─────────────────────────────────────
+    html_content = docx_to_html_preview(out_docx)
+    return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@font_bp.route("/format", methods=["POST"])
 def ft_format():
     f = request.files.get("file")
-    cfg = json.loads(request.form.get("config", "{}"))
     if not f:
-        return jsonify({"error": "No file"}), 400
-    in_path = os.path.join(UPLOAD_FOLDER, f.filename)
-    base = os.path.splitext(f.filename)[0]
-    out_name = "{}_formatted.docx".format(base)
-    out_path = os.path.join(OUTPUT_FOLDER, out_name)
+        return jsonify({"error": "No file uploaded"}), 400
+    cfg = json.loads(request.form.get("config", "{}"))
+    ext = os.path.splitext(secure_filename(f.filename))[1].lower()
+    in_path = os.path.join(UPLOAD, f"{uuid.uuid4()}{ext}")
+    out_name = f"{os.path.splitext(secure_filename(f.filename))[0]}_font_formatted.docx"
+    out_path = os.path.join(OUTPUT, f"{uuid.uuid4()}_{out_name}")
     f.save(in_path)
     data = ft_analyze_document_structure(in_path)
     ft_format_docx(in_path, data["elements"], out_path, cfg)
     return send_file(out_path, as_attachment=True, download_name=out_name)
 
 
-@app.route("/ft_preview", methods=["POST"])
-def ft_preview():
-    f = request.files.get("file")
-    if not f:
-        return "No file", 400
-    cfg = json.loads(request.form.get("config", "{}"))
-    in_path = os.path.join(UPLOAD_FOLDER, f.filename)
-    f.save(in_path)
-    out_docx = os.path.join(OUTPUT_FOLDER,
-                            "ft_formatted_{}.docx".format(uuid.uuid4()))
-    data = ft_analyze_document_structure(in_path)
-    ft_format_docx(in_path, data["elements"], out_docx, cfg)
-    if IS_WINDOWS and WORD_AVAILABLE:
-        try:
-            pythoncom.CoInitialize()
-            pdf_path = os.path.join(_OUTPUT_FOLDER,
-                                    "ft_preview_{}.pdf".format(uuid.uuid4()))
-            convert(out_docx, pdf_path)
-            pythoncom.CoUninitialize()
-            return send_file(pdf_path, mimetype="application/pdf")
-        except Exception:
-            try:
-                pythoncom.CoUninitialize()
-            except Exception:
-                pass
-    html_content = docx_to_html_preview(out_docx)
-    return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
-
+# =============================================================================
+#  STANDALONE RUNNER  — python font1.py
+# =============================================================================
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app = Flask(__name__, template_folder="templates")
+    app.register_blueprint(font_bp)
+
+    @app.route("/")
+    def root():
+        from flask import redirect
+        return redirect("/font/")
+
+    print("Font Formatter running → http://127.0.0.1:5001/font/")
+    app.run(debug=True, port=5001, threaded=False)

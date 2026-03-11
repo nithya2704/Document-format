@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Font Formatter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f4f6f9;
+    color: #1a2233;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: flex;
+    height: 100vh;
+  }
+
+  /* ── Left panel — plain scrolling block, no flex column ── */
+  .panel-left {
+    width: 340px;
+    min-width: 300px;
+    background: #fff;
+    border-right: 1px solid #e2e8f0;
+    display: block;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    flex-shrink: 0;
+  }
+
+  .panel-header {
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .panel-header h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1a2233;
+  }
+  .panel-header p {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-top: 3px;
+  }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    margin: 16px 16px 0;
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 22px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: #f8fafc;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: #6366f1;
+    background: #eef2ff;
+  }
+  .upload-zone .upload-icon { font-size: 2rem; margin-bottom: 6px; }
+  .upload-zone p { font-size: 0.82rem; color: #64748b; }
+  .upload-zone strong { color: #6366f1; }
+  #fileInput { display: none; }
+
+  .file-badge {
+    display: none;
+    margin: 10px 16px 0;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: #3730a3;
+    align-items: center;
+    gap: 8px;
+  }
+  .file-badge.show { display: flex; }
+  .file-badge .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-badge .clear-file {
+    cursor: pointer; color: #6366f1; font-size: 1rem; font-weight: bold;
+    border: none; background: none; padding: 0;
+  }
+
+  /* ── Section cards ── */
+  .section {
+    margin: 14px 16px 0;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .section-title {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #475569;
+    background: #f1f5f9;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .section-body { padding: 12px 14px; }
+
+  /* ── Detected types list ── */
+  .detected-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .type-chip {
+    background: #e0e7ff;
+    color: #3730a3;
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 0.74rem;
+    font-weight: 600;
+  }
+  .no-doc-msg {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  /* ── Config rows ── */
+  .cfg-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .cfg-row label {
+    flex: 0 0 110px;
+    font-size: 0.8rem;
+    color: #475569;
+    font-weight: 500;
+  }
+  .cfg-row input[type=number],
+  .cfg-row select {
+    flex: 1;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 6px 9px;
+    font-size: 0.82rem;
+    color: #1a2233;
+    background: #fff;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  .cfg-row input:focus,
+  .cfg-row select:focus { border-color: #6366f1; }
+
+  /* ── Toggle row ── */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .toggle-row label {
+    font-size: 0.8rem;
+    color: #475569;
+    font-weight: 500;
+    flex: 1;
+  }
+  .toggle {
+    position: relative;
+    width: 38px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #cbd5e1;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 14px; height: 14px;
+    left: 3px; top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .toggle input:checked + .toggle-slider { background: #6366f1; }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+  /* ── Per-type config table ── */
+  .type-config-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .type-config-table th {
+    text-align: left;
+    font-weight: 600;
+    color: #64748b;
+    padding: 4px 6px;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+  }
+  .type-config-table td {
+    padding: 4px 4px;
+    vertical-align: middle;
+  }
+  .type-config-table tr:not(:last-child) td {
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .type-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .type-config-table input[type=number],
+  .type-config-table select {
+    width: 100%;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 4px 6px;
+    font-size: 0.75rem;
+    color: #1a2233;
+    background: #fff;
+    outline: none;
+  }
+  .type-config-table input:focus { border-color: #6366f1; }
+
+  /* ── Action buttons ── */
+  .actions { padding: 14px 16px 32px; display: flex; flex-direction: column; gap: 8px; }
+
+  .btn {
+    width: 100%;
+    padding: 10px 0;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-analyse { background: #6366f1; color: #fff; }
+  .btn-analyse:hover:not(:disabled) { background: #4f46e5; }
+
+  .btn-preview { background: #0ea5e9; color: #fff; }
+  .btn-preview:hover:not(:disabled) { background: #0284c7; }
+
+  .btn-format { background: #10b981; color: #fff; }
+  .btn-format:hover:not(:disabled) { background: #059669; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status-bar {
+    margin: 0 16px 8px;
+    padding: 8px 12px;
+    border-radius: 7px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: none;
+  }
+  .status-bar.info  { background: #e0f2fe; color: #0369a1; display: block; }
+  .status-bar.error { background: #fee2e2; color: #b91c1c; display: block; }
+  .status-bar.ok    { background: #dcfce7; color: #15803d; display: block; }
+
+  /* ── Right panel (preview) ── */
+  .panel-right {
+    flex: 1;
+    background: #e8ecf1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100vh;
+  }
+  .preview-toolbar {
+    padding: 10px 18px;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.82rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+  .preview-area {
+    flex: 1;
+    overflow: auto;
+  }
+  #previewFrame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: none;
+  }
+  .preview-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: #94a3b8;
+  }
+  .preview-placeholder .ph-icon { font-size: 3.5rem; }
+  .preview-placeholder p { font-size: 0.9rem; }
+
+  /* colour chips for element types */
+  .chip-TITLE         { background:#fef9c3;color:#854d0e; }
+  .chip-COVER_PAGE    { background:#fef9c3;color:#854d0e; }
+  .chip-TOC_TITLE     { background:#fee2e2;color:#991b1b; }
+  .chip-TOC_HEADING_1,.chip-TOC_HEADING_2,
+  .chip-TOC_HEADING_3,.chip-TOC_HEADING_4 { background:#f3f4f6;color:#374151; }
+  .chip-HEADING_1     { background:#d1fae5;color:#065f46; }
+  .chip-HEADING_2     { background:#ccfbf1;color:#134e4a; }
+  .chip-HEADING_3     { background:#fce7f3;color:#9d174d; }
+  .chip-HEADING_4     { background:#ede9fe;color:#4c1d95; }
+  .chip-HEADING_5     { background:#b2dfdb;color:#00695c; }
+  .chip-HEADING_6     { background:#bbdefb;color:#1565c0; }
+  .chip-PARAGRAPH     { background:#f1f5f9;color:#475569; }
+  .chip-BULLET_ITEM,.chip-NUMBERED_ITEM,
+  .chip-LIST_ITEM     { background:#fee2e2;color:#7f1d1d; }
+  .chip-TABLE         { background:#e0f2fe;color:#075985; }
+
+  /* ── Font select dropdowns ── */
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px !important;
+    cursor: pointer;
+  }
+  select:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
+
+  .type-config-table select {
+    font-size: 0.73rem;
+    padding: 3px 24px 3px 5px !important;
+    background-position: right 5px center;
+  }
+
+  /* ── Colour picker widget ── */
+  .color-picker-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .color-label {
+    font-size: 0.8rem;
+    color: #475569;
+    font-weight: 500;
+  }
+  .color-widget {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .color-main-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  input[type=color] {
+    width: 40px;
+    height: 36px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 2px;
+    cursor: pointer;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 5px; }
+  input[type=color]::-webkit-color-swatch { border: none; border-radius: 5px; }
+  .hex-input {
+    flex: 1;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    font-family: 'Consolas', monospace;
+    color: #1a2233;
+    background: #fff;
+    outline: none;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .hex-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
+  .color-swatch-preview {
+    width: 36px;
+    height: 36px;
+    border-radius: 7px;
+    border: 1px solid #cbd5e1;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .color-presets {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .preset-label {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    margin-right: 2px;
+    white-space: nowrap;
+  }
+  .preset-btn {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.1s, border-color 0.1s;
+    flex-shrink: 0;
+  }
+  .preset-btn:hover { transform: scale(1.2); border-color: #6366f1; }
+  .preset-btn[data-color="#ffffff"] { border-color: #cbd5e1; }
+  .preset-btn.active { border-color: #6366f1; transform: scale(1.15); }
+
+
+  /* ── Tooltip ── */
+  .tooltip-wrap {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 5px;
+    position: relative;
+    vertical-align: middle;
+  }
+  .tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: #6366f1;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    cursor: help;
+    flex-shrink: 0;
+    line-height: 1;
+    user-select: none;
+  }
+  .tooltip-box {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    position: fixed;        /* fixed so it's never clipped by a parent */
+    background: #1e293b;
+    color: #f1f5f9;
+    font-size: 0.76rem;
+    font-weight: 400;
+    line-height: 1.55;
+    padding: 10px 13px;
+    border-radius: 8px;
+    width: 230px;
+    max-width: calc(100vw - 24px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    transition: opacity 0.18s, visibility 0.18s;
+    z-index: 9999;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: normal;
+  }
+  /* Arrow pointing up toward the ? icon */
+  .tooltip-box::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: var(--arrow-left, 16px);
+    border: 6px solid transparent;
+    border-bottom-color: #1e293b;
+  }
+  .tooltip-wrap:hover .tooltip-box,
+  .tooltip-box.visible {
+    visibility: visible;
+    opacity: 1;
+  }
+
+
+  /* ── Resizer divider ── */
+  .resizer {
+    width: 6px;
+    min-width: 6px;
+    background: #e2e8f0;
+    cursor: col-resize;
+    position: relative;
+    flex-shrink: 0;
+    transition: background 0.15s;
+    z-index: 10;
+  }
+  .resizer:hover, .resizer.dragging {
+    background: #6366f1;
+  }
+  .resizer::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 40px;
+    background: #94a3b8;
+    border-radius: 2px;
+    transition: background 0.15s;
+  }
+  .resizer:hover::before, .resizer.dragging::before {
+    background: #fff;
+  }
+  /* Dots on the handle */
+  .resizer::after {
+    content: '⋮';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #94a3b8;
+    font-size: 1.1rem;
+    letter-spacing: -1px;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .resizer:hover::after, .resizer.dragging::after {
+    color: #fff;
+  }
+  /* Prevent text selection while dragging */
+  body.is-resizing {
+    cursor: col-resize !important;
+    user-select: none !important;
+  }
+  body.is-resizing * {
+    pointer-events: none !important;
+  }
+  body.is-resizing .resizer {
+    pointer-events: all !important;
+  }
+
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ════════════════════ LEFT PANEL ════════════════════ -->
+  <div class="panel-left">
+    <div class="panel-header">
+      <h2>🔤 Font Formatter</h2>
+      <p>Apply consistent fonts &amp; sizes across your document</p>
+    </div>
+
+    <!-- Upload zone -->
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-icon">📄</div>
+      <p><strong>Click to upload</strong> or drag &amp; drop</p>
+      <p>.docx files only</p>
+    </div>
+    <input type="file" id="fileInput" accept=".docx">
+
+    <div class="file-badge" id="fileBadge">
+      <span>📎</span>
+      <span class="fname" id="fileNameLabel"></span>
+      <button class="clear-file" id="clearFile" title="Remove file">✕</button>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar" id="statusBar"></div>
+
+    <!-- Detected types -->
+    <div class="section">
+      <div class="section-title">Detected Element Types</div>
+      <div class="section-body">
+        <div class="detected-list" id="detectedList">
+          <span class="no-doc-msg">Upload &amp; analyse to see elements</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global options -->
+    <div class="section">
+      <div class="section-title">Global Options</div>
+      <div class="section-body">
+        <div class="cfg-row">
+          <label>Default font</label>
+          <select id="globalFont">
+            <optgroup label="Sans Serif">
+              <option value="Arial">Arial</option>
+              <option value="Calibri">Calibri</option>
+              <option value="Calibri Light">Calibri Light</option>
+              <option value="Helvetica">Helvetica</option>
+              <option value="Tahoma">Tahoma</option>
+              <option value="Trebuchet MS">Trebuchet MS</option>
+              <option value="Verdana">Verdana</option>
+              <option value="Gill Sans MT">Gill Sans MT</option>
+              <option value="Century Gothic">Century Gothic</option>
+              <option value="Segoe UI">Segoe UI</option>
+            </optgroup>
+            <optgroup label="Serif">
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Garamond">Garamond</option>
+              <option value="Book Antiqua">Book Antiqua</option>
+              <option value="Palatino Linotype">Palatino Linotype</option>
+              <option value="Cambria">Cambria</option>
+            </optgroup>
+            <optgroup label="Monospace">
+              <option value="Courier New">Courier New</option>
+              <option value="Consolas">Consolas</option>
+              <option value="Lucida Console">Lucida Console</option>
+            </optgroup>
+            <optgroup label="Corporate / Other">
+              <option value="Oracle Sans">Oracle Sans</option>
+              <option value="Franklin Gothic Medium">Franklin Gothic Medium</option>
+              <option value="Rockwell">Rockwell</option>
+              <option value="Tw Cen MT">Tw Cen MT</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="cfg-row">
+          <label>Default size</label>
+          <input type="number" id="globalSize" value="11" min="6" max="72" style="max-width:80px">
+        </div>
+        <div class="toggle-row">
+          <label>Bold headings</label>
+          <label class="toggle"><input type="checkbox" id="boldHeadings" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <label>Bold titles</label>
+          <label class="toggle"><input type="checkbox" id="boldTitles" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <label>Bold lists</label>
+          <label class="toggle"><input type="checkbox" id="boldLists"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <label>Highlight elements
+            <span class="tooltip-wrap">
+              <span class="tooltip-icon">?</span>
+              <span class="tooltip-box">If you enable this option, you can see colours highlighting each section in the preview — making it easy to identify Titles, Headings, Paragraphs, Lists and Tables at a glance. The highlights only appear in the preview and are also saved in the downloaded document.</span>
+            </span>
+          </label>
+          <label class="toggle"><input type="checkbox" id="highlightElems"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <label>Preserve indentation</label>
+          <label class="toggle"><input type="checkbox" id="preserveIndent" checked><span class="toggle-slider"></span></label>
+        </div>
+        <!-- Table header background colour picker -->
+        <div class="color-picker-row">
+          <label class="color-label">Table header bg</label>
+          <div class="color-widget">
+            <div class="color-main-row">
+              <input type="color" id="tableHeadingBgPicker" value="#1e3a5f" title="Pick a colour">
+              <input type="text"  id="tableHeadingBg" value="#1e3a5f" maxlength="7" placeholder="#1e3a5f" class="hex-input" spellcheck="false">
+              <div class="color-swatch-preview" id="colorSwatchPreview" style="background:#1e3a5f"></div>
+            </div>
+            <div class="color-presets">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy Blue"></button>
+              <button class="preset-btn" data-color="#1f4e79" style="background:#1f4e79" title="Dark Blue"></button>
+              <button class="preset-btn" data-color="#2e4057" style="background:#2e4057" title="Steel Blue"></button>
+              <button class="preset-btn" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
+              <button class="preset-btn" data-color="#375623" style="background:#375623" title="Dark Green"></button>
+              <button class="preset-btn" data-color="#7b2d8b" style="background:#7b2d8b" title="Purple"></button>
+              <button class="preset-btn" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
+              <button class="preset-btn" data-color="#000000" style="background:#000000" title="Black"></button>
+              <button class="preset-btn" data-color="#ffffff" style="background:#ffffff" title="White" class="preset-btn-light"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-type overrides (populated after analyse) -->
+    <div class="section" id="perTypeSection" style="display:none">
+      <div class="section-title">Per-Type Overrides <span style="font-weight:400;text-transform:none;font-size:0.75rem;color:#94a3b8">(leave blank to use global)</span></div>
+      <div class="section-body" style="overflow-x:auto;">
+        <table class="type-config-table" id="perTypeTable">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Font</th>
+              <th style="width:60px">Size</th>
+            </tr>
+          </thead>
+          <tbody id="perTypeBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions" style="padding-bottom:40px;">
+      <button class="btn btn-analyse" id="btnAnalyse" disabled>
+        <div class="spinner" id="spinAnalyse"></div>
+        <span id="lblAnalyse">🔍 Analyse Document</span>
+      </button>
+      <button class="btn btn-preview" id="btnPreview" disabled>
+        <div class="spinner" id="spinPreview"></div>
+        <span id="lblPreview">👁 Preview Changes</span>
+      </button>
+      <button class="btn btn-format" id="btnFormat" disabled>
+        <div class="spinner" id="spinFormat"></div>
+        <span id="lblFormat">⬇ Download Formatted</span>
+      </button>
+    </div>
+
+  </div><!-- end panel-left -->
+
+  <!-- Drag resizer -->
+  <div class="resizer" id="panelResizer" title="Drag to resize"></div>
+
+  <!-- ════════════════════ RIGHT PANEL ════════════════════ -->
+  <div class="panel-right">
+    <div class="preview-toolbar" id="previewToolbar">Preview will appear here after clicking "Preview Changes"</div>
+    <div class="preview-area">
+      <iframe id="previewFrame" title="Document Preview"></iframe>
+      <div class="preview-placeholder" id="previewPlaceholder">
+        <div class="ph-icon">🖼</div>
+        <p>Document preview will appear here</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end shell -->
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+let currentFile  = null;
+let analysedData = null;  // {detected_elements, element_counts, sample_texts}
+
+// ── DOM refs ──────────────────────────────────────────────────────────────
+const uploadZone       = document.getElementById('uploadZone');
+const fileInput        = document.getElementById('fileInput');
+const fileBadge        = document.getElementById('fileBadge');
+const fileNameLabel    = document.getElementById('fileNameLabel');
+const clearFileBtn     = document.getElementById('clearFile');
+const statusBar        = document.getElementById('statusBar');
+const detectedList     = document.getElementById('detectedList');
+const perTypeSection   = document.getElementById('perTypeSection');
+const perTypeBody      = document.getElementById('perTypeBody');
+const btnAnalyse       = document.getElementById('btnAnalyse');
+const btnPreview       = document.getElementById('btnPreview');
+const btnFormat        = document.getElementById('btnFormat');
+const previewFrame     = document.getElementById('previewFrame');
+const previewPlaceholder = document.getElementById('previewPlaceholder');
+const previewToolbar   = document.getElementById('previewToolbar');
+
+// ── File handling ─────────────────────────────────────────────────────────
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+clearFileBtn.addEventListener('click', resetFile);
+
+function setFile(f) {
+  if (!f.name.toLowerCase().endsWith('.docx')) {
+    showStatus('Only .docx files are supported.', 'error');
+    return;
+  }
+  currentFile = f;
+  fileNameLabel.textContent = f.name;
+  fileBadge.classList.add('show');
+  btnAnalyse.disabled = false;
+  btnPreview.disabled = true;
+  btnFormat.disabled  = true;
+  analysedData = null;
+  detectedList.innerHTML = '<span class="no-doc-msg">Click "Analyse Document" to detect elements</span>';
+  perTypeSection.style.display = 'none';
+  hidePreview();
+  showStatus('File ready. Click "Analyse Document" to continue.', 'info');
+}
+
+function resetFile() {
+  currentFile = null;
+  fileInput.value = '';
+  fileBadge.classList.remove('show');
+  btnAnalyse.disabled = true;
+  btnPreview.disabled = true;
+  btnFormat.disabled  = true;
+  analysedData = null;
+  detectedList.innerHTML = '<span class="no-doc-msg">Upload &amp; analyse to see elements</span>';
+  perTypeSection.style.display = 'none';
+  hidePreview();
+  hideStatus();
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────
+function showStatus(msg, type = 'info') {
+  statusBar.textContent = msg;
+  statusBar.className = 'status-bar ' + type;
+}
+function hideStatus() {
+  statusBar.className = 'status-bar';
+}
+
+// ── Loading state helpers ─────────────────────────────────────────────────
+function setLoading(btnEl, spinEl, lblEl, loading, label) {
+  btnEl.disabled  = loading;
+  spinEl.style.display = loading ? 'block' : 'none';
+  lblEl.textContent = label;
+}
+
+// ── Build config object from UI ───────────────────────────────────────────
+function buildConfig() {
+  const cfg = {
+    paragraph_font:    document.getElementById('globalFont').value.trim() || 'Arial',
+    paragraph_size:    parseInt(document.getElementById('globalSize').value) || 11,
+    bold_headings:     document.getElementById('boldHeadings').checked,
+    bold_titles:       document.getElementById('boldTitles').checked,
+    bold_lists:        document.getElementById('boldLists').checked,
+    highlight:         document.getElementById('highlightElems').checked,
+    preserve_indentation: document.getElementById('preserveIndent').checked,
+    table_heading_bg:  document.getElementById('tableHeadingBg').value.trim() || '#1e3a5f',
+  };
+
+  // Per-type overrides from the table
+  const rows = perTypeBody.querySelectorAll('tr');
+  rows.forEach(row => {
+    const ptype = row.dataset.ptype;
+    if (!ptype) return;
+    const key   = ptype.toLowerCase();
+    const fontVal = row.querySelector('.pt-font').value.trim();
+    const sizeVal = row.querySelector('.pt-size').value.trim();
+    if (fontVal) cfg[key + '_font'] = fontVal;
+    if (sizeVal) cfg[key + '_size'] = parseInt(sizeVal);
+  });
+  return cfg;
+}
+
+// ── Colour chip helper ────────────────────────────────────────────────────
+function chipClass(ptype) {
+  return 'chip-' + ptype.replace(/\s/g,'_');
+}
+
+// ── Analyse ───────────────────────────────────────────────────────────────
+btnAnalyse.addEventListener('click', async () => {
+  if (!currentFile) return;
+  setLoading(btnAnalyse, spinAnalyse, lblAnalyse, true, 'Analysing…');
+  showStatus('Analysing document structure…', 'info');
+  try {
+    const fd = new FormData();
+    fd.append('file', currentFile);
+    const res  = await fetch('analyse', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Analysis failed');
+    analysedData = data;
+    renderDetectedTypes(data);
+    renderPerTypeTable(data.detected_elements);
+    btnPreview.disabled = false;
+    btnFormat.disabled  = false;
+    showStatus(`Found ${data.detected_elements.length} element type(s) — ${Object.values(data.element_counts).reduce((a,b)=>a+b,0)} total paragraphs/tables.`, 'ok');
+  } catch (err) {
+    showStatus('Error: ' + err.message, 'error');
+  } finally {
+    setLoading(btnAnalyse, spinAnalyse, lblAnalyse, false, '🔍 Analyse Document');
+  }
+});
+
+function renderDetectedTypes(data) {
+  detectedList.innerHTML = '';
+  data.detected_elements.forEach(t => {
+    const chip = document.createElement('span');
+    chip.className = 'type-chip ' + chipClass(t);
+    const count = data.element_counts[t] || 0;
+    chip.textContent = t.replace(/_/g,' ') + (count ? ` ×${count}` : '');
+    chip.title = data.sample_texts[t] ? '"' + data.sample_texts[t].slice(0,80) + '…"' : '';
+    detectedList.appendChild(chip);
+  });
+}
+
+function renderPerTypeTable(types) {
+  perTypeBody.innerHTML = '';
+  types.forEach(ptype => {
+    const tr = document.createElement('tr');
+    tr.dataset.ptype = ptype;
+    tr.innerHTML = `
+      <td><span class="type-label ${chipClass(ptype)}">${ptype.replace(/_/g,' ')}</span></td>
+      <td>
+        <select class="pt-font" title="Font for ${ptype}">
+          <option value="">— default —</option>
+          <optgroup label="Sans Serif">
+            <option value="Arial">Arial</option>
+            <option value="Calibri">Calibri</option>
+            <option value="Calibri Light">Calibri Light</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Tahoma">Tahoma</option>
+            <option value="Trebuchet MS">Trebuchet MS</option>
+            <option value="Verdana">Verdana</option>
+            <option value="Gill Sans MT">Gill Sans MT</option>
+            <option value="Century Gothic">Century Gothic</option>
+            <option value="Segoe UI">Segoe UI</option>
+          </optgroup>
+          <optgroup label="Serif">
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Garamond">Garamond</option>
+            <option value="Book Antiqua">Book Antiqua</option>
+            <option value="Palatino Linotype">Palatino Linotype</option>
+            <option value="Cambria">Cambria</option>
+          </optgroup>
+          <optgroup label="Monospace">
+            <option value="Courier New">Courier New</option>
+            <option value="Consolas">Consolas</option>
+            <option value="Lucida Console">Lucida Console</option>
+          </optgroup>
+          <optgroup label="Corporate / Other">
+            <option value="Oracle Sans">Oracle Sans</option>
+            <option value="Franklin Gothic Medium">Franklin Gothic Medium</option>
+            <option value="Rockwell">Rockwell</option>
+            <option value="Tw Cen MT">Tw Cen MT</option>
+          </optgroup>
+        </select>
+      </td>
+      <td><input class="pt-size" type="number" placeholder="–" min="6" max="72" title="Size for ${ptype}"></td>
+    `;
+    perTypeBody.appendChild(tr);
+  });
+  perTypeSection.style.display = 'block';
+}
+
+// ── Preview ───────────────────────────────────────────────────────────────
+btnPreview.addEventListener('click', async () => {
+  if (!currentFile) return;
+  setLoading(btnPreview, spinPreview, lblPreview, true, 'Generating preview…');
+  showStatus('Generating preview…', 'info');
+  try {
+    const fd = new FormData();
+    fd.append('file', currentFile);
+    fd.append('config', JSON.stringify(buildConfig()));
+    const res = await fetch('preview', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Preview failed' }));
+      throw new Error(err.error || 'Preview failed');
+    }
+    const contentType = res.headers.get('Content-Type') || '';
+    if (contentType.includes('application/pdf')) {
+      // PDF preview (Windows + Word installed)
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      showPreview(url, 'pdf');
+      previewToolbar.textContent = `PDF Preview — ${currentFile.name}`;
+    } else {
+      // HTML preview (fallback)
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const url  = URL.createObjectURL(blob);
+      showPreview(url, 'html');
+      previewToolbar.textContent = `HTML Preview — ${currentFile.name}`;
+    }
+    showStatus('Preview ready.', 'ok');
+  } catch (err) {
+    showStatus('Preview error: ' + err.message, 'error');
+  } finally {
+    setLoading(btnPreview, spinPreview, lblPreview, false, '👁 Preview Changes');
+  }
+});
+
+function showPreview(url, type) {
+  previewFrame.src = url;
+  previewFrame.style.display = 'block';
+  previewPlaceholder.style.display = 'none';
+}
+
+function hidePreview() {
+  previewFrame.style.display = 'none';
+  previewFrame.src = '';
+  previewPlaceholder.style.display = 'flex';
+  previewToolbar.textContent = 'Preview will appear here after clicking "Preview Changes"';
+}
+
+// ── Format / Download ─────────────────────────────────────────────────────
+btnFormat.addEventListener('click', async () => {
+  if (!currentFile) return;
+  setLoading(btnFormat, spinFormat, lblFormat, true, 'Formatting…');
+  showStatus('Applying font formatting…', 'info');
+  try {
+    const fd = new FormData();
+    fd.append('file', currentFile);
+    fd.append('config', JSON.stringify(buildConfig()));
+    const res = await fetch('format', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Format failed' }));
+      throw new Error(err.error || 'Format failed');
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = currentFile.name.replace('.docx', '_font_formatted.docx');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showStatus('Download started — formatting complete!', 'ok');
+  } catch (err) {
+    showStatus('Error: ' + err.message, 'error');
+  } finally {
+    setLoading(btnFormat, spinFormat, lblFormat, false, '⬇ Download Formatted');
+  }
+});
+
+// ── Spinner references (needed by setLoading) ─────────────────────────────
+const spinAnalyse = document.getElementById('spinAnalyse');
+const spinPreview = document.getElementById('spinPreview');
+const spinFormat  = document.getElementById('spinFormat');
+const lblAnalyse  = document.getElementById('lblAnalyse');
+const lblPreview  = document.getElementById('lblPreview');
+const lblFormat   = document.getElementById('lblFormat');
+
+// ── Colour picker sync ─────────────────────────────────────────────────────
+(function() {
+  const picker  = document.getElementById('tableHeadingBgPicker');
+  const hexInput = document.getElementById('tableHeadingBg');
+  const swatch  = document.getElementById('colorSwatchPreview');
+
+  function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
+
+  function syncAll(hex) {
+    const h = hex.startsWith('#') ? hex : '#' + hex;
+    if (!isValidHex(h)) return;
+    const upper = h.toUpperCase();
+    picker.value   = upper;
+    hexInput.value = upper;
+    swatch.style.background = upper;
+    // Update active preset
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
+    });
+  }
+
+  // Native color picker changed
+  picker.addEventListener('input', () => syncAll(picker.value));
+
+  // Hex text field changed
+  hexInput.addEventListener('input', () => {
+    let v = hexInput.value.trim();
+    if (!v.startsWith('#')) v = '#' + v;
+    if (isValidHex(v)) syncAll(v);
+  });
+  hexInput.addEventListener('blur', () => {
+    if (!isValidHex(hexInput.value)) hexInput.value = picker.value;
+    hexInput.value = hexInput.value.toUpperCase();
+  });
+
+  // Preset buttons
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => syncAll(btn.dataset.color));
+  });
+
+  // Init active state
+  syncAll(picker.value);
+})();
+
+
+// ── Tooltip positioning ────────────────────────────────────────────────────
+document.querySelectorAll('.tooltip-wrap').forEach(wrap => {
+  const icon = wrap.querySelector('.tooltip-icon');
+  const box  = wrap.querySelector('.tooltip-box');
+  if (!icon || !box) return;
+
+  icon.addEventListener('mouseenter', () => {
+    const rect = icon.getBoundingClientRect();
+    // Position below the icon
+    let top  = rect.bottom + 8;
+    let left = rect.left;
+
+    // Clamp so box never goes off right edge of viewport
+    const boxW = 230;
+    if (left + boxW > window.innerWidth - 12) {
+      left = window.innerWidth - boxW - 12;
+    }
+    // Clamp left edge
+    if (left < 8) left = 8;
+
+    box.style.top  = top  + 'px';
+    box.style.left = left + 'px';
+
+    // Move arrow to point at icon
+    const arrowLeft = Math.max(8, rect.left + rect.width / 2 - left - 6);
+    box.style.setProperty('--arrow-left', arrowLeft + 'px');
+    box.classList.add('visible');
+  });
+
+  icon.addEventListener('mouseleave', () => {
+    box.classList.remove('visible');
+  });
+});
+
+
+// ── Panel resizer ──────────────────────────────────────────────────────────
+(function() {
+  const resizer   = document.getElementById('panelResizer');
+  const leftPanel = document.querySelector('.panel-left');
+  const shell     = document.querySelector('.shell');
+
+  if (!resizer || !leftPanel) return;
+
+  const MIN_WIDTH = 260;   // px — left panel minimum
+  const MAX_WIDTH = 600;   // px — left panel maximum
+
+  let startX     = 0;
+  let startWidth = 0;
+
+  resizer.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    startX     = e.clientX;
+    startWidth = leftPanel.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.classList.add('is-resizing');
+
+    function onMouseMove(e) {
+      const dx       = e.clientX - startX;
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
+      leftPanel.style.width    = newWidth + 'px';
+      leftPanel.style.minWidth = newWidth + 'px';
+    }
+
+    function onMouseUp() {
+      resizer.classList.remove('dragging');
+      document.body.classList.remove('is-resizing');
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup',   onMouseUp);
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup',   onMouseUp);
+  });
+
+  // Touch support
+  resizer.addEventListener('touchstart', function(e) {
+    startX     = e.touches[0].clientX;
+    startWidth = leftPanel.offsetWidth;
+    resizer.classList.add('dragging');
+
+    function onTouchMove(e) {
+      const dx       = e.touches[0].clientX - startX;
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
+      leftPanel.style.width    = newWidth + 'px';
+      leftPanel.style.minWidth = newWidth + 'px';
+    }
+
+    function onTouchEnd() {
+      resizer.classList.remove('dragging');
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend',  onTouchEnd);
+    }
+
+    document.addEventListener('touchmove', onTouchMove);
+    document.addEventListener('touchend',  onTouchEnd);
+  }, { passive: true });
+})();
+
+</script>
+</body>
+</html>
