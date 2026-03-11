@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Document Alignment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:    #F5F0EA;
+      --cream-mid:#EDE6DC;
+      --paper:    #FDFAF6;
+      --ink:      #1A1614;
+      --ink-mid:  #4A3F38;
+      --ink-soft: #8A7F78;
+      --rust:     #C8522A;
+      --rust-lt:  #E07050;
+      --border:   #D8CFC6;
+      --success:  #3A7D6A;
+      --card:     #FFFFFF;
+      --shadow:   0 2px 16px rgba(26,22,20,0.08);
+      --shadow-lg:0 8px 40px rgba(26,22,20,0.14);
+      --radius:   14px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--cream);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      line-height: 1.6;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 48px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 22px;
+      letter-spacing: -0.3px;
+    }
+    .logo span { color: var(--rust); }
+
+    .logo-sub {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin-left: 10px;
+    }
+
+    .header-tag {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink-mid);
+      background: var(--cream-mid);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px;
+    }
+    .header-tag::before {
+      content: '';
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    /* ── MAIN ── */
+    main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 56px 24px 80px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 38px;
+      line-height: 1.15;
+      color: var(--ink);
+      margin-bottom: 14px;
+    }
+    .hero h1 em {
+      font-style: italic;
+      color: var(--rust);
+    }
+    .hero p {
+      font-size: 15px;
+      color: var(--ink-soft);
+      max-width: 460px;
+      margin: 0 auto;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding: 32px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 17px;
+      color: var(--ink);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .step {
+      width: 24px; height: 24px;
+      background: var(--rust);
+      color: white;
+      border-radius: 50%;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ── DROP ZONE ── */
+    .drop-zone {
+      border: 2px dashed var(--rust-lt);
+      border-radius: 12px;
+      background: #FDF7F4;
+      padding: 48px 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.over {
+      background: #FAF0EC;
+      border-color: var(--rust);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+
+    .drop-icon {
+      width: 56px; height: 56px;
+      background: white;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 24px;
+    }
+
+    .drop-zone h3 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .drop-zone p {
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+    .drop-zone p a {
+      color: var(--rust);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .drop-zone p span {
+      margin: 0 6px;
+      color: var(--border);
+    }
+
+    /* ── FILE PILL ── */
+    .file-pill {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink-mid);
+    }
+    .file-pill.visible { display: flex; }
+    .file-pill .file-icon { font-size: 20px; }
+    .file-pill .file-name { flex: 1; }
+    .file-pill .remove {
+      cursor: pointer; color: var(--ink-soft);
+      font-size: 16px; line-height: 1;
+      transition: color 0.15s;
+    }
+    .file-pill .remove:hover { color: var(--rust); }
+
+    /* ── ANALYSE BUTTON ── */
+    .btn-analyse {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 15px;
+      margin-top: 20px;
+      background: var(--ink);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-analyse:hover {
+      background: #2E2420;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(26,22,20,0.18);
+    }
+    .btn-analyse:disabled {
+      opacity: 0.45; cursor: not-allowed; transform: none;
+    }
+
+    /* ── FORMAT OPTIONS ── */
+    #format-card { display: none; }
+
+    .format-section {
+      border-bottom: 1px solid var(--cream-mid);
+      padding-bottom: 24px;
+      margin-bottom: 24px;
+    }
+    .format-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .format-section h4 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 15px;
+      color: var(--ink);
+      margin-bottom: 16px;
+      text-transform: capitalize;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    select {
+      appearance: none;
+      background: var(--cream) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A7F78' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 32px 9px 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    select:focus {
+      outline: none;
+      border-color: var(--rust);
+      box-shadow: 0 0 0 3px rgba(200,82,42,0.12);
+    }
+
+    /* ── CHECKBOX GROUP ── */
+    .checkbox-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .check-item:hover { border-color: var(--rust-lt); background: #FDF7F4; }
+    .check-item input[type="checkbox"] { display: none; }
+    .check-item .checkmark {
+      width: 16px; height: 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 4px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      background: white;
+    }
+    .check-item input:checked ~ .checkmark {
+      background: var(--rust);
+      border-color: var(--rust);
+    }
+    .check-item input:checked ~ .checkmark::after {
+      content: '';
+      width: 4px; height: 7px;
+      border: 1.5px solid white;
+      border-top: none; border-left: none;
+      transform: rotate(45deg) translateY(-1px);
+      display: block;
+    }
+    .check-item span {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink-mid);
+      line-height: 1.3;
+    }
+
+    /* ── ACTION BUTTONS ── */
+    .btn-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .btn {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px;
+      padding: 13px 20px;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.18s;
+      border: none;
+    }
+
+    .btn-outline {
+      background: white;
+      border: 1.5px solid var(--border);
+      color: var(--ink-mid);
+    }
+    .btn-outline:hover {
+      border-color: var(--rust);
+      color: var(--rust);
+      background: #FDF7F4;
+    }
+
+    .btn-primary {
+      background: var(--rust);
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #B24420;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(200,82,42,0.3);
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      top: 28px; right: 28px;
+      background: var(--ink);
+      color: white;
+      padding: 13px 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.3s, transform 0.3s;
+      z-index: 999;
+      pointer-events: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    #toast.success { background: var(--success); }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ── MODAL ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(26,22,20,0.65);
+      z-index: 500;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; align-items: center; justify-content: center; }
+
+    .modal-box {
+      background: white;
+      border-radius: 16px;
+      width: 88vw; height: 88vh;
+      max-width: 960px;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-header span {
+      font-family: 'DM Serif Display', serif;
+      font-size: 17px;
+    }
+    .modal-close {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; color: var(--ink-mid);
+      transition: background 0.15s;
+    }
+    .modal-close:hover { background: var(--cream-mid); }
+
+    #previewFrame {
+      flex: 1;
+      border: none;
+      background: var(--cream);
+    }
+
+    /* ── LIVE PREVIEW ── */
+    .live-preview-wrap {
+      margin-top: 18px;
+    }
+    .live-preview-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .live-preview-label::before {
+      content: '';
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--rust);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+
+    .live-preview-doc {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: inset 0 1px 4px rgba(26,22,20,0.04);
+    }
+    /* Subtle paper lines */
+    .live-preview-doc::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: repeating-linear-gradient(
+        transparent,
+        transparent 27px,
+        #EDE6DC 27px,
+        #EDE6DC 28px
+      );
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    .preview-text {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12.5px;
+      color: var(--ink);
+      position: relative;
+      z-index: 1;
+      transition: text-align 0.25s ease, line-height 0.25s ease;
+    }
+
+    /* Alignment indicator badges */
+    .align-badges {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .align-badge {
+      flex: 1;
+      padding: 7px 8px;
+      border-radius: 7px;
+      border: 1.5px solid var(--border);
+      background: var(--cream);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .align-badge:hover { border-color: var(--rust-lt); background: #FDF7F4; }
+    .align-badge.active { border-color: var(--rust); background: #FDF7F4; }
+
+    .align-badge svg { width: 28px; height: 18px; }
+    .align-badge span {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .align-badge.active span { color: var(--rust); }
+
+    /* Spacing indicator */
+    .spacing-badges {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .spacing-badge {
+      flex: 1;
+      padding: 7px 6px;
+      border-radius: 7px;
+      border: 1.5px solid var(--border);
+      background: var(--cream);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .spacing-badge:hover { border-color: var(--rust-lt); background: #FDF7F4; }
+    .spacing-badge.active { border-color: var(--rust); background: #FDF7F4; }
+    .spacing-badge .lines {
+      display: flex; flex-direction: column; gap: var(--g, 2px);
+      width: 30px;
+    }
+    .spacing-badge .lines .bline {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .spacing-badge .lines .bullet {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--ink-soft);
+      flex-shrink: 0;
+    }
+    .spacing-badge .lines .btext {
+      height: 2px;
+      border-radius: 1px;
+      background: var(--ink-soft);
+      flex: 1;
+    }
+    .spacing-badge.active .lines .bullet { background: var(--rust); }
+    .spacing-badge.active .lines .btext  { background: var(--rust); }
+
+    /* Leave-as-is badge */
+    .leave-badge {
+      flex: 1;
+      padding: 7px 8px;
+      border-radius: 7px;
+      border: 1.5px dashed var(--border);
+      background: var(--paper);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .leave-badge:hover { border-color: var(--ink-soft); }
+    .leave-badge.active { border-color: var(--ink); background: var(--cream-mid); }
+    .leave-badge .leave-icon {
+      font-size: 14px;
+      line-height: 1;
+    }
+    .leave-badge span {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .leave-badge.active span { color: var(--ink); }
+    .spacing-badge span {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .spacing-badge.active span { color: var(--rust); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      height: 1px;
+      background: var(--cream-mid);
+      margin: 0;
+    }
+
+    /* ── SPINNER ── */
+    .spin {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      header { padding: 16px 20px; }
+      main { padding: 36px 16px 60px; }
+      .hero h1 { font-size: 28px; }
+      .form-row, .checkbox-grid, .btn-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div style="display:flex; align-items:baseline; gap:4px;">
+      <div class="logo"><span>Prose</span>Check</div>
+      <div class="logo-sub">Document Editor</div>
+    </div>
+    <div class="header-tag">en-US &nbsp;·&nbsp; DOCX Formatter</div>
+  </header>
+
+  <!-- MAIN -->
+  <main>
+
+    <div class="hero">
+      <h1>Format your document<br>with <em>precision</em></h1>
+      <p>Upload a .docx file and we'll detect its structure, then apply your alignment, spacing, and paragraph formatting.</p>
+    </div>
+
+    <!-- STEP 1: UPLOAD -->
+    <div class="card" id="upload-card">
+      <div class="card-title">
+        <span class="step">1</span>
+        Upload Document
+      </div>
+
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".docx" />
+        <div class="drop-icon">📄</div>
+        <h3>Drop your document here</h3>
+        <p>or <a>browse to upload</a><span>·</span>.docx files only</p>
+      </div>
+
+      <div class="file-pill" id="filePill">
+        <span class="file-icon">📝</span>
+        <span class="file-name" id="fileName">—</span>
+        <span class="remove" id="removeFile">✕</span>
+      </div>
+
+      <button class="btn-analyse" id="analyseBtn" disabled onclick="analyse()">
+        ✦ Analyse Document
+      </button>
+    </div>
+
+    <!-- STEP 2: FORMAT OPTIONS -->
+    <div class="card" id="format-card">
+      <div class="card-title">
+        <span class="step">2</span>
+        Formatting Options
+      </div>
+
+      <div id="format-sections"></div>
+
+      <div class="divider" style="margin: 24px 0;"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="previewDoc()">
+          👁 Preview
+        </button>
+        <button class="btn btn-primary" onclick="downloadDoc()">
+          ↓ Download DOCX
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- TOAST -->
+  <div id="toast">✓ <span id="toastMsg"></span></div>
+
+  <!-- PREVIEW MODAL -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>Document Preview</span>
+        <div class="modal-close" onclick="closePreview()">✕</div>
+      </div>
+      <iframe id="previewFrame"></iframe>
+    </div>
+  </div>
+
+  <script>
+    // ─── STATE ───────────────────────────────────────────────
+    let detectedTypes = [];
+    let currentConfig = null;
+
+    // ─── FILE HANDLING ────────────────────────────────────────
+    const fileInput  = document.getElementById('fileInput');
+    const filePill   = document.getElementById('filePill');
+    const fileName   = document.getElementById('fileName');
+    const analyseBtn = document.getElementById('analyseBtn');
+    const dropZone   = document.getElementById('dropZone');
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) setFile(fileInput.files[0]);
+    });
+
+    document.getElementById('removeFile').addEventListener('click', (e) => {
+      e.stopPropagation();
+      fileInput.value = '';
+      filePill.classList.remove('visible');
+      analyseBtn.disabled = true;
+      document.getElementById('format-card').style.display = 'none';
+    });
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+    dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('over');
+      const f = e.dataTransfer.files[0];
+      if (f && f.name.endsWith('.docx')) { setFile(f); }
+      else showToast('Please upload a .docx file', false);
+    });
+
+    function setFile(f) {
+      fileName.textContent = f.name;
+      filePill.classList.add('visible');
+      analyseBtn.disabled = false;
+    }
+
+    // ─── TOAST ────────────────────────────────────────────────
+    function showToast(msg, success = true) {
+      const t = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      t.className = 'show' + (success ? ' success' : '');
+      setTimeout(() => { t.className = ''; }, 3500);
+    }
+
+    // ─── ANALYSE ──────────────────────────────────────────────
+    async function analyse() {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      analyseBtn.innerHTML = '<span class="spin"></span> Analysing…';
+      analyseBtn.disabled = true;
+
+      const fd = new FormData();
+      fd.append('file', file);
+
+      try {
+        const res  = await fetch('analyse', { method: 'POST', body: fd });
+        const data = await res.json();
+
+        detectedTypes = data.types;
+        buildFormatUI(detectedTypes);
+
+        document.getElementById('format-card').style.display = 'block';
+        document.getElementById('format-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        showToast('Document analysed successfully');
+      } catch(err) {
+        showToast('Analysis failed. Please try again.', false);
+      } finally {
+        analyseBtn.innerHTML = '✦ Analyse Document';
+        analyseBtn.disabled = false;
+      }
+    }
+
+    // ─── SAMPLE TEXT ─────────────────────────────────────────
+    const SAMPLE_PARA = `Typography is the art of arranging type to make written language legible, readable, and appealing. Good formatting guides the reader's eye and establishes hierarchy. The spacing between lines and the alignment of text significantly affect how comfortable a document feels to read.`;
+
+    const SAMPLE_LIST = ['Design principles for clear typography', 'Alignment affects readability and tone', 'Line spacing guides the reader\'s eye', 'Consistent formatting builds document structure'];
+
+    // SVG icons for alignment badges
+    const ALIGN_ICONS = {
+      left:    `<svg viewBox="0 0 28 18" fill="none"><rect x="0" y="1" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="6" width="20" height="2" rx="1" fill="currentColor"/><rect x="0" y="11" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="16" width="16" height="2" rx="1" fill="currentColor"/></svg>`,
+      right:   `<svg viewBox="0 0 28 18" fill="none"><rect x="0" y="1" width="28" height="2" rx="1" fill="currentColor"/><rect x="8" y="6" width="20" height="2" rx="1" fill="currentColor"/><rect x="0" y="11" width="28" height="2" rx="1" fill="currentColor"/><rect x="12" y="16" width="16" height="2" rx="1" fill="currentColor"/></svg>`,
+      justify: `<svg viewBox="0 0 28 18" fill="none"><rect x="0" y="1" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="6" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="11" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="16" width="28" height="2" rx="1" fill="currentColor"/></svg>`,
+    };
+
+    // Bullet-list icon for spacing badges
+    function bulletLinesHTML(gap) {
+      return `<div class="lines" style="--g:${gap}px">
+        <div class="bline"><div class="bullet"></div><div class="btext"></div></div>
+        <div class="bline"><div class="bullet"></div><div class="btext"></div></div>
+        <div class="bline"><div class="bullet"></div><div class="btext"></div></div>
+        <div class="bline"><div class="bullet"></div><div class="btext"></div></div>
+      </div>`;
+    }
+
+    // ─── BUILD FORMAT UI ──────────────────────────────────────
+    function buildFormatUI(types) {
+      const container = document.getElementById('format-sections');
+      container.innerHTML = '';
+
+      types.forEach(t => {
+        // Choose preview content based on type
+        const isListType = (t === 'list');
+        const previewContent = isListType
+          ? `<ul style="padding-left:18px; margin:0; list-style:disc;">${SAMPLE_LIST.map(i=>`<li class="preview-text" style="transition:line-height 0.25s;">${i}</li>`).join('')}</ul>`
+          : `<div class="preview-text" id="${t}_preview_text">${SAMPLE_PARA}</div>`;
+
+        const sec = document.createElement('div');
+        sec.className = 'format-section';
+        sec.innerHTML = `
+          <h4>${t} settings</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Alignment</label>
+              <select id="${t}_alignment">
+                <option value="" selected>Default</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+                <option value="justify">Justify</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Line Spacing</label>
+              <select id="${t}_spacing">
+                <option value="" selected>Default</option>
+                <option value="1">Single</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">Double</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- LIVE PREVIEW -->
+          <div class="live-preview-wrap">
+            <div class="live-preview-label">Live Preview</div>
+
+            <!-- Alignment visual badges (clickable) -->
+            <div class="align-badges" id="${t}_align_badges">
+              <div class="leave-badge active" data-type="${t}" data-val="" data-kind="align">
+                <span class="leave-icon">↩</span>
+                <span>Default</span>
+              </div>
+              <div class="align-badge" data-type="${t}" data-val="left">
+                ${ALIGN_ICONS.left}
+                <span>Left</span>
+              </div>
+              <div class="align-badge" data-type="${t}" data-val="right">
+                ${ALIGN_ICONS.right}
+                <span>Right</span>
+              </div>
+              <div class="align-badge" data-type="${t}" data-val="justify">
+                ${ALIGN_ICONS.justify}
+                <span>Justify</span>
+              </div>
+            </div>
+
+            <!-- Spacing visual badges (clickable) -->
+            <div class="spacing-badges" id="${t}_spacing_badges">
+              <div class="leave-badge active" data-type="${t}" data-val="" data-kind="spacing">
+                <span class="leave-icon">↩</span>
+                <span>Default</span>
+              </div>
+              <div class="spacing-badge" data-type="${t}" data-val="1">
+                ${bulletLinesHTML(2)}
+                <span>Single</span>
+              </div>
+              <div class="spacing-badge" data-type="${t}" data-val="1.5">
+                ${bulletLinesHTML(5)}
+                <span>1.5×</span>
+              </div>
+              <div class="spacing-badge" data-type="${t}" data-val="2">
+                ${bulletLinesHTML(9)}
+                <span>Double</span>
+              </div>
+            </div>
+
+            <!-- Text / list render preview -->
+            <div class="live-preview-doc" style="margin-top:10px;" id="${t}_preview_box">
+              ${previewContent}
+            </div>
+          </div>
+        `;
+        container.appendChild(sec);
+
+        const alignSel  = document.getElementById(`${t}_alignment`);
+        const spaceSel  = document.getElementById(`${t}_spacing`);
+        const previewBox = document.getElementById(`${t}_preview_box`);
+
+        function getPreviewEl() {
+          return isListType
+            ? previewBox.querySelectorAll('li')
+            : [document.getElementById(`${t}_preview_text`)];
+        }
+
+        function updatePreview() {
+          const align   = alignSel.value;
+          const spacing = spaceSel.value ? parseFloat(spaceSel.value) : null;
+          getPreviewEl().forEach(el => {
+            el.style.textAlign  = align || '';
+            el.style.lineHeight = spacing ? (spacing * 1.6) : '';
+          });
+        }
+
+        // Alignment badge clicks
+        sec.querySelectorAll(`#${t}_align_badges [data-type="${t}"]`).forEach(badge => {
+          badge.addEventListener('click', () => {
+            alignSel.value = badge.dataset.val;
+            sec.querySelectorAll(`#${t}_align_badges [data-type="${t}"]`).forEach(b => {
+              b.classList.remove('active');
+              if (b.querySelector('svg')) b.querySelector('svg').style.color = '';
+            });
+            badge.classList.add('active');
+            if (badge.querySelector('svg')) badge.querySelector('svg').style.color = 'var(--rust)';
+            updatePreview();
+          });
+        });
+
+        // Spacing badge clicks
+        sec.querySelectorAll(`#${t}_spacing_badges [data-type="${t}"]`).forEach(badge => {
+          badge.addEventListener('click', () => {
+            spaceSel.value = badge.dataset.val;
+            sec.querySelectorAll(`#${t}_spacing_badges [data-type="${t}"]`).forEach(b => b.classList.remove('active'));
+            badge.classList.add('active');
+            updatePreview();
+          });
+        });
+
+        // Select → badge sync for alignment
+        alignSel.addEventListener('change', () => {
+          sec.querySelectorAll(`#${t}_align_badges [data-type="${t}"]`).forEach(b => {
+            const active = b.dataset.val === alignSel.value;
+            b.classList.toggle('active', active);
+            if (b.querySelector('svg')) b.querySelector('svg').style.color = active ? 'var(--rust)' : '';
+          });
+          updatePreview();
+        });
+
+        // Select → badge sync for spacing
+        spaceSel.addEventListener('change', () => {
+          sec.querySelectorAll(`#${t}_spacing_badges [data-type="${t}"]`).forEach(b => {
+            b.classList.toggle('active', b.dataset.val === spaceSel.value);
+          });
+          updatePreview();
+        });
+
+        updatePreview();
+      });
+
+      if (types.includes('paragraph')) {
+        const sec = document.createElement('div');
+        sec.className = 'format-section';
+        sec.innerHTML = `
+          <h4>Paragraph Spacing</h4>
+          <div class="checkbox-grid">
+            <label class="check-item">
+              <input type="checkbox" class="spacingOpt" value="add_before">
+              <span class="checkmark"></span>
+              <span>Add space before</span>
+            </label>
+            <label class="check-item">
+              <input type="checkbox" class="spacingOpt" value="add_after">
+              <span class="checkmark"></span>
+              <span>Add space after</span>
+            </label>
+            <label class="check-item">
+              <input type="checkbox" class="spacingOpt" value="remove_before">
+              <span class="checkmark"></span>
+              <span>Remove space before</span>
+            </label>
+            <label class="check-item">
+              <input type="checkbox" class="spacingOpt" value="remove_after">
+              <span class="checkmark"></span>
+              <span>Remove space after</span>
+            </label>
+          </div>
+
+          <!-- Paragraph spacing preview -->
+          <div class="live-preview-wrap">
+            <div class="live-preview-label">Paragraph Spacing Preview</div>
+            <div class="live-preview-doc" id="para_spacing_preview">
+              <p class="preview-text" id="para_p1" style="margin:0;">${SAMPLE_PARA.slice(0,130)}</p>
+              <p class="preview-text" id="para_p2" style="margin:0;">${SAMPLE_PARA.slice(130)}</p>
+            </div>
+          </div>
+        `;
+        container.appendChild(sec);
+
+        sec.querySelectorAll('.spacingOpt').forEach(cb => {
+          cb.addEventListener('change', updateParaSpacingPreview);
+        });
+
+        function updateParaSpacingPreview() {
+          const checked = [...sec.querySelectorAll('.spacingOpt:checked')].map(c => c.value);
+          const p1 = document.getElementById('para_p1');
+          const p2 = document.getElementById('para_p2');
+          let mt1 = 0, mb1 = 0, mt2 = 0, mb2 = 0;
+          if (checked.includes('add_before'))    { mt1 = 12; mt2 = 12; }
+          if (checked.includes('add_after'))     { mb1 = 12; mb2 = 12; }
+          if (checked.includes('remove_before')) { mt1 = 0;  mt2 = 0; }
+          if (checked.includes('remove_after'))  { mb1 = 0;  mb2 = 0; }
+          p1.style.marginTop    = mt1 + 'px';
+          p1.style.marginBottom = mb1 + 'px';
+          p2.style.marginTop    = mt2 + 'px';
+          p2.style.marginBottom = mb2 + 'px';
+        }
+      }
+    }
+
+    // ─── BUILD CONFIG ─────────────────────────────────────────
+    // Only include alignment/spacing in config when user made an explicit choice (non-empty value).
+    // Empty string means "leave as is" — skip that key so the backend won't touch it.
+    function buildConfig() {
+      const cfg = {};
+      detectedTypes.forEach(t => {
+        const aVal = document.getElementById(`${t}_alignment`).value;
+        const sVal = document.getElementById(`${t}_spacing`).value;
+        if (aVal) cfg[`${t}_alignment`] = aVal;
+        if (sVal) cfg[`${t}_spacing`]   = sVal;
+      });
+      const opts = [];
+      document.querySelectorAll('.spacingOpt').forEach(cb => {
+        if (cb.checked) opts.push(cb.value);
+      });
+      cfg['paragraph_spacing_options'] = opts;
+      return cfg;
+    }
+
+    // ─── PREVIEW ──────────────────────────────────────────────
+    async function previewDoc() {
+      const file = fileInput.files[0];
+      if (!file) return;
+      showToast('Preparing preview…');
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('config', JSON.stringify(buildConfig()));
+
+      try {
+        const res  = await fetch('preview', { method: 'POST', body: fd });
+        const blob = await res.blob();
+        document.getElementById('previewFrame').src = URL.createObjectURL(blob);
+        document.getElementById('modal').classList.add('open');
+      } catch(err) {
+        showToast('Preview failed.', false);
+      }
+    }
+
+    function closePreview() {
+      document.getElementById('modal').classList.remove('open');
+    }
+
+    document.getElementById('modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('modal')) closePreview();
+    });
+
+    // ─── DOWNLOAD ─────────────────────────────────────────────
+    async function downloadDoc() {
+      const file = fileInput.files[0];
+      if (!file) return;
+      showToast('Downloading your document…');
+
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('config', JSON.stringify(buildConfig()));
+
+      try {
+        const res  = await fetch('format', { method: 'POST', body: fd });
+        const blob = await res.blob();
+        const a    = document.createElement('a');
+        a.href     = URL.createObjectURL(blob);
+        a.download = 'formatted.docx';
+        a.click();
+        showToast('Document downloaded!');
+      } catch(err) {
+        showToast('Download failed.', false);
+      }
+    }
+  </script>
+</body>
+</html>
