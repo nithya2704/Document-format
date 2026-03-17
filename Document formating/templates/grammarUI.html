@@ -634,27 +634,14 @@
 
 <main>
 
-  <!-- UPLOAD SECTION -->
+  <!-- ANALYSE SECTION — no file upload; document comes from the session -->
   <section class="upload-section" id="upload-section">
     <div class="upload-eyebrow">Grammar & Style Analysis</div>
     <h1 class="upload-headline">Polish your prose,<br/>word by word.</h1>
-    <p class="upload-subline">Upload a Word document and let ProseCheck surface every grammar and spelling issue for your review.</p>
-
-    <div class="drop-zone" id="drop-zone">
-      <input type="file" id="file-input" accept=".docx" />
-      <div class="drop-icon">📄</div>
-      <div class="drop-label">Drop your document here</div>
-      <div class="drop-hint">or <strong>browse to upload</strong> &nbsp;·&nbsp; .docx files only</div>
-    </div>
-
-    <div class="file-name-pill" id="file-pill">
-      <span class="file-icon">📝</span>
-      <span id="file-name-label">document.docx</span>
-      <button class="file-remove" id="remove-file" title="Remove file">×</button>
-    </div>
+    <p class="upload-subline">Your document has been uploaded. Click below to detect grammar and spelling issues.</p>
 
     <div>
-      <button class="btn-analyze" id="analyze-btn" disabled>
+      <button class="btn-analyze" id="analyze-btn">
         <span class="btn-text">✦ &nbsp;Analyze Document</span>
         <span class="btn-spinner"><span class="spinner"></span></span>
       </button>
@@ -688,97 +675,59 @@
     <div id="issues-container"></div>
   </section>
 
-  <!-- DOWNLOAD SECTION -->
-  <div id="download-section">
-    <div style="font-size:40px; margin-bottom:16px;">✓</div>
-    <div class="download-headline">Your document is ready.</div>
-    <p class="download-sub">All selected corrections have been applied.</p>
-    <div class="download-summary">
-      <span><strong id="dl-accepted">0</strong> corrections applied</span>
-      <span><strong id="dl-declined">0</strong> ignored</span>
-    </div>
-    <br/>
-    <button class="btn-download" id="download-btn">
-      ↓ &nbsp; Download Corrected Document
-    </button>
-  </div>
-
 </main>
-
-<!-- COMPLETE BANNER -->
-<div id="complete-banner">
-  <span>🎉</span> All issues reviewed — your document is ready to download!
-</div>
 
 <script>
 // ── STATE ──
 let reportData = [];
-let decisions = {}; // { errorKey: { action: 'accept'|'decline', suggestion: string|null } }
+let decisions = {};
 let totalIssues = 0;
 let resolvedCount = 0;
-let selectedFile = null;
 
 // ── ELEMENTS ──
-const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElementById('file-input');
-const filePill = document.getElementById('file-pill');
-const fileNameLabel = document.getElementById('file-name-label');
-const removeFileBtn = document.getElementById('remove-file');
-const analyzeBtn = document.getElementById('analyze-btn');
-const statsBar = document.getElementById('stats-bar');
-const resultsSection = document.getElementById('results-section');
+const analyzeBtn      = document.getElementById('analyze-btn');
+const statsBar        = document.getElementById('stats-bar');
+const resultsSection  = document.getElementById('results-section');
 const issuesContainer = document.getElementById('issues-container');
-const downloadSection = document.getElementById('download-section');
-const completeBanner = document.getElementById('complete-banner');
-const divider = document.getElementById('divider');
-
-// ── FILE HANDLING ──
-fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) selectFile(fileInput.files[0]);
-});
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
-});
-
-removeFileBtn.addEventListener('click', () => {
-  selectedFile = null;
-  fileInput.value = '';
-  filePill.classList.remove('visible');
-  analyzeBtn.disabled = true;
-});
-
-function selectFile(file) {
-  selectedFile = file;
-  fileNameLabel.textContent = file.name;
-  filePill.classList.add('visible');
-  analyzeBtn.disabled = false;
-}
+const divider         = document.getElementById('divider');
 
 // ── ANALYZE ──
 analyzeBtn.addEventListener('click', async () => {
-  if (!selectedFile) return;
-
   analyzeBtn.classList.add('loading');
   analyzeBtn.disabled = true;
 
-  const formData = new FormData();
-  formData.append('file', selectedFile);
-
   try {
-    const res = await fetch('', { method: 'POST', body: formData });
+    const res  = await fetch('', { method: 'POST', body: new FormData() });
     const data = await res.json();
+    if (data.error) throw new Error(data.error);
     renderResults(data);
+    // Tell parent shell this tool now has unsaved work.
+    window.parent.postMessage({ type: 'toolDirty' }, '*');
   } catch (err) {
     console.error(err);
-    alert('An error occurred while analyzing the document.');
+    alert('An error occurred: ' + err.message);
   } finally {
     analyzeBtn.classList.remove('loading');
     analyzeBtn.disabled = false;
+  }
+});
+
+// ── tabResumed — session file may have changed while away ─────────────────
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'tabResumed') {
+    // Reset all results so user re-analyses the updated document.
+    reportData    = [];
+    decisions     = {};
+    totalIssues   = 0;
+    resolvedCount = 0;
+    statsBar.classList.remove('visible');
+    resultsSection.classList.remove('visible');
+    issuesContainer.innerHTML = '';
+    divider.style.display = 'none';
+    // Update the headline to prompt re-analysis.
+    const subline = document.querySelector('.upload-subline');
+    if (subline) subline.textContent = 'The document was updated by another tool. Click Analyze to reload.';
+    window.parent.postMessage({ type: 'toolClean' }, '*');
   }
 });
 
@@ -805,8 +754,6 @@ function renderResults(data) {
   statsBar.classList.add('visible');
   divider.style.display = 'block';
   resultsSection.classList.add('visible');
-  downloadSection.classList.remove('visible');
-  completeBanner.classList.remove('visible');
 
   issuesContainer.innerHTML = '';
 
@@ -989,51 +936,28 @@ function undoError(key) {
   resolvedCount--;
   document.getElementById('stat-resolved').textContent = resolvedCount;
   document.getElementById('progress-text').textContent = resolvedCount;
-
-  // Hide download section if it was shown
-  document.getElementById('download-section').classList.remove('visible');
-  document.getElementById('complete-banner').classList.remove('visible');
 }
 
-function showDownload() {
-  const accepted = Object.values(decisions).filter(d => d.action === 'accept').length;
-  const declined = Object.values(decisions).filter(d => d.action === 'decline').length;
-  document.getElementById('dl-accepted').textContent = accepted;
-  document.getElementById('dl-declined').textContent = declined;
-  downloadSection.classList.add('visible');
-  completeBanner.classList.add('visible');
-  downloadSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  setTimeout(() => completeBanner.classList.remove('visible'), 5000);
-}
-
-// ── DOWNLOAD ──
-document.getElementById('download-btn').addEventListener('click', async () => {
-  const btn = document.getElementById('download-btn');
-  btn.textContent = 'Preparing…';
-  btn.style.opacity = '0.7';
-
-  const formData = new FormData();
-  formData.append('file', selectedFile);
-  formData.append('decisions', JSON.stringify(decisions));
-  formData.append('report', JSON.stringify(reportData));
-
+async function showDownload() {
+  // Apply all accepted corrections to the server's working file first,
+  // so the parent modal's /download_current serves the corrected version.
   try {
+    const formData = new FormData();
+    formData.append('decisions',     JSON.stringify(decisions));
+    formData.append('report',        JSON.stringify(reportData));
+    formData.append('original_name', 'document.docx');
     const res = await fetch('download', { method: 'POST', body: formData });
-    if (!res.ok) throw new Error('Download failed');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (selectedFile.name.replace('.docx','') + '_corrected.docx');
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!res.ok) throw new Error('Failed to apply corrections');
+    // Drain the response blob so the server finishes writing the file,
+    // but we don't trigger a browser download here — the parent modal does that.
+    await res.blob();
   } catch (err) {
-    alert('Error generating document. Please try again.');
-  } finally {
-    btn.innerHTML = '↓ &nbsp; Download Corrected Document';
-    btn.style.opacity = '1';
+    alert('Error applying corrections: ' + err.message);
+    return;
   }
-});
+  // Tell the parent shell to show the "Download or another tool?" modal.
+  window.parent.postMessage({ type: 'taskComplete' }, '*');
+}
 
 // ── UTILS ──
 function escHtml(str) {
