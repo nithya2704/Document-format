@@ -60,7 +60,7 @@ header{
 /* ── HOME PAGE ── */
 #frame-home{
   display:flex;flex-direction:column;align-items:center;
-  justify-content:center;text-align:center;padding:60px;overflow-y:auto;
+  justify-content:flex-start;text-align:center;padding:60px;overflow-y:auto;
 }
 .intro-eyebrow{font-size:12px;letter-spacing:2px;color:var(--accent);margin-bottom:10px;}
 .intro-title{font-family:'Playfair Display',serif;font-size:40px;margin-bottom:14px;}
@@ -165,6 +165,10 @@ header{
 
 <!-- SIDEBAR -->
 <div class="sidebar" id="sidebar">
+  <button class="tab-btn active" id="btn-home" onclick="handleHomeClick()">
+    <div class="icon">🏠</div>Home
+  </button>
+  <div style="height:1px;background:var(--border);margin:8px 24px;"></div>
   <button class="tab-btn" id="btn-grammar" data-tab="grammar" disabled>
     <div class="icon">✦</div>Grammar & Spell
   </button>
@@ -291,6 +295,20 @@ function confirmSwitch(targetTool) {
     `Switch anyway?`
   );
 }
+function handleHomeClick() {
+  if (dirtyTool) {
+    const toolNames = { grammar: 'Grammar & Spell', font: 'Font', alignment: 'Alignment' };
+    const confirmed = confirm(
+      `You have unsaved changes in the ${toolNames[dirtyTool] || dirtyTool} tool.\n\n` +
+      `If you switch now, your formatting choices will be lost.\n\n` +
+      `Switch anyway?`
+    );
+    if (!confirmed) return; // ← stays on current tool page
+  }
+  dirtyTool = null;
+  goHome();
+  closeMenu();
+}
 
 function switchToTool(name) {
   const previous = activeTool;
@@ -324,6 +342,7 @@ function goHome() {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-frame').forEach(f => f.classList.remove('active'));
   document.getElementById('frame-home').classList.add('active');
+  document.getElementById('btn-home').classList.add('active'); 
   activeTool = null;
 }
 

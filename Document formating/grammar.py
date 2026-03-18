@@ -106,10 +106,13 @@ def analyze_sentence(sentence):
         error_text = sentence[match.offset: match.offset + match.error_length]
         if _is_abbrev_or_acronym(error_text):
             continue
+        suggestions = match.replacements[:6]
+        if not suggestions:
+            continue
         errors.append({
             "error_text": error_text,
             "message": match.message,
-            "suggestions": match.replacements[:6],
+            "suggestions": suggestions,
         })
     return errors
 
