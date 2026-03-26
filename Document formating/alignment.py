@@ -2,6 +2,7 @@ from flask import Blueprint, request, render_template, jsonify, send_file
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
+import docx2pdf
 import os
 import json
 import uuid
