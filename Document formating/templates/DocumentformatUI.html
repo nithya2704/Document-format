@@ -1,454 +1,475 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
-  <meta http-equiv="Pragma" content="no-cache"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Document Formatter</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-  <style>
-    :root {
-      --ink: #1a1614;
-      --paper: #faf8f4;
-      --cream: #f2ede3;
-      --warm-mid: #e8dfc8;
-      --accent: #c4451e;
-      --accent-soft: #f5ebe6;
-      --accent-hover: #a83718;
-      --muted: #8a7f74;
-      --border: #d9cfc0;
-      --sidebar-w: 260px;
-      --shadow: 0 4px 24px rgba(26,22,20,0.08);
-      --shadow-lg: 0 12px 48px rgba(26,22,20,0.14);
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocFormat</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#c4451e;
+  --paper:#faf8f4;
+  --cream:#f2ede3;
+  --border:#d9cfc0;
+  --ink:#1a1614;
+  --muted:#7c7268;
+  --sidebar:260px;
+  --green:#2d6a4f;
+  --green-soft:#e8f5ee;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--paper);color:var(--ink);overflow:hidden;}
+.app{display:flex;flex-direction:column;height:100vh;}
 
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── HEADER ── */
+header{
+  height:64px;display:flex;align-items:center;gap:16px;
+  padding:0 24px;border-bottom:1px solid var(--border);
+  background:var(--paper);z-index:10;
+}
+.logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;}
+.logo span{color:var(--accent);}
+.menu-btn{font-size:24px;background:none;border:none;cursor:pointer;color:var(--ink);}
 
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      font-family: 'DM Sans', sans-serif;
-      background: var(--paper);
-      color: var(--ink);
-    }
+/* ── SIDEBAR ── */
+.sidebar{
+  position:fixed;top:0;left:-260px;width:var(--sidebar);height:100%;
+  background:var(--cream);border-right:1px solid var(--border);
+  padding-top:80px;transition:left .35s cubic-bezier(.4,0,.2,1);z-index:20;
+}
+.sidebar.open{left:0;}
+.tab-btn{
+  display:flex;align-items:center;gap:14px;width:100%;padding:14px 24px;
+  border:none;background:none;font-size:14px;cursor:pointer;
+  color:var(--muted);transition:.2s;text-align:left;
+}
+.tab-btn:hover{background:white;color:var(--ink);}
+.tab-btn.active{background:white;font-weight:600;color:var(--ink);}
+.tab-btn:disabled{opacity:.4;cursor:not-allowed;}
+.icon{width:32px;height:32px;border-radius:8px;background:white;display:flex;align-items:center;justify-content:center;font-size:14px;}
 
-    /* ──────────────────────────────────────────
-       APP SHELL  (full viewport, no scroll)
-    ────────────────────────────────────────── */
-    .app {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
+/* ── OVERLAY ── */
+.overlay{position:fixed;inset:0;backdrop-filter:blur(5px);background:rgba(0,0,0,.15);opacity:0;pointer-events:none;transition:.3s;z-index:15;}
+.overlay.show{opacity:1;pointer-events:auto;}
 
-    /* ── HEADER ── */
-    header {
-      flex-shrink: 0;
-      height: 68px;
-      border-bottom: 1px solid var(--border);
-      padding: 0 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--paper);
-      z-index: 50;
-    }
+/* ── CONTENT ── */
+#content{flex:1;position:relative;}
+.tab-frame{position:absolute;inset:0;border:none;width:100%;height:100%;display:none;}
+.tab-frame.active{display:block;animation:fade .25s ease;}
 
-    .logo { display: flex; align-items: baseline; gap: 8px; }
+/* ── HOME PAGE ── */
+#frame-home{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;text-align:center;padding:60px;overflow-y:auto;
+}
+.intro-eyebrow{font-size:12px;letter-spacing:2px;color:var(--accent);margin-bottom:10px;}
+.intro-title{font-family:'Playfair Display',serif;font-size:40px;margin-bottom:14px;}
+.intro-desc{color:var(--muted);max-width:420px;margin:0 auto 40px;line-height:1.6;}
 
-    .logo-mark {
-      font-family: 'Playfair Display', serif;
-      font-size: 24px; font-weight: 700;
-      color: var(--ink); letter-spacing: -0.5px;
-    }
+/* ── UPLOAD ZONE ── */
+.upload-area{width:100%;max-width:520px;margin:0 auto 32px;}
+.drop-zone{
+  position:relative;border:2px dashed var(--border);border-radius:16px;
+  padding:48px 40px;cursor:pointer;transition:all .25s ease;background:var(--cream);
+}
+.drop-zone:hover,.drop-zone.drag-over{
+  border-color:var(--accent);background:#fdf3f0;
+  transform:translateY(-2px);box-shadow:0 12px 48px rgba(26,22,20,.14);
+}
+.drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-icon{font-size:36px;margin-bottom:12px;}
+.drop-label{font-size:17px;font-weight:500;color:var(--ink);margin-bottom:6px;}
+.drop-hint{font-size:13px;color:var(--muted);}
+.drop-hint strong{color:var(--accent);}
 
-    .logo-mark span { color: var(--accent); }
+.file-pill{
+  display:none;align-items:center;gap:10px;background:white;
+  border:1px solid var(--border);border-radius:10px;padding:12px 18px;
+  margin-top:14px;font-size:14px;color:var(--ink);
+}
+.file-pill.show{display:flex;}
+.file-pill-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;}
+.file-pill-remove{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;line-height:1;transition:color .15s;}
+.file-pill-remove:hover{color:var(--accent);}
 
-    .logo-sub {
-      font-size: 11px; font-weight: 500;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: var(--muted);
-    }
+/* ── TOOL SELECTOR CARDS ── */
+.tool-cards{
+  display:flex;gap:16px;margin:0 auto 32px;max-width:520px;
+  opacity:.4;pointer-events:none;transition:opacity .25s;
+}
+.tool-cards.unlocked{opacity:1;pointer-events:auto;}
+.tool-card{
+  flex:1;background:var(--cream);border:1px solid var(--border);
+  padding:20px 16px;border-radius:12px;cursor:pointer;
+  transition:all .2s;text-align:center;
+}
+.tool-card:hover{transform:translateY(-3px);background:white;box-shadow:0 8px 32px rgba(26,22,20,.1);}
+.tool-card-icon{font-size:22px;margin-bottom:8px;}
+.tool-card-title{font-family:'Playfair Display',serif;font-size:15px;margin-bottom:4px;}
+.tool-card-desc{font-size:12px;color:var(--muted);}
 
-    .header-badge {
-      font-size: 12px; color: var(--muted);
-      border: 1px solid var(--border);
-      padding: 4px 12px; border-radius: 20px;
-      font-family: 'DM Mono', monospace;
-    }
+/* ── POST-TASK MODAL ── */
+.modal-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);
+  z-index:100;align-items:center;justify-content:center;
+}
+.modal-backdrop.show{display:flex;}
+.modal{
+  background:var(--paper);border-radius:16px;padding:40px;
+  max-width:440px;width:90%;text-align:center;
+  box-shadow:0 24px 80px rgba(0,0,0,.25);animation:popUp .3s ease;
+}
+.modal h2{font-family:'Playfair Display',serif;font-size:26px;margin-bottom:10px;}
+.modal p{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:28px;}
+.modal-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn-download{
+  background:var(--accent);color:white;border:none;padding:13px 28px;
+  border-radius:10px;font-size:14px;font-weight:600;font-family:'DM Sans',sans-serif;
+  cursor:pointer;transition:all .2s;
+}
+.btn-download:hover{background:#a83718;transform:translateY(-1px);}
+.btn-another{
+  background:white;color:var(--ink);border:1px solid var(--border);
+  padding:13px 28px;border-radius:10px;font-size:14px;font-weight:500;
+  font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s;
+}
+.btn-another:hover{background:var(--cream);}
+.btn-close-modal{
+  position:absolute;top:14px;right:18px;background:none;border:none;
+  font-size:22px;cursor:pointer;color:var(--muted);line-height:1;
+}
+.modal-wrap{position:relative;}
 
-    /* ── BODY ROW (sidebar + content) ── */
-    .body-row {
-      flex: 1;
-      display: flex;
-      min-height: 0; /* crucial for flex children to shrink */
-      overflow: hidden;
-    }
+/* ── UPLOAD STATUS ── */
+.upload-status{
+  display:none;align-items:center;gap:10px;padding:12px 18px;
+  border-radius:10px;font-size:13px;font-weight:500;margin:0 auto 20px;
+  max-width:520px;
+}
+.upload-status.show{display:flex;}
+.upload-status.ok{background:var(--green-soft);color:var(--green);border:1px solid #a8d5be;}
+.upload-status.err{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;}
+.upload-status.uploading{background:var(--cream);color:var(--muted);border:1px solid var(--border);}
 
-    /* ──────────────────────────────────────────
-       LEFT SIDEBAR
-    ────────────────────────────────────────── */
-    .sidebar {
-      width: var(--sidebar-w);
-      flex-shrink: 0;
-      border-right: 1px solid var(--border);
-      background: var(--cream);
-      display: flex;
-      flex-direction: column;
-      padding: 28px 0 24px;
-      overflow-y: auto;
-    }
-
-    .sidebar-label {
-      font-size: 10px; font-weight: 600;
-      letter-spacing: 2.5px; text-transform: uppercase;
-      color: var(--muted); padding: 0 20px 12px;
-    }
-
-    /* ── SIDEBAR TAB BUTTONS ── */
-    .tab-btn {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 13px 20px;
-      margin: 0 10px 4px;
-      border-radius: 10px;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 13.5px;
-      font-weight: 500;
-      color: var(--muted);
-      text-align: left;
-      transition: all 0.18s ease;
-      width: calc(100% - 20px);
-    }
-
-    .tab-btn:hover {
-      background: var(--warm-mid);
-      color: var(--ink);
-    }
-
-    .tab-btn.active {
-      background: var(--paper);
-      color: var(--ink);
-      font-weight: 600;
-      box-shadow: var(--shadow);
-    }
-
-    .tab-btn.active .tab-icon-wrap {
-      background: var(--accent-soft);
-      color: var(--accent);
-    }
-
-    .tab-icon-wrap {
-      width: 34px; height: 34px;
-      border-radius: 8px;
-      background: var(--warm-mid);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px;
-      flex-shrink: 0;
-      transition: all 0.18s;
-    }
-
-    .tab-text { flex: 1; }
-
-    .tab-title { display: block; font-size: 13px; line-height: 1.3; }
-
-    .tab-sub {
-      display: block;
-      font-size: 11px; font-weight: 400;
-      color: var(--muted); margin-top: 2px;
-      line-height: 1.2;
-    }
-
-    .tab-btn.active .tab-sub { color: var(--muted); }
-
-    /* coming-soon pip */
-    .tab-pip {
-      font-size: 9px; font-weight: 700;
-      letter-spacing: 1px; text-transform: uppercase;
-      color: var(--accent);
-      background: var(--accent-soft);
-      border: 1px solid #e8c4b8;
-      padding: 2px 7px; border-radius: 20px;
-      flex-shrink: 0;
-    }
-
-    .sidebar-divider {
-      border: none; border-top: 1px solid var(--border);
-      margin: 16px 20px;
-    }
-
-    /* ──────────────────────────────────────────
-       MAIN CONTENT  (fills rest of body-row)
-    ────────────────────────────────────────── */
-    #content {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-      background: var(--paper);
-    }
-
-    /* Every tab frame is absolute, fills #content */
-    .tab-frame {
-      position: absolute;
-      inset: 0;
-      width: 100%; height: 100%;
-      border: none;
-      display: none;
-      background: var(--paper);
-    }
-
-    .tab-frame.active {
-      display: block;
-      animation: fadeIn 0.22s ease;
-    }
-
-    /* ──────────────────────────────────────────
-       INTRO / HOME FRAME
-    ────────────────────────────────────────── */
-    #frame-home {
-      display: flex;          /* overrides display:none default */
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 60px 40px;
-      background: var(--paper);
-    }
-
-    #frame-home.active { display: flex; }
-
-    .intro-eyebrow {
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 3px; text-transform: uppercase;
-      color: var(--accent); margin-bottom: 16px;
-    }
-
-    .intro-headline {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(30px, 4vw, 48px);
-      font-weight: 700; line-height: 1.1;
-      color: var(--ink); margin-bottom: 14px;
-    }
-
-    .intro-sub {
-      font-size: 15px; color: var(--muted);
-      max-width: 480px; margin: 0 auto 52px;
-      line-height: 1.7;
-    }
-
-    .intro-cards {
-      display: flex; gap: 16px; flex-wrap: wrap;
-      justify-content: center; max-width: 680px;
-    }
-
-    .intro-card {
-      background: var(--cream);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 24px 24px 22px;
-      width: 200px; text-align: left;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .intro-card:hover {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-lg);
-    }
-
-    .intro-card-icon {
-      font-size: 22px; margin-bottom: 12px; display: block;
-    }
-
-    .intro-card-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 14px; font-weight: 600;
-      color: var(--ink); margin-bottom: 6px;
-    }
-
-    .intro-card-desc {
-      font-size: 12px; color: var(--muted); line-height: 1.55;
-    }
-
-    /* ──────────────────────────────────────────
-       PLACEHOLDER FRAMES (coming soon)
-    ────────────────────────────────────────── */
-    .placeholder {
-      width: 100%; height: 100%;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      text-align: center; padding: 60px 40px;
-      background: var(--cream);
-    }
-
-    .ph-icon {
-      width: 64px; height: 64px;
-      background: var(--paper); border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 28px; margin: 0 auto 24px;
-      box-shadow: var(--shadow);
-    }
-
-    .ph-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 22px; font-weight: 600;
-      color: var(--ink); margin-bottom: 10px;
-    }
-
-    .ph-desc {
-      font-size: 14px; color: var(--muted);
-      line-height: 1.65; max-width: 340px; margin: 0 auto;
-    }
-
-    .ph-badge {
-      display: inline-block; margin-top: 24px;
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 2px; text-transform: uppercase;
-      color: var(--accent); background: var(--accent-soft);
-      padding: 5px 14px; border-radius: 20px;
-      border: 1px solid #e8c4b8;
-    }
-
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-    /* ── RESPONSIVE ── */
-    @media (max-width: 680px) {
-      :root { --sidebar-w: 64px; }
-      .tab-title, .tab-sub, .tab-pip, .sidebar-label { display: none; }
-      .tab-btn { justify-content: center; padding: 12px; }
-      .tab-icon-wrap { width: 38px; height: 38px; font-size: 18px; }
-    }
-  </style>
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes popUp{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+</style>
 </head>
 <body>
 <div class="app">
 
-  <!-- ── HEADER ── -->
-  <header>
-    <div class="logo">
-      <div class="logo-mark">Doc<span>Format</span></div>
-      <div class="logo-sub">Document Formatter</div>
-    </div>
-    <div class="header-badge">v1.0 &middot; en-US</div>
-  </header>
+<header>
+  <button class="menu-btn" onclick="toggleMenu()">☰</button>
+  <div class="logo">Doc<span>Format</span></div>
+</header>
 
-  <!-- ── BODY ROW ── -->
-  <div class="body-row">
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+  <button class="tab-btn active" id="btn-home" onclick="handleHomeClick()">
+    <div class="icon">🏠</div>Home
+  </button>
+  <div style="height:1px;background:var(--border);margin:8px 24px;"></div>
+  <button class="tab-btn" id="btn-grammar" data-tab="grammar" disabled>
+    <div class="icon">✦</div>Grammar & Spell
+  </button>
+  <button class="tab-btn" id="btn-font" data-tab="font" disabled>
+    <div class="icon">Aa</div>Font Size & Type
+  </button>
+  <button class="tab-btn" id="btn-alignment" data-tab="alignment" disabled>
+    <div class="icon">≡</div>Document Alignment
+  </button>
+</div>
+<div class="overlay" id="overlay" onclick="closeMenu()"></div>
 
-    <!-- LEFT SIDEBAR -->
-    <aside class="sidebar">
-      <div class="sidebar-label">Tools</div>
+<!-- CONTENT -->
+<div id="content">
 
-      <button class="tab-btn" role="tab" data-tab="grammar">
-        <span class="tab-icon-wrap">&#10022;</span>
-        <span class="tab-text">
-          <span class="tab-title">Grammar &amp; Spell</span>
-          <span class="tab-sub">Fix writing issues</span>
-        </span>
-      </button>
+  <!-- HOME -->
+  <div class="tab-frame active" id="frame-home">
 
-      <button class="tab-btn" role="tab" data-tab="font">
-        <span class="tab-icon-wrap">Aa</span>
-        <span class="tab-text">
-          <span class="tab-title">Font Size &amp; Type</span>
-          <span class="tab-sub">Change typeface</span>
-        </span>
-      </button>
+    <div class="intro-eyebrow">All-in-one Document Tools</div>
+    <div class="intro-title">Format, correct &amp; align<br>your documents</div>
+    <div class="intro-desc">Upload your Word document once, then choose a tool to begin. Your formatted file carries through each step.</div>
 
-      <hr class="sidebar-divider"/>
-
-      <button class="tab-btn active" role="tab" data-tab="alignment">
-        <span class="tab-icon-wrap">&#9776;</span>
-        <span class="tab-text">
-          <span class="tab-title">Document Alignment</span>
-          <span class="tab-sub">Control alignment</span>
-        </span>
-      </button>
-
-    </aside>
-
-    <!-- MAIN CONTENT -->
-    <div id="content">
-
-      <!-- HOME intro — shown by default -->
-      <div class="tab-frame" id="frame-home">
-        <div class="intro-eyebrow">All-in-one Document Tools</div>
-        <h1 class="intro-headline">Format, correct &amp;<br/>align your documents.</h1>
-        <p class="intro-sub">Choose a tool from the sidebar to get started. Upload a Word document and let DocFormat handle the rest.</p>
-        <div class="intro-cards">
-          <div class="intro-card" onclick="switchTab('grammar')">
-            <span class="intro-card-icon">&#10022;</span>
-            <div class="intro-card-title">Grammar &amp; Spell Checker</div>
-            <p class="intro-card-desc">Detect errors and fix them sentence by sentence.</p>
-          </div>
-          <div class="intro-card" onclick="switchTab('font')">
-            <span class="intro-card-icon">Aa</span>
-            <div class="intro-card-title">Font Size &amp; Type</div>
-            <p class="intro-card-desc">Change typeface and sizing across your document.</p>
-          </div>
-          <div class="intro-card" onclick="switchTab('alignment')">
-            <span class="intro-card-icon">&#9776;</span>
-            <div class="intro-card-title">Document Alignment</div>
-            <p class="intro-card-desc">Set alignment and spacing for paragraphs and lists.</p>
-          </div>
-        </div>
+    <!-- Upload zone -->
+    <div class="upload-area">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="fileInput" accept=".docx"/>
+        <div class="drop-icon">📄</div>
+        <div class="drop-label">Drop your document here</div>
+        <div class="drop-hint">or <strong>browse to upload</strong> &nbsp;·&nbsp; .docx only</div>
       </div>
+      <div class="file-pill" id="filePill">
+        <span>📝</span>
+        <span class="file-pill-name" id="filePillName">document.docx</span>
+        <button class="file-pill-remove" id="filePillRemove" title="Remove">×</button>
+      </div>
+    </div>
 
-      <!-- Grammar — live iframe -->
-      <iframe
-        class="tab-frame"
-        id="frame-grammar"
-        src="/grammar/"
-        title="Grammar and Spell Checker"
-      ></iframe>
+    <!-- Upload status -->
+    <div class="upload-status" id="uploadStatus"></div>
 
-      <!-- Font — live iframe -->
-      <iframe
-        class="tab-frame"
-        id="frame-font"
-        src="/font/"
-        title="Font Size and Type"
-      ></iframe>
+    <!-- Tool cards -->
+    <div class="tool-cards" id="toolCards">
+      <div class="tool-card" onclick="openTool('grammar')">
+        <div class="tool-card-icon">✦</div>
+        <div class="tool-card-title">Grammar & Spell</div>
+        <div class="tool-card-desc">Detect grammar and spelling errors.</div>
+      </div>
+      <div class="tool-card" onclick="openTool('font')">
+        <div class="tool-card-icon">Aa</div>
+        <div class="tool-card-title">Font Size & Type</div>
+        <div class="tool-card-desc">Change document typography.</div>
+      </div>
+      <div class="tool-card" onclick="openTool('alignment')">
+        <div class="tool-card-icon">≡</div>
+        <div class="tool-card-title">Document Alignment</div>
+        <div class="tool-card-desc">Fix alignment and spacing.</div>
+      </div>
+    </div>
 
-      <!-- Alignment — live iframe -->
-      <iframe
-        class="tab-frame active"
-        id="frame-alignment"
-        src="/alignment/"
-        title="Document Alignment"
-      ></iframe>
+  </div>
 
-    </div><!-- /#content -->
+  <!-- TOOL IFRAMES (loaded lazily, kept in DOM once loaded) -->
+  <iframe class="tab-frame" id="frame-grammar"   src="" title="Grammar"></iframe>
+  <iframe class="tab-frame" id="frame-font"      src="" title="Font"></iframe>
+  <iframe class="tab-frame" id="frame-alignment" src="" title="Alignment"></iframe>
 
-  </div><!-- /.body-row -->
+</div><!-- #content -->
 
-</div><!-- /.app -->
+</div><!-- .app -->
+
+<!-- POST-TASK MODAL -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal modal-wrap">
+    <button class="btn-close-modal" onclick="closeModal()">×</button>
+    <div style="font-size:40px;margin-bottom:14px;">✓</div>
+    <h2>Formatting complete!</h2>
+    <p>Your document has been updated. You can download it now or apply another formatting tool to the same document.</p>
+    <div class="modal-actions">
+      <button class="btn-download" id="modalDownloadBtn" onclick="downloadCurrent()">↓ &nbsp;Download Document</button>
+      <button class="btn-another"  onclick="closeModal()">Apply Another Tool</button>
+    </div>
+  </div>
+</div>
 
 <script>
-  const tabs   = document.querySelectorAll('.tab-btn');
-  const frames = document.querySelectorAll('.tab-frame');
+// ── State ─────────────────────────────────────────────────────────────────
+let uploadedFileName = '';
+let toolsUnlocked    = false;
+const loadedFrames   = new Set();
+let activeTool       = null;   // currently visible tool name
+let dirtyTool        = null;   // tool that has unsaved in-progress work
 
-  function switchTab(name) {
-    tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
-    frames.forEach(f => f.classList.remove('active'));
+// ── Sidebar ───────────────────────────────────────────────────────────────
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
 
-    const btn = document.querySelector(`[data-tab="${name}"]`);
-    if (btn) { btn.classList.add('active'); btn.setAttribute('aria-selected','true'); }
-    document.getElementById('frame-' + name).classList.add('active');
+function toggleMenu() {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('show');
+}
+function closeMenu() {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('show');
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    const target = btn.dataset.tab;
+    if (!confirmSwitch(target)) return;
+    switchToTool(target);
+    closeMenu();
+  });
+});
+
+// Returns false and shows warning if the current tool has unsaved work.
+function confirmSwitch(targetTool) {
+  if (!dirtyTool || dirtyTool === targetTool) return true;
+  const toolNames = { grammar: 'Grammar & Spell', font: 'Font', alignment: 'Alignment' };
+  return confirm(
+    `You have unsaved changes in the ${toolNames[dirtyTool] || dirtyTool} tool.\n\n` +
+    `If you switch now, your formatting choices will be lost and you will need to re-analyse when you return.\n\n` +
+    `Switch anyway?`
+  );
+}
+function handleHomeClick() {
+  if (dirtyTool) {
+    const toolNames = { grammar: 'Grammar & Spell', font: 'Font', alignment: 'Alignment' };
+    const confirmed = confirm(
+      `You have unsaved changes in the ${toolNames[dirtyTool] || dirtyTool} tool.\n\n` +
+      `If you switch now, your formatting choices will be lost.\n\n` +
+      `Switch anyway?`
+    );
+    if (!confirmed) return; // ← stays on current tool page
+  }
+  dirtyTool = null;
+  goHome();
+  closeMenu();
+}
+
+function switchToTool(name) {
+  const previous = activeTool;
+  activeTool = name;
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById('btn-' + name);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  document.querySelectorAll('.tab-frame').forEach(f => f.classList.remove('active'));
+  const frame = document.getElementById('frame-' + name);
+  if (frame) frame.classList.add('active');
+
+  // Lazy-load the iframe src on first use.
+  if (!loadedFrames.has(name)) {
+    loadedFrames.add(name);
+    frame.src = '/' + name + '/';
+  } else if (previous && previous !== name) {
+    // Tab already loaded — tell it the session file may have changed.
+    frame.contentWindow.postMessage({ type: 'tabResumed' }, '*');
+  }
+}
+
+function openTool(name) {
+  if (!toolsUnlocked) return;
+  if (!confirmSwitch(name)) return;
+  switchToTool(name);
+}
+
+function goHome() {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-frame').forEach(f => f.classList.remove('active'));
+  document.getElementById('frame-home').classList.add('active');
+  document.getElementById('btn-home').classList.add('active'); 
+  activeTool = null;
+}
+
+// ── File handling ─────────────────────────────────────────────────────────
+const dropZone      = document.getElementById('dropZone');
+const fileInput     = document.getElementById('fileInput');
+const filePill      = document.getElementById('filePill');
+const filePillName  = document.getElementById('filePillName');
+const filePillRemove= document.getElementById('filePillRemove');
+const toolCards     = document.getElementById('toolCards');
+const uploadStatus  = document.getElementById('uploadStatus');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) handleFile(fileInput.files[0]);
+});
+filePillRemove.addEventListener('click', resetUpload);
+
+function handleFile(file) {
+  if (!file.name.toLowerCase().endsWith('.docx')) {
+    showStatus('Only .docx files are supported.', 'err');
+    return;
+  }
+  filePillName.textContent = file.name;
+  filePill.classList.add('show');
+  uploadedFileName = file.name;
+  uploadFile(file);
+}
+
+function resetUpload() {
+  fileInput.value = '';
+  filePill.classList.remove('show');
+  toolCards.classList.remove('unlocked');
+  toolsUnlocked = false;
+  uploadedFileName = '';
+  // Disable sidebar buttons
+  ['grammar','font','alignment'].forEach(t => {
+    document.getElementById('btn-' + t).disabled = true;
+  });
+  hideStatus();
+  // Reset any open tool back to home
+  goHome();
+}
+
+function showStatus(msg, type) {
+  uploadStatus.textContent = msg;
+  uploadStatus.className   = 'upload-status show ' + type;
+}
+function hideStatus() {
+  uploadStatus.className = 'upload-status';
+}
+
+// ── Upload to server ──────────────────────────────────────────────────────
+async function uploadFile(file) {
+  showStatus('Uploading…', 'uploading');
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res  = await fetch('/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Upload failed');
+
+    // Unlock tools
+    toolsUnlocked = true;
+    toolCards.classList.add('unlocked');
+    ['grammar','font','alignment'].forEach(t => {
+      document.getElementById('btn-' + t).disabled = false;
+    });
+    showStatus('✓ File uploaded — choose a tool below to begin.', 'ok');
+  } catch(err) {
+    showStatus('Upload failed: ' + err.message, 'err');
+    resetUpload();
+  }
+}
+
+// ── Listen for messages from tool iframes ────────────────────────────────
+window.addEventListener('message', e => {
+  if (!e.data) return;
+
+  if (e.data.type === 'taskComplete') {
+    // Tool finished formatting — clear dirty state then show modal.
+    dirtyTool = null;
+    showModal();
   }
 
-  tabs.forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+  if (e.data.type === 'toolDirty') {
+    // Tool has been analysed and has unsaved settings — warn on switch.
+    dirtyTool = activeTool;
+  }
 
-  // Show intro home screen by default
-  switchTab('home');
+  if (e.data.type === 'toolClean') {
+    // Tool reset itself (e.g. re-analysed after tabResumed).
+    if (dirtyTool === activeTool) dirtyTool = null;
+  }
+});
+
+// ── Post-task modal ───────────────────────────────────────────────────────
+const modalBackdrop = document.getElementById('modalBackdrop');
+
+function showModal()  { modalBackdrop.classList.add('show'); }
+function closeModal() { modalBackdrop.classList.remove('show'); }
+
+async function downloadCurrent() {
+  try {
+    const res = await fetch('/download_current');
+    if (!res.ok) throw new Error('Download failed');
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    // Use original filename with a _formatted suffix
+    const base = uploadedFileName.replace(/\.docx$/i, '');
+    a.download = base ? base + '_formatted.docx' : 'formatted_document.docx';
+    a.click();
+    URL.revokeObjectURL(url);
+    closeModal();
+  } catch(err) {
+    alert('Download error: ' + err.message);
+  }
+}
 </script>
-
 </body>
 </html>

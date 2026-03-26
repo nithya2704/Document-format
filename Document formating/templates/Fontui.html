@@ -4,30 +4,46 @@
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Font Formatter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --cream:     #F5F0EA;
+    --cream-mid: #EDE6DC;
+    --paper:     #FDFAF6;
+    --ink:       #1A1614;
+    --ink-mid:   #4A3F38;
+    --ink-soft:  #8A7F78;
+    --rust:      #C8522A;
+    --rust-lt:   #E07050;
+    --border:    #D8CFC6;
+    --success:   #3A7D6A;
+    --card:      #FFFFFF;
+    --shadow:    0 2px 16px rgba(26,22,20,0.08);
+    --shadow-lg: 0 8px 40px rgba(26,22,20,0.14);
+    --radius:    14px;
+  }
+
   html, body {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background: #f4f6f9;
-    color: #1a2233;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
     height: 100%;
     margin: 0;
     padding: 0;
   }
 
   /* ── Layout ── */
-  .shell {
-    display: flex;
-    height: 100vh;
-  }
+  .shell { display: flex; height: 100vh; }
 
-  /* ── Left panel — plain scrolling block, no flex column ── */
+  /* ── Left panel ── */
   .panel-left {
-    width: 340px;
+    width: 500px;
     min-width: 300px;
-    background: #fff;
-    border-right: 1px solid #e2e8f0;
+    background: var(--paper);
+    border-right: 1px solid var(--border);
     display: block;
     height: 100vh;
     overflow-y: auto;
@@ -36,76 +52,83 @@
   }
 
   .panel-header {
-    padding: 20px 22px 14px;
-    border-bottom: 1px solid #e2e8f0;
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--paper);
   }
   .panel-header h2 {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #1a2233;
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .panel-header p {
     font-size: 0.78rem;
-    color: #64748b;
-    margin-top: 3px;
+    color: var(--ink-soft);
+    margin-top: 4px;
   }
 
   /* ── Upload zone ── */
   .upload-zone {
     margin: 16px 16px 0;
-    border: 2px dashed #cbd5e1;
-    border-radius: 10px;
+    border: 2px dashed var(--rust-lt);
+    border-radius: var(--radius);
     padding: 22px 16px;
     text-align: center;
     cursor: pointer;
     transition: border-color 0.2s, background 0.2s;
-    background: #f8fafc;
+    background: #FDF7F4;
   }
   .upload-zone:hover, .upload-zone.drag-over {
-    border-color: #6366f1;
-    background: #eef2ff;
+    border-color: var(--rust);
+    background: #FAF0EC;
   }
   .upload-zone .upload-icon { font-size: 2rem; margin-bottom: 6px; }
-  .upload-zone p { font-size: 0.82rem; color: #64748b; }
-  .upload-zone strong { color: #6366f1; }
+  .upload-zone p { font-size: 0.82rem; color: var(--ink-soft); }
+  .upload-zone strong { color: var(--rust); }
   #fileInput { display: none; }
 
   .file-badge {
     display: none;
     margin: 10px 16px 0;
-    background: #eef2ff;
-    border: 1px solid #c7d2fe;
-    border-radius: 8px;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 10px;
     padding: 8px 12px;
     font-size: 0.82rem;
-    color: #3730a3;
+    color: var(--ink-mid);
     align-items: center;
     gap: 8px;
   }
   .file-badge.show { display: flex; }
   .file-badge .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .file-badge .clear-file {
-    cursor: pointer; color: #6366f1; font-size: 1rem; font-weight: bold;
-    border: none; background: none; padding: 0;
+    cursor: pointer; color: var(--ink-soft); font-size: 1rem; font-weight: bold;
+    border: none; background: none; padding: 0; transition: color 0.15s;
   }
+  .file-badge .clear-file:hover { color: var(--rust); }
 
   /* ── Section cards ── */
   .section {
     margin: 14px 16px 0;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     overflow: hidden;
+    box-shadow: var(--shadow);
   }
   .section-title {
     padding: 10px 14px;
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-size: 0.72rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #475569;
-    background: #f1f5f9;
-    border-bottom: 1px solid #e2e8f0;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
   }
   .section-body { padding: 12px 14px; }
 
@@ -117,16 +140,17 @@
     margin-bottom: 4px;
   }
   .type-chip {
-    background: #e0e7ff;
-    color: #3730a3;
+    background: var(--cream-mid);
+    color: var(--ink-mid);
     border-radius: 20px;
     padding: 3px 10px;
     font-size: 0.74rem;
     font-weight: 600;
+    border: 1px solid var(--border);
   }
   .no-doc-msg {
     font-size: 0.8rem;
-    color: #94a3b8;
+    color: var(--ink-soft);
     font-style: italic;
   }
 
@@ -140,63 +164,85 @@
   .cfg-row label {
     flex: 0 0 110px;
     font-size: 0.8rem;
-    color: #475569;
+    color: var(--ink-mid);
     font-weight: 500;
   }
   .cfg-row input[type=number],
   .cfg-row select {
     flex: 1;
-    border: 1px solid #cbd5e1;
-    border-radius: 7px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
     padding: 6px 9px;
     font-size: 0.82rem;
-    color: #1a2233;
-    background: #fff;
+    color: var(--ink);
+    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
     transition: border-color 0.15s;
     outline: none;
   }
   .cfg-row input:focus,
-  .cfg-row select:focus { border-color: #6366f1; }
+  .cfg-row select:focus {
+    border-color: var(--rust);
+    box-shadow: 0 0 0 3px rgba(200,82,42,0.12);
+  }
 
   /* ── Toggle row ── */
   .toggle-row {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
   }
-  .toggle-row label {
-    font-size: 0.8rem;
-    color: #475569;
+  .toggle-row > label:first-child {
+    font-size: 0.82rem;
+    color: var(--ink-mid);
     font-weight: 500;
     flex: 1;
   }
   .toggle {
     position: relative;
-    width: 38px;
-    height: 20px;
     flex-shrink: 0;
+    width: 72px;
+    height: 28px;
   }
-  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
   .toggle-slider {
     position: absolute;
     inset: 0;
-    background: #cbd5e1;
-    border-radius: 20px;
+    border-radius: 28px;
+    background: var(--cream-mid);
+    border: 1.5px solid var(--border);
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.22s, border-color 0.22s;
+    overflow: hidden;
+  }
+  .toggle-slider::after {
+    content: 'OFF';
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--ink-soft); transition: opacity 0.18s;
+    pointer-events: none; user-select: none;
   }
   .toggle-slider::before {
-    content: '';
-    position: absolute;
-    width: 14px; height: 14px;
-    left: 3px; top: 3px;
-    background: #fff;
-    border-radius: 50%;
-    transition: transform 0.2s;
+    content: 'ON';
+    position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
+    color: #fff; opacity: 0; transition: opacity 0.18s;
+    pointer-events: none; user-select: none; z-index: 2;
   }
-  .toggle input:checked + .toggle-slider { background: #6366f1; }
-  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+  .toggle-thumb {
+    position: absolute;
+    width: 22px; height: 22px; top: 2px; left: 2px;
+    border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 4px rgba(26,22,20,0.18);
+    transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+    z-index: 3; pointer-events: none;
+  }
+  .toggle input:checked + .toggle-slider { background: var(--rust); border-color: var(--rust); }
+  .toggle input:checked + .toggle-slider::before { opacity: 1; }
+  .toggle input:checked + .toggle-slider::after  { opacity: 0; }
+  .toggle input:checked + .toggle-slider .toggle-thumb { transform: translateX(44px); }
+  .toggle-slider:hover { border-color: var(--rust-lt); }
 
   /* ── Per-type config table ── */
   .type-config-table {
@@ -207,18 +253,16 @@
   .type-config-table th {
     text-align: left;
     font-weight: 600;
-    color: #64748b;
+    color: var(--ink-soft);
     padding: 4px 6px;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--border);
     white-space: nowrap;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
-  .type-config-table td {
-    padding: 4px 4px;
-    vertical-align: middle;
-  }
-  .type-config-table tr:not(:last-child) td {
-    border-bottom: 1px solid #f1f5f9;
-  }
+  .type-config-table td { padding: 4px 4px; vertical-align: middle; }
+  .type-config-table tr:not(:last-child) td { border-bottom: 1px solid var(--cream-mid); }
   .type-label {
     font-size: 0.75rem;
     font-weight: 600;
@@ -229,44 +273,62 @@
   .type-config-table input[type=number],
   .type-config-table select {
     width: 100%;
-    border: 1px solid #e2e8f0;
-    border-radius: 5px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
     padding: 4px 6px;
     font-size: 0.75rem;
-    color: #1a2233;
-    background: #fff;
+    color: var(--ink);
+    background: var(--cream);
+    font-family: 'DM Sans', sans-serif;
     outline: none;
   }
-  .type-config-table input:focus { border-color: #6366f1; }
+  .type-config-table input:focus,
+  .type-config-table select:focus {
+    border-color: var(--rust);
+    box-shadow: 0 0 0 2px rgba(200,82,42,0.12);
+  }
 
   /* ── Action buttons ── */
   .actions { padding: 14px 16px 32px; display: flex; flex-direction: column; gap: 8px; }
 
   .btn {
     width: 100%;
-    padding: 10px 0;
-    border-radius: 8px;
+    padding: 11px 0;
+    border-radius: 10px;
     border: none;
+    font-family: 'DM Sans', sans-serif;
     font-size: 0.88rem;
     font-weight: 600;
     cursor: pointer;
-    transition: opacity 0.15s, transform 0.1s;
+    transition: background 0.18s, transform 0.15s, box-shadow 0.15s;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
   }
   .btn:active { transform: scale(0.98); }
-  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
-  .btn-analyse { background: #6366f1; color: #fff; }
-  .btn-analyse:hover:not(:disabled) { background: #4f46e5; }
+  .btn-analyse { background: var(--ink); color: #fff; }
+  .btn-analyse:hover:not(:disabled) {
+    background: #2E2420;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(26,22,20,0.18);
+  }
 
-  .btn-preview { background: #0ea5e9; color: #fff; }
-  .btn-preview:hover:not(:disabled) { background: #0284c7; }
+  .btn-preview { background: var(--rust); color: #fff; }
+  .btn-preview:hover:not(:disabled) {
+    background: #B24420;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(200,82,42,0.3);
+  }
 
-  .btn-format { background: #10b981; color: #fff; }
-  .btn-format:hover:not(:disabled) { background: #059669; }
+  .btn-format { background: var(--success); color: #fff; }
+  .btn-format:hover:not(:disabled) {
+    background: #2d6355;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(58,125,106,0.3);
+  }
 
   .spinner {
     width: 16px; height: 16px;
@@ -281,42 +343,90 @@
   .status-bar {
     margin: 0 16px 8px;
     padding: 8px 12px;
-    border-radius: 7px;
+    border-radius: 8px;
     font-size: 0.8rem;
     font-weight: 500;
     display: none;
   }
-  .status-bar.info  { background: #e0f2fe; color: #0369a1; display: block; }
+  .status-bar.info  { background: var(--cream-mid); color: var(--ink-mid); display: block; }
   .status-bar.error { background: #fee2e2; color: #b91c1c; display: block; }
-  .status-bar.ok    { background: #dcfce7; color: #15803d; display: block; }
+  .status-bar.ok    { background: #d1fae5; color: #065f46; display: block; }
 
-  /* ── Right panel (preview) ── */
+  /* ── Right panel ── */
   .panel-right {
     flex: 1;
-    background: #e8ecf1;
+    background: var(--cream);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     height: 100vh;
   }
-  .preview-toolbar {
-    padding: 10px 18px;
-    background: #fff;
-    border-bottom: 1px solid #e2e8f0;
-    font-size: 0.82rem;
-    color: #64748b;
-    font-weight: 500;
+
+  /* ── Preview tabs ── */
+  .preview-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 18px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--border);
+    height: 46px;
   }
-  .preview-area {
-    flex: 1;
-    overflow: auto;
-  }
-  #previewFrame {
-    width: 100%;
+  .preview-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 18px;
     height: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-soft);
     border: none;
+    background: none;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    position: relative;
+    top: 1px;
+  }
+  .preview-tab:hover { color: var(--ink-mid); }
+  .preview-tab.active { color: var(--rust); border-bottom-color: var(--rust); }
+  .preview-tab .tab-spinner {
+    width: 12px; height: 12px;
+    border: 2px solid rgba(200,82,42,0.25);
+    border-top-color: var(--rust);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
     display: none;
   }
+  .preview-tab.loading .tab-spinner { display: inline-block; }
+  .preview-tab-sep {
+    width: 1px; height: 20px;
+    background: var(--border);
+    margin: 0 4px;
+    flex-shrink: 0;
+  }
+
+  .preview-area {
+    flex: 1;
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .preview-area.active { display: flex; }
+
+  #frameOriginal, #frameFormatted {
+    width: 100%;
+    flex: 1;
+    border: none;
+    display: none;
+    min-height: 0;
+  }
+  #frameOriginal.loaded, #frameFormatted.loaded { display: block; }
+
   .preview-placeholder {
     display: flex;
     flex-direction: column;
@@ -324,40 +434,42 @@
     justify-content: center;
     height: 100%;
     gap: 12px;
-    color: #94a3b8;
+    color: var(--ink-soft);
   }
-  .preview-placeholder .ph-icon { font-size: 3.5rem; }
+  .preview-placeholder .ph-icon { font-size: 3.5rem; opacity: 0.5; }
   .preview-placeholder p { font-size: 0.9rem; }
+  .preview-placeholder strong { color: var(--rust); }
 
-  /* colour chips for element types */
-  .chip-TITLE         { background:#fef9c3;color:#854d0e; }
-  .chip-COVER_PAGE    { background:#fef9c3;color:#854d0e; }
-  .chip-TOC_TITLE     { background:#fee2e2;color:#991b1b; }
+  /* ── Colour chips for element types (kept as-is — functional colours) ── */
+  .chip-TITLE         { background:#fff59d;color:#5d4037; }
+  .chip-COVER_PAGE    { background:#fff9c4;color:#5d4037; }
+  .chip-TOC_TITLE     { background:#ffcdd2;color:#b71c1c; }
   .chip-TOC_HEADING_1,.chip-TOC_HEADING_2,
-  .chip-TOC_HEADING_3,.chip-TOC_HEADING_4 { background:#f3f4f6;color:#374151; }
-  .chip-HEADING_1     { background:#d1fae5;color:#065f46; }
-  .chip-HEADING_2     { background:#ccfbf1;color:#134e4a; }
-  .chip-HEADING_3     { background:#fce7f3;color:#9d174d; }
-  .chip-HEADING_4     { background:#ede9fe;color:#4c1d95; }
-  .chip-HEADING_5     { background:#b2dfdb;color:#00695c; }
-  .chip-HEADING_6     { background:#bbdefb;color:#1565c0; }
-  .chip-PARAGRAPH     { background:#f1f5f9;color:#475569; }
-  .chip-BULLET_ITEM,.chip-NUMBERED_ITEM,
-  .chip-LIST_ITEM     { background:#fee2e2;color:#7f1d1d; }
-  .chip-TABLE         { background:#e0f2fe;color:#075985; }
+  .chip-TOC_HEADING_3,.chip-TOC_HEADING_4 { background:#f5f5f5;color:#424242; }
+  .chip-HEADING_1     { background:#b9f6ca;color:#1b5e20; }
+  .chip-HEADING_2     { background:#b2ebf2;color:#006064; }
+  .chip-HEADING_3     { background:#fce4ec;color:#880e4f; }
+  .chip-HEADING_4     { background:#e1bee7;color:#4a148c; }
+  .chip-HEADING_5     { background:#b2dfdb;color:#004d40; }
+  .chip-HEADING_6     { background:#c5cae9;color:#1a237e; }
+  .chip-PARAGRAPH     { background:#f5f5f5;color:#424242; }
+  .chip-LIST_ITEM     { background:#ffcdd2;color:#b71c1c; }
+  .chip-TABLE         { background:#dcedc8;color:#33691e; }
 
   /* ── Font select dropdowns ── */
   select {
     appearance: none;
     -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A7F78' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 10px center;
     padding-right: 30px !important;
     cursor: pointer;
   }
-  select:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
-
+  select:focus {
+    border-color: var(--rust);
+    box-shadow: 0 0 0 3px rgba(200,82,42,0.12);
+  }
   .type-config-table select {
     font-size: 0.73rem;
     padding: 3px 24px 3px 5px !important;
@@ -365,205 +477,154 @@
   }
 
   /* ── Colour picker widget ── */
-  .color-picker-row {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 10px;
-  }
-  .color-label {
-    font-size: 0.8rem;
-    color: #475569;
-    font-weight: 500;
-  }
-  .color-widget {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .color-main-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
+  .color-picker-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .color-label { font-size: 0.8rem; color: var(--ink-mid); font-weight: 500; }
+  .color-widget { display: flex; flex-direction: column; gap: 8px; }
+  .color-main-row { display: flex; align-items: center; gap: 8px; }
   input[type=color] {
-    width: 40px;
-    height: 36px;
-    border: 1px solid #cbd5e1;
-    border-radius: 7px;
-    padding: 2px;
-    cursor: pointer;
-    background: #fff;
-    flex-shrink: 0;
+    width: 40px; height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 7px; padding: 2px;
+    cursor: pointer; background: #fff; flex-shrink: 0;
   }
   input[type=color]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 5px; }
   input[type=color]::-webkit-color-swatch { border: none; border-radius: 5px; }
   .hex-input {
     flex: 1;
-    border: 1px solid #cbd5e1;
+    border: 1px solid var(--border);
     border-radius: 7px;
     padding: 6px 10px;
     font-size: 0.85rem;
     font-family: 'Consolas', monospace;
-    color: #1a2233;
-    background: #fff;
+    color: var(--ink);
+    background: var(--cream);
     outline: none;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  .hex-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
+  .hex-input:focus { border-color: var(--rust); box-shadow: 0 0 0 3px rgba(200,82,42,0.12); }
   .color-swatch-preview {
-    width: 36px;
-    height: 36px;
-    border-radius: 7px;
-    border: 1px solid #cbd5e1;
-    flex-shrink: 0;
-    transition: background 0.15s;
+    width: 36px; height: 36px; border-radius: 7px;
+    border: 1px solid var(--border); flex-shrink: 0; transition: background 0.15s;
   }
-  .color-presets {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    flex-wrap: wrap;
-  }
-  .preset-label {
-    font-size: 0.72rem;
-    color: #94a3b8;
-    margin-right: 2px;
-    white-space: nowrap;
-  }
+  .color-presets { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .preset-label { font-size: 0.72rem; color: var(--ink-soft); margin-right: 2px; white-space: nowrap; }
   .preset-btn {
-    width: 22px;
-    height: 22px;
-    border-radius: 5px;
-    border: 2px solid transparent;
-    cursor: pointer;
-    padding: 0;
-    transition: transform 0.1s, border-color 0.1s;
-    flex-shrink: 0;
+    width: 22px; height: 22px; border-radius: 5px;
+    border: 2px solid transparent; cursor: pointer; padding: 0;
+    transition: transform 0.1s, border-color 0.1s; flex-shrink: 0;
   }
-  .preset-btn:hover { transform: scale(1.2); border-color: #6366f1; }
-  .preset-btn[data-color="#ffffff"] { border-color: #cbd5e1; }
-  .preset-btn.active { border-color: #6366f1; transform: scale(1.15); }
-
+  .preset-btn:hover { transform: scale(1.2); border-color: var(--rust); }
+  .preset-btn[data-color="#ffffff"] { border-color: var(--border); }
+  .preset-btn.active { border-color: var(--rust); transform: scale(1.15); }
 
   /* ── Tooltip ── */
   .tooltip-wrap {
-    display: inline-flex;
-    align-items: center;
-    margin-left: 5px;
-    position: relative;
-    vertical-align: middle;
+    display: inline-flex; align-items: center;
+    margin-left: 5px; position: relative; vertical-align: middle;
   }
   .tooltip-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: #6366f1;
-    color: #fff;
-    font-size: 0.65rem;
-    font-weight: 700;
-    cursor: help;
-    flex-shrink: 0;
-    line-height: 1;
-    user-select: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px; border-radius: 50%;
+    background: var(--rust); color: #fff;
+    font-size: 0.65rem; font-weight: 700; cursor: help;
+    flex-shrink: 0; line-height: 1; user-select: none;
   }
   .tooltip-box {
-    visibility: hidden;
-    opacity: 0;
-    pointer-events: none;
-    position: fixed;        /* fixed so it's never clipped by a parent */
-    background: #1e293b;
-    color: #f1f5f9;
-    font-size: 0.76rem;
-    font-weight: 400;
-    line-height: 1.55;
-    padding: 10px 13px;
-    border-radius: 8px;
-    width: 230px;
-    max-width: calc(100vw - 24px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    visibility: hidden; opacity: 0; pointer-events: none;
+    position: fixed;
+    background: var(--ink); color: var(--paper);
+    font-size: 0.76rem; font-weight: 400; line-height: 1.55;
+    padding: 10px 13px; border-radius: 8px;
+    width: 230px; max-width: calc(100vw - 24px);
+    box-shadow: var(--shadow-lg);
     transition: opacity 0.18s, visibility 0.18s;
-    z-index: 9999;
-    text-transform: none;
-    letter-spacing: normal;
-    white-space: normal;
+    z-index: 9999; text-transform: none; letter-spacing: normal; white-space: normal;
   }
-  /* Arrow pointing up toward the ? icon */
   .tooltip-box::before {
     content: '';
-    position: absolute;
-    bottom: 100%;
-    left: var(--arrow-left, 16px);
-    border: 6px solid transparent;
-    border-bottom-color: #1e293b;
+    position: absolute; bottom: 100%; left: var(--arrow-left, 16px);
+    border: 6px solid transparent; border-bottom-color: var(--ink);
   }
-  .tooltip-wrap:hover .tooltip-box,
-  .tooltip-box.visible {
-    visibility: visible;
-    opacity: 1;
-  }
+  .tooltip-wrap:hover .tooltip-box, .tooltip-box.visible { visibility: visible; opacity: 1; }
 
-
-  /* ── Resizer divider ── */
+  /* ── Resizer ── */
   .resizer {
-    width: 6px;
-    min-width: 6px;
-    background: #e2e8f0;
-    cursor: col-resize;
-    position: relative;
-    flex-shrink: 0;
-    transition: background 0.15s;
-    z-index: 10;
+    width: 6px; min-width: 6px;
+    background: var(--border);
+    cursor: col-resize; position: relative; flex-shrink: 0;
+    transition: background 0.15s; z-index: 10;
   }
-  .resizer:hover, .resizer.dragging {
-    background: #6366f1;
-  }
+  .resizer:hover, .resizer.dragging { background: var(--rust); }
   .resizer::before {
     content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
+    position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    width: 2px;
-    height: 40px;
-    background: #94a3b8;
-    border-radius: 2px;
-    transition: background 0.15s;
+    width: 2px; height: 40px;
+    background: var(--ink-soft); border-radius: 2px; transition: background 0.15s;
   }
-  .resizer:hover::before, .resizer.dragging::before {
-    background: #fff;
-  }
-  /* Dots on the handle */
+  .resizer:hover::before, .resizer.dragging::before { background: #fff; }
   .resizer::after {
     content: '⋮';
-    position: absolute;
-    top: 50%;
-    left: 50%;
+    position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    color: #94a3b8;
-    font-size: 1.1rem;
-    letter-spacing: -1px;
-    line-height: 1;
-    pointer-events: none;
+    color: var(--ink-soft); font-size: 1.1rem;
+    letter-spacing: -1px; line-height: 1; pointer-events: none;
   }
-  .resizer:hover::after, .resizer.dragging::after {
-    color: #fff;
+  .resizer:hover::after, .resizer.dragging::after { color: #fff; }
+  body.is-resizing { cursor: col-resize !important; user-select: none !important; }
+  body.is-resizing * { pointer-events: none !important; }
+  body.is-resizing .resizer { pointer-events: all !important; }
+
+  /* ── Current font badge ── */
+  .current-font-badge {
+    display: inline-block;
+    background: #F0FAF6;
+    border: 1px solid #A7D7C5;
+    color: var(--success);
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-size: 0.70rem;
+    font-weight: 500;
+    white-space: nowrap;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
   }
-  /* Prevent text selection while dragging */
-  body.is-resizing {
-    cursor: col-resize !important;
-    user-select: none !important;
+  .current-font-badge.unknown {
+    background: var(--cream);
+    border-color: var(--border);
+    color: var(--ink-soft);
+    font-style: italic;
   }
-  body.is-resizing * {
-    pointer-events: none !important;
+
+  /* ── Default (keep as-is) controls ── */
+  .color-default-row {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 8px;
   }
-  body.is-resizing .resizer {
-    pointer-events: all !important;
+  .color-default-toggle { display: flex; align-items: center; cursor: pointer; gap: 0; }
+  .color-default-toggle input { display: none; }
+  .default-pill {
+    font-size: 0.72rem; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+    border: 1.5px solid var(--rust); color: var(--rust);
+    background: #FDF7F4; cursor: pointer;
+    transition: background 0.15s, color 0.15s; white-space: nowrap; user-select: none;
   }
+  .color-default-toggle input:not(:checked) + .default-pill {
+    background: var(--cream); color: var(--ink-soft); border-color: var(--border);
+  }
+  .color-widget.is-default { opacity: 0.38; pointer-events: none; filter: grayscale(0.5); }
+
+  /* "Default" notice badge shown on font select */
+  .default-notice {
+    font-size: 0.72rem; color: var(--rust);
+    background: #FDF7F4; border: 1px solid #F0C0A8;
+    border-radius: 6px; padding: 4px 8px; margin-bottom: 8px; display: none;
+  }
+  .default-notice.show { display: block; }
 
 </style>
 </head>
@@ -577,22 +638,11 @@
       <p>Apply consistent fonts &amp; sizes across your document</p>
     </div>
 
-    <!-- Upload zone -->
-    <div class="upload-zone" id="uploadZone">
-      <div class="upload-icon">📄</div>
-      <p><strong>Click to upload</strong> or drag &amp; drop</p>
-      <p>.docx files only</p>
-    </div>
-    <input type="file" id="fileInput" accept=".docx">
-
-    <div class="file-badge" id="fileBadge">
-      <span>📎</span>
-      <span class="fname" id="fileNameLabel"></span>
-      <button class="clear-file" id="clearFile" title="Remove file">✕</button>
-    </div>
-
+    <!-- No file upload — document comes from the session -->
     <!-- Status bar -->
-    <div class="status-bar" id="statusBar"></div>
+    <div class="status-bar info" id="statusBar" style="margin:16px 16px 0;">
+      Document loaded from session. Click "Analyse Document" to begin.
+    </div>
 
     <!-- Detected types -->
     <div class="section">
@@ -608,9 +658,10 @@
     <div class="section">
       <div class="section-title">Global Options</div>
       <div class="section-body">
-        <div class="cfg-row">
+        <div class="cfg-row" style="margin-bottom:4px;">
           <label>Default font</label>
           <select id="globalFont">
+            <option value="" selected>Default</option>
             <optgroup label="Sans Serif">
               <option value="Arial">Arial</option>
               <option value="Calibri">Calibri</option>
@@ -644,21 +695,17 @@
             </optgroup>
           </select>
         </div>
-        <div class="cfg-row">
-          <label>Default size</label>
-          <input type="number" id="globalSize" value="11" min="6" max="72" style="max-width:80px">
-        </div>
         <div class="toggle-row">
           <label>Bold headings</label>
-          <label class="toggle"><input type="checkbox" id="boldHeadings" checked><span class="toggle-slider"></span></label>
+          <label class="toggle"><input type="checkbox" id="boldHeadings" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
         </div>
         <div class="toggle-row">
           <label>Bold titles</label>
-          <label class="toggle"><input type="checkbox" id="boldTitles" checked><span class="toggle-slider"></span></label>
+          <label class="toggle"><input type="checkbox" id="boldTitles" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
         </div>
         <div class="toggle-row">
           <label>Bold lists</label>
-          <label class="toggle"><input type="checkbox" id="boldLists"><span class="toggle-slider"></span></label>
+          <label class="toggle"><input type="checkbox" id="boldLists"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
         </div>
         <div class="toggle-row">
           <label>Highlight elements
@@ -667,16 +714,19 @@
               <span class="tooltip-box">If you enable this option, you can see colours highlighting each section in the preview — making it easy to identify Titles, Headings, Paragraphs, Lists and Tables at a glance. The highlights only appear in the preview and are also saved in the downloaded document.</span>
             </span>
           </label>
-          <label class="toggle"><input type="checkbox" id="highlightElems"><span class="toggle-slider"></span></label>
+          <label class="toggle"><input type="checkbox" id="highlightElems"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
         </div>
-        <div class="toggle-row">
-          <label>Preserve indentation</label>
-          <label class="toggle"><input type="checkbox" id="preserveIndent" checked><span class="toggle-slider"></span></label>
-        </div>
+
         <!-- Table header background colour picker -->
         <div class="color-picker-row">
-          <label class="color-label">Table header bg</label>
-          <div class="color-widget">
+          <div class="color-default-row">
+            <label class="color-label">Table header bg</label>
+            <label class="color-default-toggle">
+              <input type="checkbox" id="tableHeadingBgDefault" checked>
+              <span class="default-pill">Default (keep as-is)</span>
+            </label>
+          </div>
+          <div class="color-widget" id="colorWidget">
             <div class="color-main-row">
               <input type="color" id="tableHeadingBgPicker" value="#1e3a5f" title="Pick a colour">
               <input type="text"  id="tableHeadingBg" value="#1e3a5f" maxlength="7" placeholder="#1e3a5f" class="hex-input" spellcheck="false">
@@ -701,12 +751,18 @@
 
     <!-- Per-type overrides (populated after analyse) -->
     <div class="section" id="perTypeSection" style="display:none">
-      <div class="section-title">Per-Type Overrides <span style="font-weight:400;text-transform:none;font-size:0.75rem;color:#94a3b8">(leave blank to use global)</span></div>
+      <div class="section-title">Per-Type Overrides <span style="font-weight:400;text-transform:none;font-size:0.75rem;color:var(--ink-soft)">(leave blank to use global)</span></div>
       <div class="section-body" style="overflow-x:auto;">
         <table class="type-config-table" id="perTypeTable">
           <thead>
             <tr>
               <th>Type</th>
+              <th>Current Font
+                <span class="tooltip-wrap">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-box">Shows the most commonly used font across all paragraphs of this type in your document. If a heading type only appears once or uses a theme font that can't be resolved, it may show —.</span>
+                </span>
+              </th>
               <th>Font</th>
               <th style="width:60px">Size</th>
             </tr>
@@ -718,7 +774,7 @@
 
     <!-- Actions -->
     <div class="actions" style="padding-bottom:40px;">
-      <button class="btn btn-analyse" id="btnAnalyse" disabled>
+      <button class="btn btn-analyse" id="btnAnalyse">
         <div class="spinner" id="spinAnalyse"></div>
         <span id="lblAnalyse">🔍 Analyse Document</span>
       </button>
@@ -728,7 +784,7 @@
       </button>
       <button class="btn btn-format" id="btnFormat" disabled>
         <div class="spinner" id="spinFormat"></div>
-        <span id="lblFormat">⬇ Download Formatted</span>
+        <span id="lblFormat">⬇ Download or Apply another tool</span>
       </button>
     </div>
 
@@ -739,12 +795,34 @@
 
   <!-- ════════════════════ RIGHT PANEL ════════════════════ -->
   <div class="panel-right">
-    <div class="preview-toolbar" id="previewToolbar">Preview will appear here after clicking "Preview Changes"</div>
-    <div class="preview-area">
-      <iframe id="previewFrame" title="Document Preview"></iframe>
-      <div class="preview-placeholder" id="previewPlaceholder">
-        <div class="ph-icon">🖼</div>
-        <p>Document preview will appear here</p>
+    <!-- Tab bar -->
+    <div class="preview-tabs">
+      <button class="preview-tab active" id="tabOriginal">
+        <div class="tab-spinner"></div>
+        📄 Preview Original
+      </button>
+      <div class="preview-tab-sep"></div>
+      <button class="preview-tab" id="tabFormatted">
+        <div class="tab-spinner"></div>
+        ✨ Preview Formatted
+      </button>
+    </div>
+
+    <!-- Original pane -->
+    <div class="preview-area active" id="paneOriginal">
+      <iframe id="frameOriginal" title="Original Document"></iframe>
+      <div class="preview-placeholder" id="placeholderOriginal">
+        <div class="ph-icon">📄</div>
+        <p>Upload a file and click <strong>Preview Original</strong> to view</p>
+      </div>
+    </div>
+
+    <!-- Formatted pane -->
+    <div class="preview-area" id="paneFormatted">
+      <iframe id="frameFormatted" title="Formatted Preview"></iframe>
+      <div class="preview-placeholder" id="placeholderFormatted">
+        <div class="ph-icon">✨</div>
+        <p>Click <strong>👁 Preview Changes</strong> to generate formatted preview</p>
       </div>
     </div>
   </div>
@@ -753,106 +831,100 @@
 
 <script>
 // ── State ─────────────────────────────────────────────────────────────────
-let currentFile  = null;
-let analysedData = null;  // {detected_elements, element_counts, sample_texts}
+// No currentFile — the working file lives in the Flask session server-side.
+let analysedData = null;
 
 // ── DOM refs ──────────────────────────────────────────────────────────────
-const uploadZone       = document.getElementById('uploadZone');
-const fileInput        = document.getElementById('fileInput');
-const fileBadge        = document.getElementById('fileBadge');
-const fileNameLabel    = document.getElementById('fileNameLabel');
-const clearFileBtn     = document.getElementById('clearFile');
-const statusBar        = document.getElementById('statusBar');
-const detectedList     = document.getElementById('detectedList');
-const perTypeSection   = document.getElementById('perTypeSection');
-const perTypeBody      = document.getElementById('perTypeBody');
-const btnAnalyse       = document.getElementById('btnAnalyse');
-const btnPreview       = document.getElementById('btnPreview');
-const btnFormat        = document.getElementById('btnFormat');
-const previewFrame     = document.getElementById('previewFrame');
-const previewPlaceholder = document.getElementById('previewPlaceholder');
-const previewToolbar   = document.getElementById('previewToolbar');
+const statusBar            = document.getElementById('statusBar');
+const detectedList         = document.getElementById('detectedList');
+const perTypeSection       = document.getElementById('perTypeSection');
+const perTypeBody          = document.getElementById('perTypeBody');
+const btnAnalyse           = document.getElementById('btnAnalyse');
+const btnPreview           = document.getElementById('btnPreview');
+const btnFormat            = document.getElementById('btnFormat');
+const tabOriginal          = document.getElementById('tabOriginal');
+const tabFormatted         = document.getElementById('tabFormatted');
+const paneOriginal         = document.getElementById('paneOriginal');
+const paneFormatted        = document.getElementById('paneFormatted');
+const frameOriginal        = document.getElementById('frameOriginal');
+const frameFormatted       = document.getElementById('frameFormatted');
+const placeholderOriginal  = document.getElementById('placeholderOriginal');
+const placeholderFormatted = document.getElementById('placeholderFormatted');
 
-// ── File handling ─────────────────────────────────────────────────────────
-uploadZone.addEventListener('click', () => fileInput.click());
-uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
-uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
-uploadZone.addEventListener('drop', e => {
-  e.preventDefault();
-  uploadZone.classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f) setFile(f);
-});
-fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
-clearFileBtn.addEventListener('click', resetFile);
-
-function setFile(f) {
-  if (!f.name.toLowerCase().endsWith('.docx')) {
-    showStatus('Only .docx files are supported.', 'error');
-    return;
+// ── Tab switching ─────────────────────────────────────────────────────────
+function switchTab(tab) {
+  if (tab === 'original') {
+    tabOriginal.classList.add('active');
+    tabFormatted.classList.remove('active');
+    paneOriginal.classList.add('active');
+    paneFormatted.classList.remove('active');
+  } else {
+    tabFormatted.classList.add('active');
+    tabOriginal.classList.remove('active');
+    paneFormatted.classList.add('active');
+    paneOriginal.classList.remove('active');
   }
-  currentFile = f;
-  fileNameLabel.textContent = f.name;
-  fileBadge.classList.add('show');
-  btnAnalyse.disabled = false;
-  btnPreview.disabled = true;
-  btnFormat.disabled  = true;
-  analysedData = null;
-  detectedList.innerHTML = '<span class="no-doc-msg">Click "Analyse Document" to detect elements</span>';
-  perTypeSection.style.display = 'none';
-  hidePreview();
-  showStatus('File ready. Click "Analyse Document" to continue.', 'info');
 }
-
-function resetFile() {
-  currentFile = null;
-  fileInput.value = '';
-  fileBadge.classList.remove('show');
-  btnAnalyse.disabled = true;
-  btnPreview.disabled = true;
-  btnFormat.disabled  = true;
-  analysedData = null;
-  detectedList.innerHTML = '<span class="no-doc-msg">Upload &amp; analyse to see elements</span>';
-  perTypeSection.style.display = 'none';
-  hidePreview();
-  hideStatus();
-}
+tabOriginal.addEventListener('click',  () => switchTab('original'));
+tabFormatted.addEventListener('click', () => switchTab('formatted'));
 
 // ── Status bar ────────────────────────────────────────────────────────────
 function showStatus(msg, type = 'info') {
   statusBar.textContent = msg;
   statusBar.className = 'status-bar ' + type;
 }
-function hideStatus() {
-  statusBar.className = 'status-bar';
-}
+function hideStatus() { statusBar.className = 'status-bar'; }
 
 // ── Loading state helpers ─────────────────────────────────────────────────
 function setLoading(btnEl, spinEl, lblEl, loading, label) {
-  btnEl.disabled  = loading;
+  btnEl.disabled       = loading;
   spinEl.style.display = loading ? 'block' : 'none';
-  lblEl.textContent = label;
+  lblEl.textContent    = label;
 }
+
+// ── Auto-load original preview on page load ───────────────────────────────
+// Uses the session's working file — no file upload needed.
+(async function loadOriginalPreview() {
+  tabOriginal.classList.add('loading');
+  try {
+    const res = await fetch('original', { method: 'POST', body: new FormData() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Original preview failed' }));
+      throw new Error(err.error || 'Original preview failed');
+    }
+    const contentType = res.headers.get('Content-Type') || '';
+    const url = contentType.includes('application/pdf')
+      ? URL.createObjectURL(await res.blob())
+      : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
+    frameOriginal.src = url;
+    frameOriginal.classList.add('loaded');
+    placeholderOriginal.style.display = 'none';
+  } catch (err) {
+    showStatus('Original preview error: ' + err.message, 'error');
+  } finally {
+    tabOriginal.classList.remove('loading');
+  }
+})();
 
 // ── Build config object from UI ───────────────────────────────────────────
 function buildConfig() {
+  const fontVal   = document.getElementById('globalFont').value.trim();
+  const bgDefault = document.getElementById('tableHeadingBgDefault').checked;
   const cfg = {
-    paragraph_font:    document.getElementById('globalFont').value.trim() || 'Arial',
-    paragraph_size:    parseInt(document.getElementById('globalSize').value) || 11,
-    bold_headings:     document.getElementById('boldHeadings').checked,
-    bold_titles:       document.getElementById('boldTitles').checked,
-    bold_lists:        document.getElementById('boldLists').checked,
-    highlight:         document.getElementById('highlightElems').checked,
-    preserve_indentation: document.getElementById('preserveIndent').checked,
-    table_heading_bg:  document.getElementById('tableHeadingBg').value.trim() || '#1e3a5f',
+    bold_headings:        document.getElementById('boldHeadings').checked,
+    bold_titles:          document.getElementById('boldTitles').checked,
+    bold_lists:           document.getElementById('boldLists').checked,
+    highlight:            document.getElementById('highlightElems').checked,
+    preserve_indentation: true,
   };
+  if (fontVal)    cfg.paragraph_font    = fontVal;
+  if (!bgDefault) cfg.table_heading_bg  = document.getElementById('tableHeadingBg').value.trim() || '#1e3a5f';
 
-  // Per-type overrides from the table
   const rows = perTypeBody.querySelectorAll('tr');
   rows.forEach(row => {
-    const ptype = row.dataset.ptype;
+    const ptype   = row.dataset.ptype;
     if (!ptype) return;
-    const key   = ptype.toLowerCase();
+    const key     = ptype.toLowerCase();
     const fontVal = row.querySelector('.pt-font').value.trim();
     const sizeVal = row.querySelector('.pt-size').value.trim();
     if (fontVal) cfg[key + '_font'] = fontVal;
@@ -862,31 +934,64 @@ function buildConfig() {
 }
 
 // ── Colour chip helper ────────────────────────────────────────────────────
-function chipClass(ptype) {
-  return 'chip-' + ptype.replace(/\s/g,'_');
-}
+function chipClass(ptype) { return 'chip-' + ptype.replace(/\s/g,'_'); }
 
 // ── Analyse ───────────────────────────────────────────────────────────────
+// No file appended — server reads the session's working file.
 btnAnalyse.addEventListener('click', async () => {
-  if (!currentFile) return;
   setLoading(btnAnalyse, spinAnalyse, lblAnalyse, true, 'Analysing…');
   showStatus('Analysing document structure…', 'info');
   try {
-    const fd = new FormData();
-    fd.append('file', currentFile);
-    const res  = await fetch('analyse', { method: 'POST', body: fd });
+    const res  = await fetch('analyse', { method: 'POST', body: new FormData() });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || 'Analysis failed');
     analysedData = data;
     renderDetectedTypes(data);
-    renderPerTypeTable(data.detected_elements);
+    renderPerTypeTable(data.detected_elements, data.current_fonts || {});
     btnPreview.disabled = false;
     btnFormat.disabled  = false;
     showStatus(`Found ${data.detected_elements.length} element type(s) — ${Object.values(data.element_counts).reduce((a,b)=>a+b,0)} total paragraphs/tables.`, 'ok');
+    // Tell parent shell this tool now has unsaved work.
+    window.parent.postMessage({ type: 'toolDirty' }, '*');
   } catch (err) {
     showStatus('Error: ' + err.message, 'error');
   } finally {
     setLoading(btnAnalyse, spinAnalyse, lblAnalyse, false, '🔍 Analyse Document');
+  }
+});
+
+// ── tabResumed — session file may have changed while away ─────────────────
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'tabResumed') {
+    // Reset so user re-analyses the updated document.
+    analysedData = null;
+    detectedList.innerHTML = '<span class="no-doc-msg">Session file was updated — click Analyse to reload</span>';
+    perTypeSection.style.display = 'none';
+    btnPreview.disabled = true;
+    btnFormat.disabled  = true;
+    frameFormatted.src = '';
+    frameFormatted.classList.remove('loaded');
+    placeholderFormatted.style.display = 'flex';
+    showStatus('Another tool updated the document — please re-analyse.', 'info');
+    window.parent.postMessage({ type: 'toolClean' }, '*');
+    // Reload the original preview with the updated file.
+    (async function() {
+      tabOriginal.classList.add('loading');
+      try {
+        const res = await fetch('original', { method: 'POST', body: new FormData() });
+        if (!res.ok) return;
+        const contentType = res.headers.get('Content-Type') || '';
+        const url = contentType.includes('application/pdf')
+          ? URL.createObjectURL(await res.blob())
+          : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
+        frameOriginal.src = url;
+        frameOriginal.classList.add('loaded');
+        placeholderOriginal.style.display = 'none';
+        switchTab('original');
+      } catch(err) { /* silent */ } finally {
+        tabOriginal.classList.remove('loading');
+      }
+    })();
   }
 });
 
@@ -902,13 +1007,18 @@ function renderDetectedTypes(data) {
   });
 }
 
-function renderPerTypeTable(types) {
+function renderPerTypeTable(types, currentFonts) {
   perTypeBody.innerHTML = '';
   types.forEach(ptype => {
     const tr = document.createElement('tr');
     tr.dataset.ptype = ptype;
+    const fontName = (currentFonts && currentFonts[ptype]) || '';
+    const badgeHtml = fontName
+      ? `<span class="current-font-badge" title="${fontName}">${fontName}</span>`
+      : `<span class="current-font-badge unknown">—</span>`;
     tr.innerHTML = `
       <td><span class="type-label ${chipClass(ptype)}">${ptype.replace(/_/g,' ')}</span></td>
+      <td>${badgeHtml}</td>
       <td>
         <select class="pt-font" title="Font for ${ptype}">
           <option value="">— default —</option>
@@ -952,84 +1062,65 @@ function renderPerTypeTable(types) {
   perTypeSection.style.display = 'block';
 }
 
-// ── Preview ───────────────────────────────────────────────────────────────
+// ── Preview Changes ───────────────────────────────────────────────────────
+// No file appended — server reads the session's working file.
 btnPreview.addEventListener('click', async () => {
-  if (!currentFile) return;
   setLoading(btnPreview, spinPreview, lblPreview, true, 'Generating preview…');
+  tabFormatted.classList.add('loading');
   showStatus('Generating preview…', 'info');
   try {
     const fd = new FormData();
-    fd.append('file', currentFile);
     fd.append('config', JSON.stringify(buildConfig()));
     const res = await fetch('preview', { method: 'POST', body: fd });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Preview failed' }));
-      throw new Error(err.error || 'Preview failed');
+      // Try to read the real error from the server response.
+      const body = await res.text();
+      let msg = 'Preview failed';
+      try { msg = JSON.parse(body).error || msg; } catch { msg = body.slice(0, 200) || msg; }
+      throw new Error(msg);
     }
     const contentType = res.headers.get('Content-Type') || '';
-    if (contentType.includes('application/pdf')) {
-      // PDF preview (Windows + Word installed)
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      showPreview(url, 'pdf');
-      previewToolbar.textContent = `PDF Preview — ${currentFile.name}`;
-    } else {
-      // HTML preview (fallback)
-      const html = await res.text();
-      const blob = new Blob([html], { type: 'text/html' });
-      const url  = URL.createObjectURL(blob);
-      showPreview(url, 'html');
-      previewToolbar.textContent = `HTML Preview — ${currentFile.name}`;
-    }
+    const url = contentType.includes('application/pdf')
+      ? URL.createObjectURL(await res.blob())
+      : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
+    frameFormatted.src = url;
+    frameFormatted.classList.add('loaded');
+    placeholderFormatted.style.display = 'none';
+    switchTab('formatted');
     showStatus('Preview ready.', 'ok');
   } catch (err) {
     showStatus('Preview error: ' + err.message, 'error');
   } finally {
     setLoading(btnPreview, spinPreview, lblPreview, false, '👁 Preview Changes');
+    tabFormatted.classList.remove('loading');
   }
 });
 
-function showPreview(url, type) {
-  previewFrame.src = url;
-  previewFrame.style.display = 'block';
-  previewPlaceholder.style.display = 'none';
-}
-
-function hidePreview() {
-  previewFrame.style.display = 'none';
-  previewFrame.src = '';
-  previewPlaceholder.style.display = 'flex';
-  previewToolbar.textContent = 'Preview will appear here after clicking "Preview Changes"';
-}
-
-// ── Format / Download ─────────────────────────────────────────────────────
+// ── Format ────────────────────────────────────────────────────────────────
+// Server applies font formatting and saves the result as the new session
+// working file.  No browser download here — the parent shell modal handles
+// "Download or apply another tool?" via /download_current.
 btnFormat.addEventListener('click', async () => {
-  if (!currentFile) return;
   setLoading(btnFormat, spinFormat, lblFormat, true, 'Formatting…');
   showStatus('Applying font formatting…', 'info');
   try {
     const fd = new FormData();
-    fd.append('file', currentFile);
     fd.append('config', JSON.stringify(buildConfig()));
     const res = await fetch('format', { method: 'POST', body: fd });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: 'Format failed' }));
       throw new Error(err.error || 'Format failed');
     }
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = currentFile.name.replace('.docx', '_font_formatted.docx');
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    showStatus('Download started — formatting complete!', 'ok');
+    // Drain the response so the server finishes writing the file.
+    await res.blob();
+    showStatus('Formatting complete!', 'ok');
+    // Tell parent the dirty work is done, then show the modal.
+    window.parent.postMessage({ type: 'toolClean' }, '*');
+    window.parent.postMessage({ type: 'taskComplete' }, '*');
   } catch (err) {
     showStatus('Error: ' + err.message, 'error');
   } finally {
-    setLoading(btnFormat, spinFormat, lblFormat, false, '⬇ Download Formatted');
+    setLoading(btnFormat, spinFormat, lblFormat, false, '⬇ Apply Formatting');
   }
 });
 
@@ -1182,6 +1273,39 @@ document.querySelectorAll('.tooltip-wrap').forEach(wrap => {
     document.addEventListener('touchmove', onTouchMove);
     document.addEventListener('touchend',  onTouchEnd);
   }, { passive: true });
+})();
+
+
+// ── Default (keep as-is) toggle for Table header bg ──────────────────────
+(function() {
+  const defaultChk  = document.getElementById('tableHeadingBgDefault');
+  const colorWidget = document.getElementById('colorWidget');
+
+  function applyDefaultState() {
+    if (defaultChk.checked) {
+      colorWidget.classList.add('is-default');
+    } else {
+      colorWidget.classList.remove('is-default');
+    }
+  }
+  defaultChk.addEventListener('change', applyDefaultState);
+  applyDefaultState(); // init — checked by default so widget starts greyed
+})();
+
+// ── Default notice for font select ───────────────────────────────────────
+(function() {
+  const fontSel = document.getElementById('globalFont');
+  const notice  = document.getElementById('fontDefaultNotice');
+
+  function updateNotice() {
+    if (!fontSel.value) {
+      notice.classList.add('show');
+    } else {
+      notice.classList.remove('show');
+    }
+  }
+  fontSel.addEventListener('change', updateNotice);
+  updateNotice(); // init
 })();
 
 </script>

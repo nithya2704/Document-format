@@ -620,6 +620,112 @@
       letter-spacing: 0.2px;
     }
 
+    /* ── GROUPED DUPLICATE CARD ── */
+    .grouped-card {
+      border-left: 4px solid var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .grouped-card.resolved {
+      opacity: 0.45;
+      transform: scale(0.985);
+    }
+
+    .group-icon {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      background: #faedb5;
+      border: 1px solid #e8d08a;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      color: var(--gold);
+    }
+
+    .group-count-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: var(--gold);
+      background: #faedb5;
+      border: 1px solid #e8d08a;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+
+    .group-error-body {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 16px 24px;
+      flex-wrap: wrap;
+    }
+
+    .group-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    .btn-accept-all {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid var(--green);
+      padding: 7px 16px; border-radius: 7px;
+      font-size: 13px; font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-accept-all:hover { background: var(--green); color: white; }
+
+    .btn-decline-all {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 7px 16px; border-radius: 7px;
+      font-size: 13px; font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-decline-all:hover { background: var(--cream); color: var(--ink); border-color: var(--muted); }
+
+    .group-sentences-toggle {
+      padding: 10px 24px;
+      border-top: 1px solid #e8d08a;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: 0.3px;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .group-sentences-toggle:hover { background: #faedb5; }
+
+    .group-sentences-list {
+      border-top: 1px solid #e8d08a;
+    }
+
+    .group-sentence-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 24px;
+      border-bottom: 1px solid #f0e8c8;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .group-sentence-row:last-child { border-bottom: none; }
+
   </style>
 </head>
 <body>
@@ -634,27 +740,14 @@
 
 <main>
 
-  <!-- UPLOAD SECTION -->
+  <!-- ANALYSE SECTION — no file upload; document comes from the session -->
   <section class="upload-section" id="upload-section">
     <div class="upload-eyebrow">Grammar & Style Analysis</div>
     <h1 class="upload-headline">Polish your prose,<br/>word by word.</h1>
-    <p class="upload-subline">Upload a Word document and let ProseCheck surface every grammar and spelling issue for your review.</p>
-
-    <div class="drop-zone" id="drop-zone">
-      <input type="file" id="file-input" accept=".docx" />
-      <div class="drop-icon">📄</div>
-      <div class="drop-label">Drop your document here</div>
-      <div class="drop-hint">or <strong>browse to upload</strong> &nbsp;·&nbsp; .docx files only</div>
-    </div>
-
-    <div class="file-name-pill" id="file-pill">
-      <span class="file-icon">📝</span>
-      <span id="file-name-label">document.docx</span>
-      <button class="file-remove" id="remove-file" title="Remove file">×</button>
-    </div>
+    <p class="upload-subline">Your document has been uploaded. Click below to detect grammar and spelling issues.</p>
 
     <div>
-      <button class="btn-analyze" id="analyze-btn" disabled>
+      <button class="btn-analyze" id="analyze-btn">
         <span class="btn-text">✦ &nbsp;Analyze Document</span>
         <span class="btn-spinner"><span class="spinner"></span></span>
       </button>
@@ -688,129 +781,90 @@
     <div id="issues-container"></div>
   </section>
 
-  <!-- DOWNLOAD SECTION -->
-  <div id="download-section">
-    <div style="font-size:40px; margin-bottom:16px;">✓</div>
-    <div class="download-headline">Your document is ready.</div>
-    <p class="download-sub">All selected corrections have been applied.</p>
-    <div class="download-summary">
-      <span><strong id="dl-accepted">0</strong> corrections applied</span>
-      <span><strong id="dl-declined">0</strong> ignored</span>
-    </div>
-    <br/>
-    <button class="btn-download" id="download-btn">
-      ↓ &nbsp; Download Corrected Document
-    </button>
-  </div>
-
 </main>
-
-<!-- COMPLETE BANNER -->
-<div id="complete-banner">
-  <span>🎉</span> All issues reviewed — your document is ready to download!
-</div>
 
 <script>
 // ── STATE ──
 let reportData = [];
-let decisions = {}; // { errorKey: { action: 'accept'|'decline', suggestion: string|null } }
-let totalIssues = 0;
+let decisions  = {};
+let totalIssues   = 0;
 let resolvedCount = 0;
-let selectedFile = null;
+
+// groupMap: { groupKey → { keys: ['si_ei', ...], suggestions: [...], resolved: false } }
+// Used by grouped (duplicate) error cards only.
+let groupMap = {};
 
 // ── ELEMENTS ──
-const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElementById('file-input');
-const filePill = document.getElementById('file-pill');
-const fileNameLabel = document.getElementById('file-name-label');
-const removeFileBtn = document.getElementById('remove-file');
-const analyzeBtn = document.getElementById('analyze-btn');
-const statsBar = document.getElementById('stats-bar');
-const resultsSection = document.getElementById('results-section');
+const analyzeBtn      = document.getElementById('analyze-btn');
+const statsBar        = document.getElementById('stats-bar');
+const resultsSection  = document.getElementById('results-section');
 const issuesContainer = document.getElementById('issues-container');
-const downloadSection = document.getElementById('download-section');
-const completeBanner = document.getElementById('complete-banner');
-const divider = document.getElementById('divider');
-
-// ── FILE HANDLING ──
-fileInput.addEventListener('change', () => {
-  if (fileInput.files[0]) selectFile(fileInput.files[0]);
-});
-
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
-});
-
-removeFileBtn.addEventListener('click', () => {
-  selectedFile = null;
-  fileInput.value = '';
-  filePill.classList.remove('visible');
-  analyzeBtn.disabled = true;
-});
-
-function selectFile(file) {
-  selectedFile = file;
-  fileNameLabel.textContent = file.name;
-  filePill.classList.add('visible');
-  analyzeBtn.disabled = false;
-}
+const divider         = document.getElementById('divider');
 
 // ── ANALYZE ──
 analyzeBtn.addEventListener('click', async () => {
-  if (!selectedFile) return;
-
   analyzeBtn.classList.add('loading');
   analyzeBtn.disabled = true;
-
-  const formData = new FormData();
-  formData.append('file', selectedFile);
-
   try {
-    const res = await fetch('', { method: 'POST', body: formData });
+    const res  = await fetch('', { method: 'POST', body: new FormData() });
     const data = await res.json();
+    if (data.error) throw new Error(data.error);
     renderResults(data);
+    window.parent.postMessage({ type: 'toolDirty' }, '*');
   } catch (err) {
     console.error(err);
-    alert('An error occurred while analyzing the document.');
+    alert('An error occurred: ' + err.message);
   } finally {
     analyzeBtn.classList.remove('loading');
     analyzeBtn.disabled = false;
   }
 });
 
+// ── tabResumed ──
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'tabResumed') {
+    reportData    = [];
+    decisions     = {};
+    groupMap      = {};
+    totalIssues   = 0;
+    resolvedCount = 0;
+    statsBar.classList.remove('visible');
+    resultsSection.classList.remove('visible');
+    issuesContainer.innerHTML = '';
+    divider.style.display = 'none';
+    const subline = document.querySelector('.upload-subline');
+    if (subline) subline.textContent = 'The document was updated by another tool. Click Analyze to reload.';
+    window.parent.postMessage({ type: 'toolClean' }, '*');
+  }
+});
+
 // ── RENDER RESULTS ──
 function renderResults(data) {
   reportData = data.report;
-  decisions = {};
+  decisions  = {};
+  groupMap   = {};
   resolvedCount = 0;
-  totalIssues = 0;
+  totalIssues   = 0;
 
-  reportData.forEach((item, si) => {
-    item.errors.forEach((_, ei) => {
-      totalIssues++;
-    });
+  // Filter errors without suggestions; count total individual instances
+  reportData.forEach(item => {
+    item.errors = item.errors.filter(err => err.suggestions && err.suggestions.length > 0);
+    totalIssues += item.errors.length;
   });
 
   // Stats
   document.getElementById('stat-sentences').textContent = data.sentence_count;
-  document.getElementById('stat-issues').textContent = data.total_errors;
-  document.getElementById('stat-resolved').textContent = '0';
+  document.getElementById('stat-issues').textContent    = totalIssues;
+  document.getElementById('stat-resolved').textContent  = '0';
   document.getElementById('progress-total').textContent = totalIssues;
-  document.getElementById('progress-text').textContent = '0';
+  document.getElementById('progress-text').textContent  = '0';
 
   statsBar.classList.add('visible');
   divider.style.display = 'block';
   resultsSection.classList.add('visible');
-  downloadSection.classList.remove('visible');
-  completeBanner.classList.remove('visible');
-
   issuesContainer.innerHTML = '';
 
-  if (data.total_errors === 0) {
+  if (totalIssues === 0) {
     issuesContainer.innerHTML = `
       <div class="clean-card">
         <span class="clean-icon">✅</span>
@@ -820,29 +874,118 @@ function renderResults(data) {
     return;
   }
 
+  // ── Build duplicate-group index ────────────────────────────────────────
+  // key = error_text + "|||" + message
+  // groupIndex: { groupKey → [{ si, ei, item, err }] }
+  const groupIndex = {};
   reportData.forEach((item, si) => {
-    if (item.errors.length === 0) return;
+    item.errors.forEach((err, ei) => {
+      const gk = (err.error_text || '') + '|||' + err.message;
+      if (!groupIndex[gk]) groupIndex[gk] = [];
+      groupIndex[gk].push({ si, ei, item, err });
+    });
+  });
+
+  // Separate singleton keys (appear once) vs duplicate keys (appear 2+)
+  const duplicateKeys = new Set(
+    Object.keys(groupIndex).filter(gk => groupIndex[gk].length > 1)
+  );
+
+  // Track which si_ei instances are handled inside a grouped card
+  const handledInGroup = new Set();
+
+  // Render grouped cards first (top of list — one card per duplicate group)
+  duplicateKeys.forEach(gk => {
+    const instances = groupIndex[gk];
+    const { err } = instances[0];
+    const instanceKeys = instances.map(({ si, ei }) => `${si}_${ei}`);
+    instanceKeys.forEach(k => handledInGroup.add(k));
+
+    // Register in groupMap
+    groupMap[gk] = { keys: instanceKeys, resolved: false };
+
+    const card = document.createElement('div');
+    card.className = 'issue-card grouped-card';
+    card.id = `group-card-${CSS.escape(gk)}`;
+
+    const suggestionsArr = (err.suggestions || []).slice(0, 6);
+    const suggestionsHTML = suggestionsArr.map(s =>
+      `<button class="suggestion-btn" data-group-suggest="${escAttr(gk)}" data-val="${escAttr(s)}">${escHtml(s)}</button>`
+    ).join('');
+
+    // Collapsible sentence list
+    const sentenceRows = instances.map(({ si, ei, item: itm }) => {
+      const label = (itm.occurrence_labels || [itm.location_label || `¶${itm.paragraph}`])[0];
+      const icon  = label.startsWith('T') ? '⊞' : '¶';
+      const cls   = label.startsWith('T') ? 'para-chip table-chip' : 'para-chip';
+      const highlighted = buildHighlightedSentence(itm.sentence, [err]);
+      return `
+        <div class="group-sentence-row" id="gsr-${si}_${ei}">
+          <span class="${cls}" style="margin-top:2px;flex-shrink:0;">${icon} ${escHtml(label)}</span>
+          <span class="sentence-text" style="font-size:14px;margin-bottom:0;">${highlighted}</span>
+        </div>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="card-top" style="align-items:center;">
+        <div class="group-icon">⟳</div>
+        <div class="sentence-block">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+            <span class="error-word" style="font-size:15px;">"${escHtml(err.error_text)}"</span>
+            <span class="group-count-badge">${instances.length} occurrences</span>
+          </div>
+          <div class="error-message" style="margin-bottom:0;">${escHtml(err.message)}</div>
+        </div>
+      </div>
+      <div class="errors-list">
+        <div class="group-error-body">
+          <div>
+            <div class="suggestions-label">Suggestions</div>
+            <div class="suggestions-row" id="group-suggestions-${escAttr(gk)}">${suggestionsHTML}</div>
+          </div>
+          <div class="group-actions" id="group-actions-${escAttr(gk)}">
+            <button class="btn-accept-all" data-group-accept="${escAttr(gk)}">✓ Accept all</button>
+            <button class="btn-decline-all" data-group-decline="${escAttr(gk)}">✕ Ignore all</button>
+          </div>
+        </div>
+        <div class="group-sentences-toggle" data-group-toggle="${escAttr(gk)}">
+          <span class="toggle-label">▸ Show ${instances.length} affected sentences</span>
+        </div>
+        <div class="group-sentences-list" id="group-sentences-${escAttr(gk)}" style="display:none;">
+          ${sentenceRows}
+        </div>
+      </div>`;
+
+    issuesContainer.appendChild(card);
+  });
+
+  // Render singleton cards (one card per sentence that has non-grouped errors)
+  reportData.forEach((item, si) => {
+    const singletonErrors = item.errors.filter((_, ei) => !handledInGroup.has(`${si}_${ei}`));
+    if (singletonErrors.length === 0) return;
 
     const card = document.createElement('div');
     card.className = 'issue-card';
     card.id = `card-${si}`;
 
-    const highlightedSentence = buildHighlightedSentence(item.sentence, item.errors);
-    const errorsHTML = item.errors.map((err, ei) => buildErrorItem(err, si, ei)).join('');
+    const highlightedSentence = buildHighlightedSentence(item.sentence, singletonErrors);
+    const errorsHTML = singletonErrors.map((err, localEi) => {
+      // Find the real ei in the full errors array
+      const realEi = item.errors.indexOf(err);
+      return buildErrorItem(err, si, realEi);
+    }).join('');
 
     const labels = item.occurrence_labels || [item.location_label || `¶${item.paragraph}`];
     const isTable = item.source === 'table';
     const locationChips = labels.map(l => {
       const icon = l.startsWith('T') ? '⊞' : '¶';
-      const cls = l.startsWith('T') ? 'para-chip table-chip' : 'para-chip';
+      const cls  = l.startsWith('T') ? 'para-chip table-chip' : 'para-chip';
       return `<span class="${cls}">${icon} ${l}</span>`;
     }).join('');
     const occurrenceBadge = labels.length > 1
       ? `<span class="occurrence-badge">⟳ Repeats ${labels.length}× — correction will apply to all</span>`
       : '';
-    const sourceBadge = isTable
-      ? `<span class="source-badge">⊞ Table text</span>`
-      : '';
+    const sourceBadge = isTable ? `<span class="source-badge">⊞ Table text</span>` : '';
 
     card.innerHTML = `
       <div class="card-top">
@@ -850,7 +993,7 @@ function renderResults(data) {
         <div class="sentence-block">
           <div class="sentence-text">${highlightedSentence}</div>
           <div class="badges-row">
-            <span class="error-count-badge">⚠ ${item.errors.length} issue${item.errors.length > 1 ? 's' : ''}</span>
+            <span class="error-count-badge">⚠ ${singletonErrors.length} issue${singletonErrors.length > 1 ? 's' : ''}</span>
             ${sourceBadge}
             ${occurrenceBadge}
           </div>
@@ -861,7 +1004,8 @@ function renderResults(data) {
     issuesContainer.appendChild(card);
   });
 
-  // Attach event listeners
+  // ── Attach listeners ──
+  // Singleton accept / decline
   document.querySelectorAll('[data-accept]').forEach(btn => {
     btn.addEventListener('click', () => acceptError(btn.dataset.accept));
   });
@@ -872,12 +1016,120 @@ function renderResults(data) {
     btn.addEventListener('click', () => selectSuggestion(btn));
   });
 
+  // Group accept / decline / suggest / toggle
+  document.querySelectorAll('[data-group-accept]').forEach(btn => {
+    btn.addEventListener('click', () => acceptGroup(btn.dataset.groupAccept));
+  });
+  document.querySelectorAll('[data-group-decline]').forEach(btn => {
+    btn.addEventListener('click', () => declineGroup(btn.dataset.groupDecline));
+  });
+  document.querySelectorAll('[data-group-suggest]').forEach(btn => {
+    btn.addEventListener('click', () => selectGroupSuggestion(btn));
+  });
+  document.querySelectorAll('[data-group-toggle]').forEach(el => {
+    el.addEventListener('click', () => toggleGroupSentences(el.dataset.groupToggle));
+  });
+
   resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// ── GROUP HELPERS ──────────────────────────────────────────────────────────
+
+function selectGroupSuggestion(btn) {
+  const gk = btn.dataset.groupSuggest;
+  document.querySelectorAll(`[data-group-suggest="${CSS.escape(gk)}"]`).forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  if (!groupMap[gk]) groupMap[gk] = {};
+  groupMap[gk].selectedSuggestion = btn.dataset.val;
+}
+
+function getGroupSuggestion(gk) {
+  // Return currently selected suggestion for this group, or auto-select first
+  const row = document.getElementById(`group-suggestions-${gk}`);
+  if (!row) return null;
+  const selected = row.querySelector('.suggestion-btn.selected');
+  if (selected) return selected.dataset.val;
+  const first = row.querySelector('.suggestion-btn');
+  if (first) { first.classList.add('selected'); return first.dataset.val; }
+  return null;
+}
+
+function acceptGroup(gk) {
+  const suggestion = getGroupSuggestion(gk);
+  const group = groupMap[gk];
+  if (!group) return;
+  group.keys.forEach(key => {
+    decisions[key] = { action: 'accept', suggestion };
+  });
+  markGroupResolved(gk, 'accept', group.keys.length);
+}
+
+function declineGroup(gk) {
+  const group = groupMap[gk];
+  if (!group) return;
+  group.keys.forEach(key => {
+    decisions[key] = { action: 'decline', suggestion: null };
+  });
+  markGroupResolved(gk, 'decline', group.keys.length);
+}
+
+function markGroupResolved(gk, action, count) {
+  const actionsEl = document.getElementById(`group-actions-${gk}`);
+  if (actionsEl) {
+    const label = action === 'accept'
+      ? `<span class="resolved-badge accepted-badge">✓ Accepted all ${count}</span>`
+      : `<span class="resolved-badge declined-badge">✕ Ignored all ${count}</span>`;
+    actionsEl.innerHTML = label + `<button class="btn-undo" data-group-undo="${escAttr(gk)}" title="Undo all">↩ Undo all</button>`;
+    actionsEl.querySelector('[data-group-undo]').addEventListener('click', () => undoGroup(gk));
+  }
+  const card = document.getElementById(`group-card-${CSS.escape(gk)}`);
+  if (card) card.classList.add('resolved');
+
+  resolvedCount += count;
+  document.getElementById('stat-resolved').textContent = resolvedCount;
+  document.getElementById('progress-text').textContent = resolvedCount;
+  if (resolvedCount >= totalIssues) setTimeout(() => showDownload(), 400);
+}
+
+function undoGroup(gk) {
+  const group = groupMap[gk];
+  if (!group) return;
+  const count = group.keys.length;
+  group.keys.forEach(key => { delete decisions[key]; });
+
+  const actionsEl = document.getElementById(`group-actions-${gk}`);
+  if (actionsEl) {
+    actionsEl.innerHTML = `
+      <button class="btn-accept-all" data-group-accept="${escAttr(gk)}">✓ Accept all</button>
+      <button class="btn-decline-all" data-group-decline="${escAttr(gk)}">✕ Ignore all</button>`;
+    actionsEl.querySelector('[data-group-accept]').addEventListener('click', () => acceptGroup(gk));
+    actionsEl.querySelector('[data-group-decline]').addEventListener('click', () => declineGroup(gk));
+  }
+
+  const card = document.getElementById(`group-card-${CSS.escape(gk)}`);
+  if (card) card.classList.remove('resolved');
+
+  resolvedCount -= count;
+  document.getElementById('stat-resolved').textContent = resolvedCount;
+  document.getElementById('progress-text').textContent = resolvedCount;
+}
+
+function toggleGroupSentences(gk) {
+  const list = document.getElementById(`group-sentences-${gk}`);
+  const toggle = document.querySelector(`[data-group-toggle="${CSS.escape(gk)}"] .toggle-label`);
+  if (!list || !toggle) return;
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  const count = groupMap[gk] ? groupMap[gk].keys.length : '';
+  toggle.textContent = open
+    ? `▸ Show ${count} affected sentences`
+    : `▾ Hide affected sentences`;
+}
+
+// ── SINGLETON HELPERS ──────────────────────────────────────────────────────
+
 function buildHighlightedSentence(sentence, errors) {
   let result = escHtml(sentence);
-  // highlight error words (simple approach — mark first occurrence)
   const seen = new Set();
   errors.forEach(err => {
     if (!err.error_text || seen.has(err.error_text)) return;
@@ -896,7 +1148,7 @@ function buildErrorItem(err, si, ei) {
        <div class="suggestions-row">
          ${suggestionsArr.map(s => `<button class="suggestion-btn" data-suggest="${key}" data-val="${escAttr(s)}">${escHtml(s)}</button>`).join('')}
        </div>`
-    : `<div style="font-size:13px;color:var(--muted);font-style:italic;">No suggestions available</div>`;
+    : '';
 
   return `
     <div class="error-item" id="error-item-${key}">
@@ -916,16 +1168,13 @@ function buildErrorItem(err, si, ei) {
 
 function selectSuggestion(btn) {
   const key = btn.dataset.suggest;
-  // Deselect siblings
   document.querySelectorAll(`[data-suggest="${key}"]`).forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
-  // Store selected suggestion
   if (!decisions[key]) decisions[key] = {};
   decisions[key].suggestion = btn.dataset.val;
 }
 
 function acceptError(key) {
-  // Check if multi-suggestions and none selected — auto-select first
   const row = document.querySelector(`#error-item-${key} .suggestions-row`);
   let suggestion = null;
   if (row) {
@@ -948,7 +1197,7 @@ function declineError(key) {
 
 function markResolved(key, action) {
   const actionsEl = document.getElementById(`actions-${key}`);
-  const itemEl = document.getElementById(`error-item-${key}`);
+  const itemEl    = document.getElementById(`error-item-${key}`);
   if (actionsEl) {
     const label = action === 'accept'
       ? `<span class="resolved-badge accepted-badge">✓ Accepted</span>`
@@ -961,18 +1210,13 @@ function markResolved(key, action) {
   resolvedCount++;
   document.getElementById('stat-resolved').textContent = resolvedCount;
   document.getElementById('progress-text').textContent = resolvedCount;
-
-  if (resolvedCount >= totalIssues) {
-    setTimeout(() => { showDownload(); }, 400);
-  }
+  if (resolvedCount >= totalIssues) setTimeout(() => showDownload(), 400);
 }
 
 function undoError(key) {
   delete decisions[key];
-
   const actionsEl = document.getElementById(`actions-${key}`);
-  const itemEl = document.getElementById(`error-item-${key}`);
-
+  const itemEl    = document.getElementById(`error-item-${key}`);
   if (actionsEl) {
     actionsEl.innerHTML = `
       <button class="btn-accept" data-accept="${key}">✓ Accept</button>
@@ -980,62 +1224,33 @@ function undoError(key) {
     actionsEl.querySelector('[data-accept]').addEventListener('click', () => acceptError(key));
     actionsEl.querySelector('[data-decline]').addEventListener('click', () => declineError(key));
   }
-
-  // Deselect any chosen suggestion
   document.querySelectorAll(`[data-suggest="${key}"]`).forEach(b => b.classList.remove('selected'));
-
   if (itemEl) itemEl.classList.remove('resolved-item');
 
   resolvedCount--;
   document.getElementById('stat-resolved').textContent = resolvedCount;
   document.getElementById('progress-text').textContent = resolvedCount;
-
-  // Hide download section if it was shown
-  document.getElementById('download-section').classList.remove('visible');
-  document.getElementById('complete-banner').classList.remove('visible');
 }
 
-function showDownload() {
-  const accepted = Object.values(decisions).filter(d => d.action === 'accept').length;
-  const declined = Object.values(decisions).filter(d => d.action === 'decline').length;
-  document.getElementById('dl-accepted').textContent = accepted;
-  document.getElementById('dl-declined').textContent = declined;
-  downloadSection.classList.add('visible');
-  completeBanner.classList.add('visible');
-  downloadSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  setTimeout(() => completeBanner.classList.remove('visible'), 5000);
-}
+// ── DOWNLOAD ──────────────────────────────────────────────────────────────
 
-// ── DOWNLOAD ──
-document.getElementById('download-btn').addEventListener('click', async () => {
-  const btn = document.getElementById('download-btn');
-  btn.textContent = 'Preparing…';
-  btn.style.opacity = '0.7';
-
-  const formData = new FormData();
-  formData.append('file', selectedFile);
-  formData.append('decisions', JSON.stringify(decisions));
-  formData.append('report', JSON.stringify(reportData));
-
+async function showDownload() {
   try {
+    const formData = new FormData();
+    formData.append('decisions',     JSON.stringify(decisions));
+    formData.append('report',        JSON.stringify(reportData));
+    formData.append('original_name', 'document.docx');
     const res = await fetch('download', { method: 'POST', body: formData });
-    if (!res.ok) throw new Error('Download failed');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = (selectedFile.name.replace('.docx','') + '_corrected.docx');
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!res.ok) throw new Error('Failed to apply corrections');
+    await res.blob();
   } catch (err) {
-    alert('Error generating document. Please try again.');
-  } finally {
-    btn.innerHTML = '↓ &nbsp; Download Corrected Document';
-    btn.style.opacity = '1';
+    alert('Error applying corrections: ' + err.message);
+    return;
   }
-});
+  window.parent.postMessage({ type: 'taskComplete' }, '*');
+}
 
-// ── UTILS ──
+// ── UTILS ────────────────────────────────────────────────────────────────
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
