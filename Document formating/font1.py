@@ -1,4 +1,3 @@
-#font1.py
 import os
 import re
 import json
@@ -652,23 +651,22 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
 
     # ── Step 2: classify every table AND its cell paragraphs ──────────────────
     for tbl_idx, table in enumerate(doc.tables):
-        for tbl_idx, table in enumerate(doc.tables):
         # --- NEW: Extract Header Background Colors ---
-            try:
-                if len(table.rows) > 0:
-                    first_row = table.rows[0]
-                    for cell in first_row.cells:
-                        tcPr = cell._tc.find(qn("w:tcPr"))
-                        if tcPr is not None:
-                            shd = tcPr.find(qn("w:shd"))
-                            if shd is not None:
-                                fill = shd.get(qn("w:fill"))
-                                if fill and fill.upper() not in ("AUTO", "FFFFFF", "000000"):
-                                    # Normalize to #RRGGBB format
-                                    detected_table_bg_colors.add(f"#{fill.upper()}")
-            except Exception:
-                pass
-            # --- End of New Logic ---
+        try:
+            if len(table.rows) > 0:
+                first_row = table.rows[0]
+                for cell in first_row.cells:
+                    tcPr = cell._tc.find(qn("w:tcPr"))
+                    if tcPr is not None:
+                        shd = tcPr.find(qn("w:shd"))
+                        if shd is not None:
+                            fill = shd.get(qn("w:fill"))
+                            if fill and fill.upper() not in ("AUTO", "FFFFFF", "000000"):
+                                # Normalize to #RRGGBB format
+                                detected_table_bg_colors.add(f"#{fill.upper()}")
+        except Exception:
+            pass
+        # --- End of New Logic ---
         tbl_body_pos = body_elem_to_pos.get(id(table._tbl), -1)
         on_cover     = (cover_body_threshold >= 0 and
                         0 <= tbl_body_pos <= cover_body_threshold)
@@ -774,8 +772,26 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
         "current_fonts":     current_fonts,
         "toc_detected":      has_toc,
         "toc_range":         [toc_start, toc_end] if has_toc else [],
-        "detected_table_bgs": list(detected_table_bg_colors) # Added this
+        "detected_table_bgs": sorted(list(detected_table_bg_colors))
     }
+
+
+# =============================================================================
+#  STANDARD TABLE HEADER COLORS (COMMON DEFAULTS)
+# =============================================================================
+
+STANDARD_TABLE_BG_COLORS = [
+    "#4472C4",  # Blue
+    "#70AD47",  # Green
+    "#FFC000",  # Gold
+    "#ED7D31",  # Orange
+    "#A5A5A5",  # Gray
+    "#44546A",  # Dark Gray
+    "#BDD7EE",  # Light Blue
+    "#C6EFCE",  # Light Green
+    "#FFE699",  # Light Yellow
+    "#F4B084",  # Light Orange
+]
 
 
 # =============================================================================
@@ -1037,7 +1053,7 @@ def ft_highlight_toc(doc, elements: list, config: dict):
 
 
 # =============================================================================
-#  TABLE CELL CONTENT FORMAT PASS  ← THE KEY NEW PASS
+#  TABLE CELL CONTENT FORMAT PASS
 # =============================================================================
 
 def ft_format_table_cells(doc, elements: list, config: dict):
@@ -1162,10 +1178,6 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
     for i, table in enumerate(doc.tables):
         elem_info = tbl_elem_map.get(i)
         on_cover  = elem_info.get("on_cover", False) if elem_info else False
-        tbl_elem = {e.get("table_idx")
-                          : e for e in elements if e.get("type") == "TABLE"}
-        elem_info = tbl_elem.get(i)
-        on_cover = elem_info.get("on_cover", False) if elem_info else False
         if not on_cover and table_heading_bg:
             set_table_heading_bg(table, table_heading_bg)
 
@@ -1424,6 +1436,8 @@ def ft_analyse():
         return jsonify({"error": "No file uploaded yet. Please upload from the home page."}), 400
     try:
         data = ft_analyze_document_structure(path)
+        # Add standard colors to the response
+        data["standard_table_bgs"] = STANDARD_TABLE_BG_COLORS
         return jsonify(data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1475,8 +1489,6 @@ def ft_preview():
             return send_file(pdf_path, mimetype="application/pdf")
 
         html_content = docx_to_html_preview(out_docx, elements=data["elements"])
-        # Non-Windows or Word not installed — fall back to HTML renderer
-        html_content = docx_to_html_preview(out_docx)
         return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
         return jsonify({"error": str(e)}), 500

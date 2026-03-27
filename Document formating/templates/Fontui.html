@@ -736,17 +736,25 @@
               <span class="preset-label">Detected in Doc:</span>
               <div id="detectedPresetsList" style="display: flex; gap: 5px; flex-wrap: wrap;"></div>
             </div>
+            <!-- Detected colors section (populated by JavaScript after analyse) -->
+            <div class="color-presets" id="detectedPresetsRow" style="display:none; margin-bottom: 8px;">
+              <span class="preset-label">Detected in Doc:</span>
+              <div id="detectedPresetsList" style="display: flex; gap: 5px; flex-wrap: wrap;"></div>
+            </div>
+
+            <!-- Standard colors section -->
             <div class="color-presets">
               <span class="preset-label">Standard:</span>
-              <button class="preset-btn" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy Blue"></button>
-              <button class="preset-btn" data-color="#1f4e79" style="background:#1f4e79" title="Dark Blue"></button>
-              <button class="preset-btn" data-color="#2e4057" style="background:#2e4057" title="Steel Blue"></button>
-              <button class="preset-btn" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
-              <button class="preset-btn" data-color="#375623" style="background:#375623" title="Dark Green"></button>
-              <button class="preset-btn" data-color="#7b2d8b" style="background:#7b2d8b" title="Purple"></button>
-              <button class="preset-btn" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
-              <button class="preset-btn" data-color="#000000" style="background:#000000" title="Black"></button>
-              <button class="preset-btn" data-color="#ffffff" style="background:#ffffff" title="White" class="preset-btn-light"></button>
+              <button class="preset-btn" data-color="#4472C4" style="background:#4472C4" title="Blue"></button>
+              <button class="preset-btn" data-color="#70AD47" style="background:#70AD47" title="Green"></button>
+              <button class="preset-btn" data-color="#FFC000" style="background:#FFC000" title="Gold"></button>
+              <button class="preset-btn" data-color="#ED7D31" style="background:#ED7D31" title="Orange"></button>
+              <button class="preset-btn" data-color="#A5A5A5" style="background:#A5A5A5" title="Gray"></button>
+              <button class="preset-btn" data-color="#44546A" style="background:#44546A" title="Dark Gray"></button>
+              <button class="preset-btn" data-color="#BDD7EE" style="background:#BDD7EE" title="Light Blue"></button>
+              <button class="preset-btn" data-color="#C6EFCE" style="background:#C6EFCE" title="Light Green"></button>
+              <button class="preset-btn" data-color="#FFE699" style="background:#FFE699" title="Light Yellow"></button>
+              <button class="preset-btn" data-color="#F4B084" style="background:#F4B084" title="Light Orange"></button>
             </div>
           </div>
         </div>
@@ -952,6 +960,7 @@ btnAnalyse.addEventListener('click', async () => {
     analysedData = data;
     renderDetectedTypes(data);
     renderPerTypeTable(data.detected_elements, data.current_fonts || {});
+    populateDetectedColors(data.detected_table_bgs || []);  // ← ADD THIS
     btnPreview.disabled = false;
     btnFormat.disabled  = false;
     showStatus(`Found ${data.detected_elements.length} element type(s) — ${Object.values(data.element_counts).reduce((a,b)=>a+b,0)} total paragraphs/tables.`, 'ok');
@@ -1000,15 +1009,56 @@ window.addEventListener('message', e => {
 });
 
 function renderDetectedTypes(data) {
+  const detectedList = document.getElementById('detectedList');
+  if (!detectedList) return;
+
   detectedList.innerHTML = '';
-  data.detected_elements.forEach(t => {
+  
+  if (!data.detected_elements || data.detected_elements.length === 0) {
+    detectedList.innerHTML = '<span class="no-doc-msg">No elements detected</span>';
+    return;
+  }
+
+  data.detected_elements.forEach(ptype => {
     const chip = document.createElement('span');
-    chip.className = 'type-chip ' + chipClass(t);
-    const count = data.element_counts[t] || 0;
-    chip.textContent = t.replace(/_/g,' ') + (count ? ` ×${count}` : '');
-    chip.title = data.sample_texts[t] ? '"' + data.sample_texts[t].slice(0,80) + '…"' : '';
+    chip.className = 'type-chip ' + ('chip-' + ptype.replace(/\s/g,'_'));
+    const count = data.element_counts[ptype] || 0;
+    chip.textContent = ptype.replace(/_/g,' ') + (count ? ` ×${count}` : '');
+    
+    if (data.sample_texts && data.sample_texts[ptype]) {
+      chip.title = '"' + data.sample_texts[ptype].slice(0, 80) + '…"';
+    }
+    
     detectedList.appendChild(chip);
   });
+}
+
+// After renderDetectedTypes() function, add this:
+function populateDetectedColors(detectedColors) {
+  const row = document.getElementById('detectedPresetsRow');
+  const list = document.getElementById('detectedPresetsList');
+
+  if (!detectedColors || detectedColors.length === 0) {
+    row.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = '';
+  detectedColors.forEach(hex => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.dataset.color = hex;
+    btn.style.background = hex;
+    btn.title = hex;
+    btn.addEventListener('click', () => {
+      // Sync the color picker
+      document.getElementById('tableHeadingBgPicker').value = hex;
+      document.getElementById('tableHeadingBgPicker').dispatchEvent(new Event('input'));
+    });
+    list.appendChild(btn);
+  });
+
+  row.style.display = 'flex';
 }
 
 function renderPerTypeTable(types, currentFonts) {
