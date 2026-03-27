@@ -732,8 +732,12 @@
               <input type="text"  id="tableHeadingBg" value="#1e3a5f" maxlength="7" placeholder="#1e3a5f" class="hex-input" spellcheck="false">
               <div class="color-swatch-preview" id="colorSwatchPreview" style="background:#1e3a5f"></div>
             </div>
+            <div class="color-presets" id="detectedPresetsRow" style="display:none; margin-bottom: 8px;">
+              <span class="preset-label">Detected in Doc:</span>
+              <div id="detectedPresetsList" style="display: flex; gap: 5px; flex-wrap: wrap;"></div>
+            </div>
             <div class="color-presets">
-              <span class="preset-label">Presets:</span>
+              <span class="preset-label">Standard:</span>
               <button class="preset-btn" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy Blue"></button>
               <button class="preset-btn" data-color="#1f4e79" style="background:#1f4e79" title="Dark Blue"></button>
               <button class="preset-btn" data-color="#2e4057" style="background:#2e4057" title="Steel Blue"></button>

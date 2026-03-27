@@ -65,8 +65,7 @@ def _session_out_dir():
 
 
 # =============================================================================
-#  ALL UTILITY FUNCTIONS (unchanged from original font1.py)
-#  — copied verbatim so this file is self-contained.
+#  UTILITY FUNCTIONS
 # =============================================================================
 
 def is_in_footer_or_header(para, *args) -> bool:
@@ -178,11 +177,9 @@ def _resolve_numFmt(para) -> str:
         numPr = pPr.find(qn("w:numPr"))
         if numPr is not None:
             numId_node = numPr.find(qn("w:numId"))
-            ilvl_node = numPr.find(qn("w:ilvl"))
-            numId_val = numId_node.get(
-                qn("w:val"), "0") if numId_node is not None else "0"
-            ilvl_val = ilvl_node.get(
-                qn("w:val"),  "0") if ilvl_node is not None else "0"
+            ilvl_node  = numPr.find(qn("w:ilvl"))
+            numId_val  = numId_node.get(qn("w:val"), "0") if numId_node is not None else "0"
+            ilvl_val   = ilvl_node.get(qn("w:val"),  "0") if ilvl_node  is not None else "0"
             if numId_val == "0":
                 return ""
             return _fmt_from_numId_ilvl(numId_val, ilvl_val)
@@ -191,16 +188,14 @@ def _resolve_numFmt(para) -> str:
     while style is not None:
         try:
             style_elem = style.element
-            style_pPr = style_elem.find(qn("w:pPr"))
+            style_pPr  = style_elem.find(qn("w:pPr"))
             if style_pPr is not None:
                 style_numPr = style_pPr.find(qn("w:numPr"))
                 if style_numPr is not None:
                     numId_node = style_numPr.find(qn("w:numId"))
-                    ilvl_node = style_numPr.find(qn("w:ilvl"))
-                    numId_val = numId_node.get(
-                        qn("w:val"), "0") if numId_node is not None else "0"
-                    ilvl_val = ilvl_node.get(
-                        qn("w:val"),  "0") if ilvl_node is not None else "0"
+                    ilvl_node  = style_numPr.find(qn("w:ilvl"))
+                    numId_val  = numId_node.get(qn("w:val"), "0") if numId_node is not None else "0"
+                    ilvl_val   = ilvl_node.get(qn("w:val"),  "0") if ilvl_node  is not None else "0"
                     if numId_val == "0":
                         return ""
                     return _fmt_from_numId_ilvl(numId_val, ilvl_val)
@@ -230,6 +225,8 @@ def get_list_type(para) -> str:
     return "LIST_ITEM"
 
 
+# ── Highlight colour definitions ──────────────────────────────────────────────
+
 HIGHLIGHT_COLORS = {
     "TITLE":         WD_COLOR_INDEX.YELLOW,
     "COVER_PAGE":    WD_COLOR_INDEX.DARK_YELLOW,
@@ -238,6 +235,8 @@ HIGHLIGHT_COLORS = {
     "TOC_HEADING_2": WD_COLOR_INDEX.GRAY_50,
     "TOC_HEADING_3": WD_COLOR_INDEX.BLUE,
     "TOC_HEADING_4": WD_COLOR_INDEX.DARK_BLUE,
+    "TOC_HEADING_5": WD_COLOR_INDEX.TEAL,
+    "TOC_HEADING_6": WD_COLOR_INDEX.TURQUOISE,
     "HEADING_1":     WD_COLOR_INDEX.BRIGHT_GREEN,
     "HEADING_2":     WD_COLOR_INDEX.TURQUOISE,
     "HEADING_3":     WD_COLOR_INDEX.PINK,
@@ -246,6 +245,11 @@ HIGHLIGHT_COLORS = {
     "HEADING_6":     WD_COLOR_INDEX.DARK_BLUE,
     "PARAGRAPH":     WD_COLOR_INDEX.WHITE,
     "LIST_ITEM":     WD_COLOR_INDEX.RED,
+    # Table zones — distinct colours for header / body / footer rows
+    "TABLE_HEADER":  WD_COLOR_INDEX.GREEN,
+    "TABLE_BODY":    WD_COLOR_INDEX.WHITE,
+    "TABLE_FOOTER":  WD_COLOR_INDEX.DARK_YELLOW,
+    # Backward-compat key
     "TABLE":         WD_COLOR_INDEX.GREEN,
 }
 
@@ -269,6 +273,50 @@ _COLOR_MAP = {
 }
 
 
+# =============================================================================
+#  TABLE ROW-ROLE HELPERS
+# =============================================================================
+
+def _is_table_header_row(table, row_idx: int) -> bool:
+    """
+    Return True when row_idx is a designated header row.
+    Checks the Word tblHeader XML flag; falls back to row 0.
+    """
+    try:
+        row  = table.rows[row_idx]
+        trPr = row._tr.find(qn("w:trPr"))
+        if trPr is not None:
+            tblHeader = trPr.find(qn("w:tblHeader"))
+            if tblHeader is not None:
+                val = tblHeader.get(qn("w:val"), "true")
+                if val.lower() not in ("false", "0", "off"):
+                    return True
+    except Exception:
+        pass
+    return row_idx == 0
+
+
+def _is_table_footer_row(table, row_idx: int, total_rows: int) -> bool:
+    """Heuristic: last row whose text contains totals/summary keywords."""
+    if row_idx != total_rows - 1:
+        return False
+    try:
+        row_text = " ".join(
+            cell.text for cell in table.rows[row_idx].cells
+        ).lower()
+        FOOTER_KW = re.compile(
+            r"\b(total|sum|grand\s+total|subtotal|average|avg|count)\b",
+            re.IGNORECASE,
+        )
+        return bool(FOOTER_KW.search(row_text))
+    except Exception:
+        return False
+
+
+# =============================================================================
+#  TOC DETECTION HELPERS
+# =============================================================================
+
 def _ft_get_style_base(para) -> str:
     try:
         name = para.style.name if para.style else ""
@@ -288,7 +336,7 @@ def _ft_toc_level_from_style(para) -> int:
 
 _FT_TOC_ENTRY_RE = re.compile(
     r"^\s*(\d+(?:\.\d+)*)?\s*(.+?)[\s\.…\-]{2,}(\d{1,4})\s*$", re.UNICODE)
-_FT_TOC_TAB_RE = re.compile(r"^.+\t\d{1,4}\s*$")
+_FT_TOC_TAB_RE   = re.compile(r"^.+\t\d{1,4}\s*$")
 
 
 def _ft_is_toc_entry_by_heuristic(para) -> bool:
@@ -320,7 +368,7 @@ def _ft_detect_toc_section(doc):
         toc_start = first_toc_style_idx
         for j in range(first_toc_style_idx - 1, max(-1, first_toc_style_idx - 5), -1):
             text = (paragraphs[j].text or "").strip().lower()
-            sb = _ft_get_style_base(paragraphs[j])
+            sb   = _ft_get_style_base(paragraphs[j])
             if sb == "TOC Heading" or "table of contents" in text or text == "contents":
                 toc_start = j
                 break
@@ -333,7 +381,7 @@ def _ft_detect_toc_section(doc):
     toc_start = -1
     for i, para in enumerate(paragraphs[:100]):
         text = (para.text or "").strip()
-        sb = _ft_get_style_base(para)
+        sb   = _ft_get_style_base(para)
         if sb == "TOC Heading" or TOC_TITLE_RE.match(text):
             toc_start = i
             break
@@ -344,7 +392,7 @@ def _ft_detect_toc_section(doc):
         return -1, -1, False
 
     toc_end = toc_start
-    consec = 0
+    consec  = 0
     for i in range(toc_start + 1, min(len(paragraphs), toc_start + 300)):
         text = (paragraphs[i].text or "").strip()
         if not text:
@@ -352,7 +400,7 @@ def _ft_detect_toc_section(doc):
         if (_ft_is_toc_entry_by_heuristic(paragraphs[i]) or
                 _ft_is_toc_entry_by_style(paragraphs[i])):
             toc_end = i
-            consec = 0
+            consec  = 0
         else:
             consec += 1
             if consec >= 3:
@@ -375,10 +423,10 @@ def _ft_detect_cover_page(doc) -> int:
             return i - 1
     COVER_KW = re.compile(
         r"\b(prepared\s+(by|for)|author|version|copyright|confidential|restricted|"
-        r"january|february|march|april|may|june|july|august|september|october|november|december|\d{4})\b",
+        r"january|february|march|april|may|june|july|august|september|october|"
+        r"november|december|\d{4})\b",
         re.IGNORECASE)
-    non_empty = [(i, p) for i, p in enumerate(
-        paragraphs) if (p.text or "").strip()]
+    non_empty      = [(i, p) for i, p in enumerate(paragraphs) if (p.text or "").strip()]
     cover_candidate = -1
     for rank, (i, para) in enumerate(non_empty[:25]):
         text = (para.text or "").strip()
@@ -470,8 +518,8 @@ def _ft_get_para_font(para, theme_resolver) -> str:
             try:
                 if style.font and style.font.name:
                     return style.font.name
-                style_elem = style.element
-                style_pPr = style_elem.find(qn("w:pPr"))
+                style_elem  = style.element
+                style_pPr   = style_elem.find(qn("w:pPr"))
                 if style_pPr is not None:
                     style_rPr = style_pPr.find(qn("w:rPr"))
                     if style_rPr is not None:
@@ -494,23 +542,43 @@ def _ft_get_para_font(para, theme_resolver) -> str:
     return ""
 
 
-def ft_analyze_document_structure(docx_path: str) -> dict:
-    doc = Document(docx_path)
-    footer_ids = get_footer_paragraph_ids(doc)
-    header_ids = get_header_paragraph_ids(doc)
+# =============================================================================
+#  DOCUMENT STRUCTURE ANALYSIS
+# =============================================================================
 
-    elements = []
+def ft_analyze_document_structure(docx_path: str) -> dict:
+    doc            = Document(docx_path)
+    footer_ids     = get_footer_paragraph_ids(doc)
+    header_ids     = get_header_paragraph_ids(doc)
+
+    elements:       list = []
     element_counts: dict = {}
-    detected_types: set = set()
+    detected_types: set  = set()
     sample_texts:   dict = {}
     _font_votes:    dict = {}
 
-    theme_resolver = _make_theme_resolver(doc)
-    cover_end = _ft_detect_cover_page(doc)
+    detected_table_bg_colors = set() # To store unique hex colors
+
+    theme_resolver    = _make_theme_resolver(doc)
+    cover_end         = _ft_detect_cover_page(doc)
     toc_start, toc_end, has_toc = _ft_detect_toc_section(doc)
     first_content_idx = next(
         (i for i, p in enumerate(doc.paragraphs) if (p.text or "").strip()), 0)
 
+    # ── body-position maps ────────────────────────────────────────────────────
+    body_children    = list(doc.element.body)
+    body_elem_to_pos = {id(child): pos for pos, child in enumerate(body_children)}
+    para_body_pos:   dict = {}
+    para_seq = 0
+    for child in body_children:
+        if child.tag == qn("w:p"):
+            para_body_pos[para_seq] = body_elem_to_pos[id(child)]
+            para_seq += 1
+    cover_body_threshold = -1
+    if cover_end >= 0 and cover_end in para_body_pos:
+        cover_body_threshold = para_body_pos[cover_end]
+
+    # ── Step 1: classify every top-level paragraph ────────────────────────────
     for idx, para in enumerate(doc.paragraphs):
         if is_in_footer_or_header(para, footer_ids, header_ids):
             continue
@@ -519,9 +587,9 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
 
         style_name = para.style.name if para.style is not None else ""
         style_base = style_name.split(" Char")[0].strip()
-        ptype = None
-        in_toc = has_toc and toc_start <= idx <= toc_end
-        in_cover = cover_end >= 0 and idx <= cover_end
+        ptype      = None
+        in_toc     = has_toc and toc_start <= idx <= toc_end
+        in_cover   = cover_end >= 0 and idx <= cover_end
 
         if style_base == "Title":
             ptype = "TITLE"
@@ -533,7 +601,7 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
         elif re.match(r"^TOC \d+$", style_base):
             try:
                 level = int(style_base.split()[-1])
-            except:
+            except Exception:
                 level = 1
             ptype = f"TOC_HEADING_{level}"
 
@@ -582,26 +650,39 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
         if font_name:
             _font_votes.setdefault(ptype, []).append(font_name)
 
-    body_children = list(doc.element.body)
-    body_elem_to_pos = {id(child): pos for pos,
-                        child in enumerate(body_children)}
-    para_body_pos:   dict = {}
-    para_seq = 0
-    for child in body_children:
-        if child.tag == qn("w:p"):
-            para_body_pos[para_seq] = body_elem_to_pos[id(child)]
-            para_seq += 1
-    cover_body_threshold = -1
-    if cover_end >= 0 and cover_end in para_body_pos:
-        cover_body_threshold = para_body_pos[cover_end]
-
-    for i, table in enumerate(doc.tables):
+    # ── Step 2: classify every table AND its cell paragraphs ──────────────────
+    for tbl_idx, table in enumerate(doc.tables):
+        for tbl_idx, table in enumerate(doc.tables):
+        # --- NEW: Extract Header Background Colors ---
+            try:
+                if len(table.rows) > 0:
+                    first_row = table.rows[0]
+                    for cell in first_row.cells:
+                        tcPr = cell._tc.find(qn("w:tcPr"))
+                        if tcPr is not None:
+                            shd = tcPr.find(qn("w:shd"))
+                            if shd is not None:
+                                fill = shd.get(qn("w:fill"))
+                                if fill and fill.upper() not in ("AUTO", "FFFFFF", "000000"):
+                                    # Normalize to #RRGGBB format
+                                    detected_table_bg_colors.add(f"#{fill.upper()}")
+            except Exception:
+                pass
+            # --- End of New Logic ---
         tbl_body_pos = body_elem_to_pos.get(id(table._tbl), -1)
-        on_cover = cover_body_threshold >= 0 and 0 <= tbl_body_pos <= cover_body_threshold
-        elements.append(
-            {"type": "TABLE", "table_idx": i, "on_cover": on_cover})
+        on_cover     = (cover_body_threshold >= 0 and
+                        0 <= tbl_body_pos <= cover_body_threshold)
+        total_rows   = len(table.rows)
+
+        # One summary entry for the table itself (used by set_table_heading_bg)
+        elements.append({
+            "type":      "TABLE",
+            "table_idx": tbl_idx,
+            "on_cover":  on_cover,
+        })
         element_counts["TABLE"] = element_counts.get("TABLE", 0) + 1
         detected_types.add("TABLE")
+
         if "TABLE" not in sample_texts:
             for row in table.rows:
                 for cell in row.cells:
@@ -609,28 +690,75 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
                         sample_texts["TABLE"] = cell.text.strip()[:250]
                         break
 
+        # Per-cell-paragraph entries
+        seen_cell_ids: set = set()
+        for row_idx, row in enumerate(table.rows):
+            if _is_table_header_row(table, row_idx):
+                row_role = "TABLE_HEADER"
+            elif _is_table_footer_row(table, row_idx, total_rows):
+                row_role = "TABLE_FOOTER"
+            else:
+                row_role = "TABLE_BODY"
+
+            for col_idx, cell in enumerate(row.cells):
+                cid = id(cell._tc)
+                if cid in seen_cell_ids:
+                    continue
+                seen_cell_ids.add(cid)
+
+                for cell_para_idx, para in enumerate(cell.paragraphs):
+                    # Skip paragraphs that belong to a nested table
+                    nested = False
+                    node   = para._element.getparent()
+                    while node is not None and node is not cell._tc:
+                        if node.tag == qn("w:tbl"):
+                            nested = True
+                            break
+                        node = node.getparent()
+                    if nested:
+                        continue
+
+                    text = (para.text or "").strip()
+
+                    cell_elem = {
+                        "type":          row_role,
+                        "table_idx":     tbl_idx,
+                        "row_idx":       row_idx,
+                        "col_idx":       col_idx,
+                        "cell_para_idx": cell_para_idx,
+                        "on_cover":      on_cover,
+                        "_para_elem_id": id(para._element),
+                    }
+                    elements.append(cell_elem)
+
+                    element_counts[row_role] = element_counts.get(row_role, 0) + 1
+                    detected_types.add(row_role)
+
+                    if text and row_role not in sample_texts:
+                        sample_texts[row_role] = text[:250]
+
+                    font_name = _ft_get_para_font(para, theme_resolver)
+                    if font_name:
+                        _font_votes.setdefault(row_role, []).append(font_name)
+
+    # ── Sort key for detected_elements display list ───────────────────────────
     def _sort_key(x):
-        if x == "TITLE":
-            return (0, 0)
-        if x == "COVER_PAGE":
-            return (1, 0)
-        if x == "TOC_TITLE":
-            return (2, 0)
+        if x == "TITLE":           return (0, 0)
+        if x == "COVER_PAGE":      return (1, 0)
+        if x == "TOC_TITLE":       return (2, 0)
         if x.startswith("TOC_HEADING_"):
-            try:
-                return (3, int(x.split("_")[-1]))
-            except:
-                return (3, 99)
+            try:    return (3, int(x.split("_")[-1]))
+            except: return (3, 99)
         if x.startswith("HEADING_"):
-            try:
-                return (4, int(x.split("_")[-1]))
-            except:
-                return (4, 99)
-        if x == "LIST_ITEM":
-            return (5, 0)
-        if x == "PARAGRAPH":
-            return (6, 0)
-        return (7, 0)
+            try:    return (4, int(x.split("_")[-1]))
+            except: return (4, 99)
+        if x == "LIST_ITEM":       return (5, 0)
+        if x == "PARAGRAPH":       return (6, 0)
+        if x == "TABLE":           return (7, 0)
+        if x == "TABLE_HEADER":    return (7, 1)
+        if x == "TABLE_BODY":      return (7, 2)
+        if x == "TABLE_FOOTER":    return (7, 3)
+        return (8, 0)
 
     from collections import Counter
     current_fonts = {
@@ -644,37 +772,77 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
         "element_counts":    element_counts,
         "sample_texts":      sample_texts,
         "current_fonts":     current_fonts,
+        "toc_detected":      has_toc,
+        "toc_range":         [toc_start, toc_end] if has_toc else [],
+        "detected_table_bgs": list(detected_table_bg_colors) # Added this
     }
 
 
+# =============================================================================
+#  FORMATTING HELPERS
+# =============================================================================
+
 def _ft_get_config_for_type(ptype: str, config: dict):
-    font_name = config.get(ptype.lower() + "_font")
+    """Return (font_name, font_size_pt) for a given element type."""
+    font_name     = config.get(ptype.lower() + "_font")
     font_size_raw = config.get(ptype.lower() + "_size")
+
     if not font_name:
         if ptype == "COVER_PAGE":
-            font_name = config.get(
-                "title_font") or config.get("paragraph_font")
+            font_name = config.get("title_font") or config.get("paragraph_font")
         elif ptype == "LIST_ITEM":
-            font_name = config.get(
-                "list_item_font") or config.get("paragraph_font")
+            font_name = config.get("list_item_font") or config.get("paragraph_font")
+        elif ptype == "TOC_TITLE":
+            font_name = (config.get("toc_title_font")
+                         or config.get("title_font")
+                         or config.get("paragraph_font"))
+        elif ptype.startswith("TOC_HEADING_"):
+            font_name = config.get("toc_heading_font") or config.get("paragraph_font")
+        elif ptype == "TABLE_HEADER":
+            font_name = (config.get("table_header_font")
+                         or config.get("table_font")
+                         or config.get("paragraph_font"))
+        elif ptype in ("TABLE_BODY", "TABLE_FOOTER"):
+            font_name = (config.get("table_body_font")
+                         or config.get("table_font")
+                         or config.get("paragraph_font"))
         else:
             font_name = config.get("paragraph_font")
+
     if not font_size_raw:
         if ptype == "COVER_PAGE":
             font_size_raw = config.get("title_size") or 12
         elif ptype == "LIST_ITEM":
-            font_size_raw = config.get(
-                "list_item_size") or config.get("paragraph_size") or 12
+            font_size_raw = (config.get("list_item_size")
+                             or config.get("paragraph_size") or 12)
+        elif ptype == "TOC_TITLE":
+            font_size_raw = config.get("toc_title_size") or 14
+        elif ptype.startswith("TOC_HEADING_"):
+            try:
+                lvl = int(ptype.split("_")[-1])
+            except Exception:
+                lvl = 1
+            font_size_raw = config.get("toc_heading_size") or max(9, 13 - lvl)
+        elif ptype == "TABLE_HEADER":
+            font_size_raw = (config.get("table_header_size")
+                             or config.get("table_size")
+                             or config.get("paragraph_size") or 11)
+        elif ptype in ("TABLE_BODY", "TABLE_FOOTER"):
+            font_size_raw = (config.get("table_body_size")
+                             or config.get("table_size")
+                             or config.get("paragraph_size") or 11)
         else:
             font_size_raw = config.get("paragraph_size") or 12
+
     try:
         font_size = int(font_size_raw)
-    except:
+    except Exception:
         font_size = 12
     return font_name, font_size
 
 
 def _ft_get_all_runs(para):
+    """All <w:r> elements inside para, excluding those inside nested tables."""
     all_r = para._element.xpath(".//w:r")
     nested_tbl_runs = set()
     for tbl in para._element.xpath(".//w:tbl"):
@@ -684,7 +852,7 @@ def _ft_get_all_runs(para):
 
 
 def _ft_apply_para_direct_format(para, font_name, font_size_pt, bold,
-                                 highlight_color_name=None):
+                                  highlight_color_name=None):
     pPr = para._element.get_or_add_pPr()
     rPr = pPr.find(qn("w:rPr"))
     if rPr is None:
@@ -696,7 +864,7 @@ def _ft_apply_para_direct_format(para, font_name, font_size_pt, bold,
             rFonts = OxmlElement("w:rFonts")
             rPr.insert(0, rFonts)
         for attr_name, value in (("w:ascii", font_name), ("w:hAnsi", font_name),
-                                 ("w:cs", font_name), ("w:eastAsia", font_name)):
+                                  ("w:cs", font_name), ("w:eastAsia", font_name)):
             rFonts.set(qn(attr_name), value)
         for attr in (qn("w:asciiTheme"), qn("w:hAnsiTheme"), qn("w:cstheme")):
             if rFonts.get(attr) is not None:
@@ -722,8 +890,46 @@ def _ft_apply_para_direct_format(para, font_name, font_size_pt, bold,
         hl.set(qn("w:val"), highlight_color_name)
 
 
+def _ft_apply_run_format(r_elem, font_name, font_size, bold, highlight_name=None):
+    """Apply font / size / bold / highlight to a single <w:r> element."""
+    rPr = r_elem.find(qn("w:rPr"))
+    if rPr is None:
+        rPr = OxmlElement("w:rPr")
+        r_elem.insert(0, rPr)
+    if font_name:
+        rFonts = rPr.find(qn("w:rFonts"))
+        if rFonts is None:
+            rFonts = OxmlElement("w:rFonts")
+            rPr.insert(0, rFonts)
+        for attr_name, value in (("w:ascii", font_name), ("w:hAnsi", font_name),
+                                  ("w:cs", font_name), ("w:eastAsia", font_name)):
+            rFonts.set(qn(attr_name), value)
+        for attr in (qn("w:asciiTheme"), qn("w:hAnsiTheme"), qn("w:cstheme")):
+            if rFonts.get(attr) is not None:
+                del rFonts.attrib[attr]
+        half_pts = str(int(font_size) * 2)
+        for tag_name in ("w:sz", "w:szCs"):
+            el = rPr.find(qn(tag_name))
+            if el is None:
+                el = OxmlElement(tag_name)
+                rPr.append(el)
+            el.set(qn("w:val"), half_pts)
+    for tag_name in ("w:b", "w:bCs"):
+        el = rPr.find(qn(tag_name))
+        if el is None:
+            el = OxmlElement(tag_name)
+            rPr.append(el)
+        el.set(qn("w:val"), "1" if bold else "0")
+    if highlight_name:
+        hl = rPr.find(qn("w:highlight"))
+        if hl is None:
+            hl = OxmlElement("w:highlight")
+            rPr.append(hl)
+        hl.set(qn("w:val"), highlight_name)
+
+
 def _ft_apply_numbering_runprops(para, font_name, font_size, bold=False,
-                                 highlight_val=None):
+                                  highlight_val=None):
     if not para._element.xpath(".//w:numPr"):
         return
     pPr = para._element.get_or_add_pPr()
@@ -731,14 +937,13 @@ def _ft_apply_numbering_runprops(para, font_name, font_size, bold=False,
     if rPr is None:
         rPr = OxmlElement("w:rPr")
         pPr.append(rPr)
-    # Only touch font if one was actually chosen — never pass None to lxml .set()
     if font_name:
         rFonts = rPr.find(qn("w:rFonts"))
         if rFonts is None:
             rFonts = OxmlElement("w:rFonts")
             rPr.append(rFonts)
         for attr_name, value in (("w:ascii", font_name), ("w:hAnsi", font_name),
-                                 ("w:cs", font_name), ("w:eastAsia", font_name)):
+                                  ("w:cs", font_name), ("w:eastAsia", font_name)):
             rFonts.set(qn(attr_name), value)
         half_pts = str(int(font_size) * 2)
         for tag in ("w:sz", "w:szCs"):
@@ -778,7 +983,7 @@ def set_table_heading_bg(table, hex_color: str):
     except IndexError:
         return
     for cell in first_row.cells:
-        tc = cell._tc
+        tc   = cell._tc
         tcPr = tc.find(qn("w:tcPr"))
         if tcPr is None:
             tcPr = OxmlElement("w:tcPr")
@@ -792,85 +997,158 @@ def set_table_heading_bg(table, hex_color: str):
         shd.set(qn("w:fill"),  rgb)
 
 
+# =============================================================================
+#  TOC HIGHLIGHT PASS
+# =============================================================================
+
+def ft_highlight_toc(doc, elements: list, config: dict):
+    """
+    Dedicated pass: stamp highlight colours onto every TOC paragraph
+    including HYPERLINK field runs that python-docx .runs skips.
+    """
+    if not config.get("highlight"):
+        return
+
+    para_map = {e["para_idx"]: e for e in elements if "para_idx" in e}
+
+    for idx, para in enumerate(doc.paragraphs):
+        if is_in_footer_or_header(para, None, None):
+            continue
+        elem_info = para_map.get(idx)
+        if not elem_info:
+            continue
+        ptype = elem_info["type"]
+        if ptype != "TOC_TITLE" and not ptype.startswith("TOC_HEADING_"):
+            continue
+
+        highlight_idx  = HIGHLIGHT_COLORS.get(ptype)
+        highlight_name = _COLOR_MAP.get(highlight_idx) if highlight_idx else None
+        if not highlight_name:
+            continue
+
+        font_name, font_size = _ft_get_config_for_type(ptype, config)
+        bold = (config.get("bold_toc", True)
+                if ptype == "TOC_TITLE"
+                else config.get("bold_toc_entries", False))
+
+        _ft_apply_para_direct_format(para, font_name, font_size, bold, highlight_name)
+        for r_elem in _ft_get_all_runs(para):
+            _ft_apply_run_format(r_elem, font_name, font_size, bold, highlight_name)
+
+
+# =============================================================================
+#  TABLE CELL CONTENT FORMAT PASS  ← THE KEY NEW PASS
+# =============================================================================
+
+def ft_format_table_cells(doc, elements: list, config: dict):
+    """
+    Walk every table in the document and apply font / size / bold / highlight
+    to every cell paragraph, classified by its row role:
+      TABLE_HEADER  – row 0 or rows flagged with w:tblHeader
+      TABLE_FOOTER  – last row when it contains totals keywords
+      TABLE_BODY    – everything else
+    """
+    do_highlight = config.get("highlight", False)
+
+    for tbl_idx, table in enumerate(doc.tables):
+        total_rows    = len(table.rows)
+        seen_cell_ids: set = set()
+
+        for row_idx, row in enumerate(table.rows):
+            if _is_table_header_row(table, row_idx):
+                row_role = "TABLE_HEADER"
+            elif _is_table_footer_row(table, row_idx, total_rows):
+                row_role = "TABLE_FOOTER"
+            else:
+                row_role = "TABLE_BODY"
+
+            font_name, font_size = _ft_get_config_for_type(row_role, config)
+            bold = (row_role == "TABLE_HEADER" and
+                    config.get("bold_table_header", True))
+
+            highlight_name = None
+            if do_highlight:
+                hi             = HIGHLIGHT_COLORS.get(row_role)
+                highlight_name = _COLOR_MAP.get(hi) if hi else None
+
+            for col_idx, cell in enumerate(row.cells):
+                cid = id(cell._tc)
+                if cid in seen_cell_ids:
+                    continue
+                seen_cell_ids.add(cid)
+
+                for para in cell.paragraphs:
+                    # Skip paragraphs that belong to a nested table
+                    nested = False
+                    node   = para._element.getparent()
+                    while node is not None and node is not cell._tc:
+                        if node.tag == qn("w:tbl"):
+                            nested = True
+                            break
+                        node = node.getparent()
+                    if nested:
+                        continue
+
+                    _ft_apply_para_direct_format(
+                        para, font_name, font_size, bold, highlight_name)
+                    for r_elem in _ft_get_all_runs(para):
+                        _ft_apply_run_format(
+                            r_elem, font_name, font_size, bold, highlight_name)
+
+
+# =============================================================================
+#  MAIN FORMAT FUNCTION
+# =============================================================================
+
 def ft_format_docx(input_path: str, elements: list, output_path: str, config: dict):
-    doc = Document(input_path)
+    doc        = Document(input_path)
     footer_ids = get_footer_paragraph_ids(doc)
     header_ids = get_header_paragraph_ids(doc)
 
     para_map = {e["para_idx"]: e for e in elements if "para_idx" in e}
 
+    # ── Pass 1: top-level (non-table) paragraphs ──────────────────────────────
     for idx, para in enumerate(doc.paragraphs):
         if is_in_footer_or_header(para, footer_ids, header_ids):
             continue
         elem_info = para_map.get(idx)
         if not elem_info:
             continue
-        ptype = elem_info["type"]
+        ptype           = elem_info["type"]
         original_indent = elem_info.get("indent", 0.0)
         font_name, font_size = _ft_get_config_for_type(ptype, config)
 
-        is_heading = ptype.startswith("HEADING_")
-        is_title = ptype == "TITLE"
+        is_heading   = ptype.startswith("HEADING_")
+        is_title     = ptype == "TITLE"
         is_toc_title = ptype == "TOC_TITLE"
-        is_cover = ptype == "COVER_PAGE"
-        is_list = ptype == "LIST_ITEM"
+        is_toc_entry = ptype.startswith("TOC_HEADING_")
+        is_cover     = ptype == "COVER_PAGE"
+        is_list      = ptype == "LIST_ITEM"
 
         bold_run = (
-            (is_heading and config.get("bold_headings", True)) or
-            (is_title and config.get("bold_titles",   True)) or
-            (is_cover and config.get("bold_titles",   True)) or
-            (is_toc_title and config.get("bold_toc",      True)) or
-            (is_list and config.get("bold_lists",    False))
+            (is_heading   and config.get("bold_headings",    True))  or
+            (is_title     and config.get("bold_titles",      True))  or
+            (is_cover     and config.get("bold_titles",      True))  or
+            (is_toc_title and config.get("bold_toc",         True))  or
+            (is_toc_entry and config.get("bold_toc_entries", False)) or
+            (is_list      and config.get("bold_lists",       False))
         )
-        highlight_idx = HIGHLIGHT_COLORS.get(
-            ptype) if config.get("highlight") else None
-        highlight_name = _COLOR_MAP.get(
-            highlight_idx) if highlight_idx else None
 
-        _ft_apply_para_direct_format(
-            para, font_name, font_size, bold_run, highlight_name)
+        # TOC highlight is handled by ft_highlight_toc(); skip here
+        if is_toc_title or is_toc_entry:
+            highlight_name = None
+        else:
+            hi             = HIGHLIGHT_COLORS.get(ptype) if config.get("highlight") else None
+            highlight_name = _COLOR_MAP.get(hi) if hi else None
+
+        _ft_apply_para_direct_format(para, font_name, font_size, bold_run, highlight_name)
 
         if is_list:
-            _ft_apply_numbering_runprops(
-                para, font_name, font_size, bold_run, highlight_name)
+            _ft_apply_numbering_runprops(para, font_name, font_size, bold_run, highlight_name)
 
-        all_runs = _ft_get_all_runs(para)
-        for r_elem in all_runs:
-            rPr = r_elem.find(qn("w:rPr"))
-            if rPr is None:
-                rPr = OxmlElement("w:rPr")
-                r_elem.insert(0, rPr)
-            if font_name:
-                rFonts = rPr.find(qn("w:rFonts"))
-                if rFonts is None:
-                    rFonts = OxmlElement("w:rFonts")
-                    rPr.insert(0, rFonts)
-                for attr_name, value in (
-                    ("w:ascii", font_name), ("w:hAnsi", font_name),
-                        ("w:cs", font_name),    ("w:eastAsia", font_name)):
-                    rFonts.set(qn(attr_name), value)
-                for attr in (qn("w:asciiTheme"), qn("w:hAnsiTheme"), qn("w:cstheme")):
-                    if rFonts.get(attr) is not None:
-                        del rFonts.attrib[attr]
-                half_pts = str(int(font_size) * 2)
-                for tag_name in ("w:sz", "w:szCs"):
-                    el = rPr.find(qn(tag_name))
-                    if el is None:
-                        el = OxmlElement(tag_name)
-                        rPr.append(el)
-                    el.set(qn("w:val"), half_pts)
-            for tag_name in ("w:b", "w:bCs"):
-                el = rPr.find(qn(tag_name))
-                if el is None:
-                    el = OxmlElement(tag_name)
-                    rPr.append(el)
-                el.set(qn("w:val"), "1" if bold_run else "0")
-            if highlight_name:
-                hl = rPr.find(qn("w:highlight"))
-                if hl is None:
-                    hl = OxmlElement("w:highlight")
-                    rPr.append(hl)
-                hl.set(qn("w:val"), highlight_name)
+        for r_elem in _ft_get_all_runs(para):
+            _ft_apply_run_format(r_elem, font_name, font_size, bold_run,
+                                 highlight_name if not (is_toc_title or is_toc_entry) else None)
 
         if config.get("preserve_indentation") and original_indent > 0:
             try:
@@ -878,26 +1156,43 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
             except Exception:
                 pass
 
+    # ── Pass 2: table heading background colour ────────────────────────────────
     table_heading_bg = config.get("table_heading_bg")
+    tbl_elem_map     = {e.get("table_idx"): e for e in elements if e.get("type") == "TABLE"}
     for i, table in enumerate(doc.tables):
-        tbl_elem = {e.get("table_idx"): e for e in elements if e.get("type") == "TABLE"}
-        elem_info = tbl_elem.get(i)
-        on_cover = elem_info.get("on_cover", False) if elem_info else False
+        elem_info = tbl_elem_map.get(i)
+        on_cover  = elem_info.get("on_cover", False) if elem_info else False
         if not on_cover and table_heading_bg:
             set_table_heading_bg(table, table_heading_bg)
+
+    # ── Pass 3: format every cell paragraph (font / size / bold / highlight) ──
+    ft_format_table_cells(doc, elements, config)
+
+    # ── Pass 4: TOC highlight (after main loop so field runs are covered) ──────
+    ft_highlight_toc(doc, elements, config)
 
     doc.save(output_path)
 
 
 # =============================================================================
-#  HTML PREVIEW  (unchanged from original)
+#  HTML PREVIEW
 # =============================================================================
 
-def docx_to_html_preview(docx_path: str) -> str:
+def docx_to_html_preview(docx_path: str, elements: list = None) -> str:
+    """
+    Render a .docx as an HTML page for browser preview.
+    When *elements* is supplied, TOC and table rows are colour-coded.
+    """
     import html as _html_mod
-    doc = Document(docx_path)
+    doc        = Document(docx_path)
     footer_ids = get_footer_paragraph_ids(doc)
     header_ids = get_header_paragraph_ids(doc)
+
+    para_type_map: dict = {}
+    if elements:
+        for e in elements:
+            if "para_idx" in e:
+                para_type_map[e["para_idx"]] = e["type"]
 
     page_css = (
         "<!DOCTYPE html><html><head><meta charset='utf-8'><style>"
@@ -912,39 +1207,47 @@ def docx_to_html_preview(docx_path: str) -> str:
         "ul,ol{margin:0.5em 0 0.5em 1.8em;padding:0;}"
         "li{margin:0.2em 0;line-height:1.5;}"
         "hr.page-break{border:none;border-top:2px dashed #bbb;margin:24px 0;}"
+        ".toc-title{background:#ffe0e0;font-weight:700;padding:4px 8px;"
+        "border-left:4px solid #d44;margin:2px 0;}"
+        ".toc-1{background:#f0f0f0;padding-left:0px;margin:1px 0;}"
+        ".toc-2{background:#e4e4e4;padding-left:18px;margin:1px 0;}"
+        ".toc-3{background:#d4e2f5;padding-left:36px;margin:1px 0;}"
+        ".toc-4{background:#b8cce8;padding-left:54px;margin:1px 0;}"
+        ".toc-5{background:#9fd5d5;padding-left:72px;margin:1px 0;}"
+        ".toc-6{background:#7ecece;padding-left:90px;margin:1px 0;}"
+        ".tbl-header-row th,.tbl-header-row td"
+        "{background:#c6efce;font-weight:700;color:#276221;}"
+        ".tbl-footer-row td{background:#ffeb9c;font-style:italic;color:#7a5c00;}"
+        ".tbl-body-row td{background:#ffffff;}"
         "</style></head><body><div class='page'>"
     )
     parts = [page_css]
-    para_map = {id(p._element): p for p in doc.paragraphs}
-    table_map = {id(t._tbl): t for t in doc.tables}
+
+    para_map       = {id(p._element): p for p in doc.paragraphs}
+    table_map      = {id(t._tbl):     t for t in doc.tables}
+    para_seq_index = {id(p._element): i for i, p in enumerate(doc.paragraphs)}
 
     def _render_runs(para) -> str:
         out = []
         for run in para.runs:
-            raw = run.text
-            if raw is None:
-                raw = ""
-            t = _html_mod.escape(str(raw))
+            raw = run.text or ""
+            t   = _html_mod.escape(str(raw))
             rPr = run._r.find(qn("w:rPr"))
             bold = ital = underline = False
             color = ""
             if rPr is not None:
-                bold = rPr.find(qn("w:b")) is not None
-                ital = rPr.find(qn("w:i")) is not None
+                bold      = rPr.find(qn("w:b")) is not None
+                ital      = rPr.find(qn("w:i")) is not None
                 underline = rPr.find(qn("w:u")) is not None
                 c = rPr.find(qn("w:color"))
                 if c is not None:
                     val = c.get(qn("w:val"), "")
                     if val and val.upper() not in ("AUTO", ""):
                         color = f"color:#{val};"
-            if bold:
-                t = f"<strong>{t}</strong>"
-            if ital:
-                t = f"<em>{t}</em>"
-            if underline:
-                t = f"<u>{t}</u>"
-            if color:
-                t = f'<span style="{color}">{t}</span>'
+            if bold:      t = f"<strong>{t}</strong>"
+            if ital:      t = f"<em>{t}</em>"
+            if underline: t = f"<u>{t}</u>"
+            if color:     t = f'<span style="{color}">{t}</span>'
             out.append(t)
         return "".join(out)
 
@@ -973,43 +1276,75 @@ def docx_to_html_preview(docx_path: str) -> str:
                 pass
         return ";".join(css)
 
+    def _toc_html_class(ptype: str) -> str:
+        if ptype == "TOC_TITLE":
+            return "toc-title"
+        if ptype.startswith("TOC_HEADING_"):
+            try:
+                lvl = int(ptype.split("_")[-1])
+                return f"toc-{lvl}"
+            except Exception:
+                return "toc-1"
+        return ""
+
     def _render_table(table) -> str:
-        rows_html = ["<table>"]
+        """
+        Render table with header / body / footer row CSS classes.
+        Each cell's paragraphs are rendered; existing cell shading is preserved.
+        """
+        total_rows = len(table.rows)
+        rows_html  = ["<table>"]
+        seen_cell_ids: set = set()
+
         for row_idx, row in enumerate(table.rows):
-            rows_html.append("<tr>")
-            for cell in row.cells:
+            if _is_table_header_row(table, row_idx):
+                tr_class = "tbl-header-row"
+            elif _is_table_footer_row(table, row_idx, total_rows):
+                tr_class = "tbl-footer-row"
+            else:
+                tr_class = "tbl-body-row"
+
+            rows_html.append(f'<tr class="{tr_class}">')
+
+            for col_idx, cell in enumerate(row.cells):
+                cid = id(cell._tc)
+                if cid in seen_cell_ids:
+                    continue
+                seen_cell_ids.add(cid)
+
                 cell_parts = []
                 for cpara in cell.paragraphs:
                     if is_in_footer_or_header(cpara, footer_ids, header_ids):
                         continue
                     rendered = _render_runs(cpara)
-                    if rendered is not None:
-                        cell_parts.append(rendered)
-                cell_content = "<br>".join(
-                    p for p in cell_parts if p) or "&nbsp;"
-                tag_name = "th" if row_idx == 0 else "td"
+                    cell_parts.append(rendered)
+                cell_content = "<br>".join(p for p in cell_parts if p) or "&nbsp;"
+
+                tag_name   = "th" if tr_class == "tbl-header-row" else "td"
                 cell_style = ""
                 tcPr = cell._tc.find(qn("w:tcPr"))
                 if tcPr is not None:
-                    shd = tcPr.find(qn("w:shd"))
+                    shd  = tcPr.find(qn("w:shd"))
                     if shd is not None:
                         fill = shd.get(qn("w:fill"), "") or ""
                         if fill and fill.upper() not in ("", "AUTO", "FFFFFF"):
-                            cell_style = f' style="background:#{fill};color:white;"'
-                rows_html.append(
-                    f"<{tag_name}{cell_style}>{cell_content}</{tag_name}>")
+                            cell_style = f' style="background:#{fill};"'
+
+                rows_html.append(f"<{tag_name}{cell_style}>{cell_content}</{tag_name}>")
+
             rows_html.append("</tr>")
+
         rows_html.append("</table>")
         return "".join(rows_html)
 
-    in_list = False
+    in_list     = False
     in_numbered = False
 
     def close_list():
         nonlocal in_list, in_numbered
         if in_list:
             parts.append("</ol>" if in_numbered else "</ul>")
-            in_list = False
+            in_list     = False
             in_numbered = False
 
     for child in doc.element.body:
@@ -1018,7 +1353,7 @@ def docx_to_html_preview(docx_path: str) -> str:
             para = para_map.get(id(child))
             if para is None or is_in_footer_or_header(para, footer_ids, header_ids):
                 continue
-            text = para.text or ""
+            text   = para.text or ""
             has_pb = has_page_break_before(para)
             if has_pb:
                 close_list()
@@ -1028,18 +1363,26 @@ def docx_to_html_preview(docx_path: str) -> str:
                     close_list()
                     parts.append("<p>&nbsp;</p>")
                 continue
-            style_name = (para.style.name if para.style else None) or ""
+
+            style_name   = (para.style.name if para.style else None) or ""
+            seq_idx      = para_seq_index.get(id(para._element), -1)
+            ptype        = para_type_map.get(seq_idx, "")
             is_para_list = bool(para._element.xpath(".//w:numPr"))
-            fmt = _resolve_numFmt(para) if is_para_list else ""
-            is_num = fmt in _NUMBERED_FMTS if fmt else False
-            htag = _style_tag(style_name)
-            block_css = _para_css(para)
-            style_attr = f' style="{block_css}"' if block_css else ""
-            inner = _render_runs(para)
-            if is_para_list:
+            fmt          = _resolve_numFmt(para) if is_para_list else ""
+            is_num       = fmt in _NUMBERED_FMTS if fmt else False
+            toc_cls      = _toc_html_class(ptype)
+            htag         = _style_tag(style_name)
+            block_css    = _para_css(para)
+            style_attr   = f' style="{block_css}"' if block_css else ""
+            inner        = _render_runs(para)
+
+            if toc_cls:
+                close_list()
+                parts.append(f'<p class="{toc_cls}"{style_attr}>{inner}</p>')
+            elif is_para_list:
                 if not in_list:
                     parts.append("<ol>" if is_num else "<ul>")
-                    in_list = True
+                    in_list     = True
                     in_numbered = is_num
                 elif is_num != in_numbered:
                     parts.append("</ol>" if in_numbered else "</ul>")
@@ -1049,6 +1392,7 @@ def docx_to_html_preview(docx_path: str) -> str:
             else:
                 close_list()
                 parts.append(f"<{htag}{style_attr}>{inner}</{htag}>")
+
         elif tag == qn("w:tbl"):
             close_list()
             table = table_map.get(id(child))
@@ -1061,7 +1405,7 @@ def docx_to_html_preview(docx_path: str) -> str:
 
 
 # =============================================================================
-#  FLASK ROUTES  — session-aware, no file upload
+#  FLASK ROUTES
 # =============================================================================
 
 @font_bp.route("/")
@@ -1111,9 +1455,8 @@ def ft_preview():
     path = _get_path()
     if not path or not os.path.exists(path):
         return jsonify({"error": "No file uploaded yet. Please upload from the home page."}), 400
-
     try:
-        cfg = json.loads(request.form.get("config", "{}"))
+        cfg      = json.loads(request.form.get("config", "{}"))
         out_docx = os.path.join(
             _session_out_dir(), f"ft_preview_{uuid.uuid4().hex}.docx")
         data = ft_analyze_document_structure(path)
@@ -1133,7 +1476,7 @@ def ft_preview():
                 except Exception:
                     pass
 
-        html_content = docx_to_html_preview(out_docx)
+        html_content = docx_to_html_preview(out_docx, elements=data["elements"])
         return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -1144,17 +1487,13 @@ def ft_format():
     path = _get_path()
     if not path or not os.path.exists(path):
         return jsonify({"error": "No file uploaded yet. Please upload from the home page."}), 400
-
     try:
-        cfg = json.loads(request.form.get("config", "{}"))
+        cfg      = json.loads(request.form.get("config", "{}"))
         out_name = f"font_formatted_{uuid.uuid4().hex}.docx"
         out_path = os.path.join(_session_out_dir(), out_name)
-        data = ft_analyze_document_structure(path)
+        data     = ft_analyze_document_structure(path)
         ft_format_docx(path, data["elements"], out_path, cfg)
-
-        # Update working file so the next tool in the pipeline uses this output.
         _set_path(out_path)
-
         return send_file(out_path, as_attachment=True, download_name="font_formatted.docx")
     except Exception as e:
         return jsonify({"error": str(e)}), 500
