@@ -226,28 +226,28 @@ def preview():
     if not path or not os.path.exists(path):
         return jsonify({"error": "No file uploaded yet. Please upload from the home page."}), 400
 
-    cfg = json.loads(request.form.get("config", "{}"))
-    out_docx = os.path.join(
-        _session_out_dir(), f"preview_{uuid.uuid4().hex}.docx")
-    detected, _ = analyse_docx(path)
-    format_docx(path, out_docx, detected, cfg)
-
     try:
+        cfg = json.loads(request.form.get("config", "{}"))
+        out_docx = os.path.join(
+            _session_out_dir(), f"preview_{uuid.uuid4().hex}.docx")
+        detected, _ = analyse_docx(path)
+        format_docx(path, out_docx, detected, cfg)
+
         if IS_WINDOWS and WORD_AVAILABLE:
-            pythoncom.CoInitialize()
             pdf_path = os.path.join(
                 _session_out_dir(), f"preview_{uuid.uuid4().hex}.pdf")
-            convert(out_docx, pdf_path)
-            pythoncom.CoUninitialize()
+            pythoncom.CoInitialize()
+            try:
+                convert(out_docx, pdf_path)
+            finally:
+                pythoncom.CoUninitialize()
             return send_file(pdf_path, mimetype="application/pdf")
-    except Exception:
-        try:
-            pythoncom.CoUninitialize()
-        except Exception:
-            pass
 
-    html_content = _docx_to_html(out_docx)
-    return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
+        # Non-Windows or Word not installed — fall back to HTML renderer
+        html_content = _docx_to_html(out_docx)
+        return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @alignment_bp.route("/format", methods=["POST"])

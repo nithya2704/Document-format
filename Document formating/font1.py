@@ -879,7 +879,8 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
 
     table_heading_bg = config.get("table_heading_bg")
     for i, table in enumerate(doc.tables):
-        tbl_elem = {e.get("table_idx"): e for e in elements if e.get("type") == "TABLE"}
+        tbl_elem = {e.get("table_idx")
+                          : e for e in elements if e.get("type") == "TABLE"}
         elem_info = tbl_elem.get(i)
         on_cover = elem_info.get("on_cover", False) if elem_info else False
         if not on_cover and table_heading_bg:
@@ -1087,18 +1088,16 @@ def ft_original():
         return jsonify({"error": "No file uploaded yet. Please upload from the home page."}), 400
     try:
         if IS_WINDOWS and WORD_AVAILABLE:
+            pdf_path = os.path.join(
+                _session_out_dir(), f"orig_{uuid.uuid4().hex}.pdf")
+            pythoncom.CoInitialize()
             try:
-                pythoncom.CoInitialize()
-                pdf_path = os.path.join(
-                    _session_out_dir(), f"orig_{uuid.uuid4().hex}.pdf")
                 convert(path, pdf_path)
+            finally:
                 pythoncom.CoUninitialize()
-                return send_file(pdf_path, mimetype="application/pdf")
-            except Exception:
-                try:
-                    pythoncom.CoUninitialize()
-                except Exception:
-                    pass
+            return send_file(pdf_path, mimetype="application/pdf")
+
+        # Non-Windows or Word not installed — fall back to HTML renderer
         html_content = docx_to_html_preview(path)
         return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
@@ -1119,19 +1118,16 @@ def ft_preview():
         ft_format_docx(path, data["elements"], out_docx, cfg)
 
         if IS_WINDOWS and WORD_AVAILABLE:
+            pdf_path = os.path.join(
+                _session_out_dir(), f"ft_preview_{uuid.uuid4().hex}.pdf")
+            pythoncom.CoInitialize()
             try:
-                pythoncom.CoInitialize()
-                pdf_path = os.path.join(
-                    _session_out_dir(), f"ft_preview_{uuid.uuid4().hex}.pdf")
                 convert(out_docx, pdf_path)
+            finally:
                 pythoncom.CoUninitialize()
-                return send_file(pdf_path, mimetype="application/pdf")
-            except Exception:
-                try:
-                    pythoncom.CoUninitialize()
-                except Exception:
-                    pass
+            return send_file(pdf_path, mimetype="application/pdf")
 
+        # Non-Windows or Word not installed — fall back to HTML renderer
         html_content = docx_to_html_preview(out_docx)
         return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
