@@ -574,6 +574,11 @@ body.is-resizing .resizer { pointer-events: all !important; }
               <button class="preset-btn" data-color="#000000" style="background:#000000" title="Black"></button>
               <button class="preset-btn" data-color="#ffffff" style="background:#ffffff" title="White"></button>
             </div>
+            <!-- DETECTED COLORS FROM DOCUMENT -->
+            <div class="presets-row" id="detectedColorsRow" style="display:none;margin-bottom:8px;">
+              <span class="preset-label">Detected from doc:</span>
+              <div id="detectedColorsList" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+            </div>
           </div>
         </div>
         <div class="legend-note">Cover page, Table of Contents and Table of Figures are detected and preserved automatically — no font changes applied to those sections.</div>
@@ -899,6 +904,36 @@ function renderPerTypeTable(types, currentFonts) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  POPULATE DETECTED TABLE HEADER COLORS
+// ═══════════════════════════════════════════════════════════════
+function populateDetectedColors(detectedColors) {
+  const row = document.getElementById('detectedColorsRow');
+  const list = document.getElementById('detectedColorsList');
+
+  if (!detectedColors || detectedColors.length === 0) {
+    row.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = '';
+  detectedColors.forEach(hex => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.dataset.color = hex;
+    btn.style.background = hex;
+    btn.title = hex;
+    btn.type = 'button';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      syncAllColors(hex);
+    });
+    list.appendChild(btn);
+  });
+
+  row.style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  ANALYSE
 // ═══════════════════════════════════════════════════════════════
 btnAnalyse.addEventListener('click', async () => {
@@ -911,6 +946,7 @@ btnAnalyse.addEventListener('click', async () => {
     analysedData = data;
     renderDetectedTypes(data);
     renderPerTypeTable(data.detected_elements, data.current_fonts || {});
+    populateDetectedColors(data.detected_table_bgs || []);
     fontPreviewSection.style.display = 'block';
     btnPreview.disabled = false;
     btnFormat.disabled  = false;
@@ -1054,7 +1090,7 @@ window.addEventListener('message', e => {
 
   function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
 
-  function syncAll(hex) {
+  window.syncAllColors = function(hex) {
     const h = hex.startsWith('#') ? hex : '#' + hex;
     if (!isValidHex(h)) return;
     const upper = h.toUpperCase();
@@ -1070,21 +1106,21 @@ window.addEventListener('message', e => {
     widget.classList.toggle('is-default', defChk.checked);
   }
 
-  picker.addEventListener('input', () => syncAll(picker.value));
+  picker.addEventListener('input', () => syncAllColors(picker.value));
   hexInp.addEventListener('input', () => {
     let v = hexInp.value.trim();
     if (!v.startsWith('#')) v = '#' + v;
-    if (isValidHex(v)) syncAll(v);
+    if (isValidHex(v)) syncAllColors(v);
   });
   hexInp.addEventListener('blur', () => {
     if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
     hexInp.value = hexInp.value.toUpperCase();
   });
   document.querySelectorAll('.preset-btn').forEach(b => {
-    b.addEventListener('click', () => syncAll(b.dataset.color));
+    b.addEventListener('click', () => syncAllColors(b.dataset.color));
   });
   defChk.addEventListener('change', applyDefaultState);
-  syncAll(picker.value);
+  syncAllColors(picker.value);
   applyDefaultState();
 })();
 

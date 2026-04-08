@@ -452,7 +452,8 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
         tbl_body_pos = body_elem_to_pos.get(id(table._tbl), -1)
         on_cover = (cover_body_threshold >= 0 and 0 <= tbl_body_pos <= cover_body_threshold)
 
-        # ✅ FIX: Detect colors from BODY tables only (skip cover)
+        # ✅ FIX 1: Detect colors from BODY tables only (skip cover)
+        # Include grey, light grey, and even white/near-white colors
         if not on_cover:
             try:
                 for row_idx, row in enumerate(table.rows):
@@ -463,8 +464,12 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
                                 shd = tcPr.find(qn("w:shd"))
                                 if shd is not None:
                                     fill = shd.get(qn("w:fill"))
-                                    if fill and fill.upper() not in ("AUTO", "FFFFFF", "000000"):
-                                        detected_table_bg_colors.add(f"#{fill.upper()}")
+                                    if fill:
+                                        fill_upper = fill.upper()
+                                        # Include ALL colors: auto, grey, light grey, even near-white
+                                        # Exclude only: empty, exact white (FFFFFF)
+                                        if fill_upper and fill_upper != "FFFFFF":
+                                            detected_table_bg_colors.add(f"#{fill_upper}")
             except Exception:
                 pass
 
@@ -644,63 +649,116 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
 #  HTML PREVIEW
 # =============================================================================
 
-def docx_to_html_preview(docx_path: str) -> str:
-    """Convert docx to HTML."""
+def docx_to_html_preview(docx_path: str, elements: list = None, highlight: bool = False) -> str:
+    """Convert docx to HTML with optional element highlighting."""
     import html as _html_mod
     doc = Document(docx_path)
+    
+    # Build element type map by paragraph index
+    para_type_map = {}
+    if elements:
+        for e in elements:
+            if "para_idx" in e:
+                para_type_map[e["para_idx"]] = e["type"]
+    
+    # Highlight colors for each type
+    HIGHLIGHT_MAP = {
+        "HEADING_1": "#00FF00", "HEADING_2": "#00FFFF", "HEADING_3": "#FF00FF",
+        "HEADING_4": "#800080", "HEADING_5": "#e67e22", "HEADING_6": "#e74c3c",
+        "PARAGRAPH": "#f4f4f4", "LIST_ITEM": "#FFFF00", "TABLE_TEXT": "#FF0000",
+    }
     
     css = (
         "<!DOCTYPE html><html><head><meta charset='utf-8'><style>"
         "body{font-family:Arial,sans-serif;margin:0;padding:0;background:#e8e8e8;}"
         ".page{background:white;width:794px;min-height:1123px;margin:30px auto;"
-        "padding:40px;box-shadow:0 2px 12px rgba(0,0,0,0.18);}"
-        "table{border-collapse:collapse;width:100%;margin:12px 0;}"
-        "th,td{border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:13px;}"
-        "th{font-weight:600;background:#f0f0f0;}"
-        "h1,h2,h3,h4,h5,h6{margin:0.5em 0 0.25em;}"
-        "p{margin:0.35em 0;line-height:1.55;}"
+        "padding:40px;box-shadow:0 2px 12px rgba(0,0,0,0.18);box-sizing:border-box;}"
+        "table{border-collapse:collapse;width:100%;margin:12px 0;border:1px solid #999;}"
+        "th,td{border:1px solid #999;padding:8px 10px;text-align:left;font-size:13px;}"
+        "th{font-weight:600;background:#e0e0e0;}"
+        "h1,h2,h3,h4,h5,h6{margin:0.6em 0 0.3em;line-height:1.3;}"
+        "h1{font-size:24px;} h2{font-size:20px;} h3{font-size:18px;}"
+        "h4{font-size:16px;} h5{font-size:14px;} h6{font-size:13px;}"
+        "p{margin:0.5em 0;line-height:1.6;font-size:13px;}"
+        "ul,ol{margin:0.5em 0 0.5em 2em;line-height:1.6;}"
+        "li{margin:0.3em 0;}"
+        ".hl{background-color:currentColor;opacity:0.25;padding:2px 4px;border-radius:3px;}"
+        ".hr{border-top:2px dashed #999;margin:20px 0;}"
         "</style></head><body><div class='page'>"
     )
     
     parts = [css]
-    
     para_map = {id(p._element): p for p in doc.paragraphs}
     table_map = {id(t._tbl): t for t in doc.tables}
+    para_seq_idx = {id(p._element): i for i, p in enumerate(doc.paragraphs)}
     
-    def render_runs(para):
+    def render_runs(para, color=None):
         out = []
         for run in para.runs:
             t = _html_mod.escape(run.text or "")
+            if not t:
+                continue
             rPr = run._r.find(qn("w:rPr"))
+            bold = ital = False
             if rPr is not None:
                 if rPr.find(qn("w:b")) is not None:
-                    t = f"<strong>{t}</strong>"
+                    bold = True
                 if rPr.find(qn("w:i")) is not None:
-                    t = f"<em>{t}</em>"
+                    ital = True
+            if bold:
+                t = f"<strong>{t}</strong>"
+            if ital:
+                t = f"<em>{t}</em>"
+            if color and highlight:
+                t = f"<span class='hl' style='background-color:{color}'>{t}</span>"
             out.append(t)
         return "".join(out)
     
+    para_counter = 0
     for child in doc.element.body:
         if child.tag == qn("w:p"):
             para = para_map.get(id(child))
             if para is None or is_in_footer_or_header(para):
+                para_counter += 1
                 continue
+            
             text = (para.text or "").strip()
+            seq_idx = para_seq_idx.get(id(para._element), -1)
+            ptype = para_type_map.get(seq_idx, "")
+            # ✅ FIX 2: Only get color if highlight mode is ON - don't use default
+            color = HIGHLIGHT_MAP.get(ptype) if highlight and ptype else None
+            
+            # Detect heading level from style
+            sn = para.style.name if para.style else ""
+            htag = "p"
+            for i in range(1, 7):
+                if f"Heading {i}" in sn:
+                    htag = f"h{i}"
+                    break
+            
             if not text:
                 parts.append("<p>&nbsp;</p>")
+                para_counter += 1
                 continue
-            inner = render_runs(para)
-            parts.append(f"<p>{inner}</p>")
+            
+            inner = render_runs(para, color)
+            
+            # Check for page break
+            if has_page_break_before(para):
+                parts.append('<div class="hr"></div>')
+            
+            parts.append(f"<{htag}>{inner}</{htag}>")
+            para_counter += 1
         
         elif child.tag == qn("w:tbl"):
             table = table_map.get(id(child))
             if table is None:
                 continue
             
-            rows = ["<table>"]
+            rows = ['<table style="width:100%">']
             for row_idx, row in enumerate(table.rows):
                 is_header = _is_table_header_row(table, row_idx)
-                rows.append(f"<tr>")
+                rows.append("<tr>")
                 
                 seen_tc = set()
                 for cell in row.cells:
@@ -726,7 +784,7 @@ def docx_to_html_preview(docx_path: str) -> str:
                         if shd is not None:
                             fill = shd.get(qn("w:fill"), "").upper()
                             if fill and fill not in ("AUTO", "FFFFFF", ""):
-                                style = f' style="background:#{fill};"'
+                                style = f' style="background:#{fill};color:white;font-weight:600;"'
                     
                     rows.append(f"<{tag}{style}>{content}</{tag}>")
                 rows.append("</tr>")
@@ -763,7 +821,7 @@ def ft_original():
     if not path or not os.path.exists(path):
         return jsonify({"error": "No file in session"}), 400
     try:
-        html = docx_to_html_preview(path)
+        html = docx_to_html_preview(path, elements=None, highlight=False)
         return html, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -778,7 +836,8 @@ def ft_preview():
         out_docx = os.path.join(_session_out_dir(), f"ft_preview_{uuid.uuid4().hex}.docx")
         data = ft_analyze_document_structure(path)
         ft_format_docx(path, data["elements"], out_docx, cfg)
-        html = docx_to_html_preview(out_docx)
+        highlight = cfg.get("highlight", False)
+        html = docx_to_html_preview(out_docx, elements=data["elements"], highlight=highlight)
         return html, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
         return jsonify({"error": str(e)}), 500
