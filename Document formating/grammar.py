@@ -1,15 +1,88 @@
+from flask import (Blueprint, render_template, request,
+                   jsonify, send_file, session, current_app)
+import language_tool_python
+from textblob import TextBlob
+from docx.oxml.ns import qn
+from docx import Document
+from werkzeug.utils import secure_filename
 import re as _re
 import io
 import os
 import json
 import uuid
 
-from flask import (Blueprint, render_template, request,
-                   jsonify, send_file, session, current_app)
-from werkzeug.utils import secure_filename
-from docx import Document
-from textblob import TextBlob
-import language_tool_python
+# ── CODE BLOCK DETECTION ──────────────────────────────────────────────────────
+# Only structural signals that cannot appear in normal business English prose.
+# Keywords like "type", "interface", "create", "update", "error", "import" are
+# deliberately excluded — they are everyday English words in technical documents.
+
+# Signal 1: Fenced code markers (markdown ``` / ~~~) or root-level XML/HTML
+_CODE_FENCE_RE = _re.compile(
+    r'^\s*```|^\s*~~~|^\s*<\?xml\b|^\s*<!DOCTYPE\b',
+    _re.IGNORECASE
+)
+
+# Signal 2: Actual XML/HTML element pairs or self-closing tags.
+# Requires the tag name to be followed immediately by > or attributes,
+# and the closing tag to match — avoids matching "(Contract type)" etc.
+_XML_ELEMENT_RE = _re.compile(
+    r'<([a-zA-Z][a-zA-Z0-9_:-]*)[^>]*>.*?</\1>'   # matched open+close tag
+    r'|<[a-zA-Z][a-zA-Z0-9_:-]*[^>]*/>'            # self-closing tag
+)
+
+# Signal 3: Shebang line
+_SHEBANG_RE = _re.compile(r'^\s*#!')
+
+# Signal 4: Lone braces on their own line (structural block delimiters)
+_LONE_BRACE_RE = _re.compile(r'^\s*[{}]\s*$', _re.MULTILINE)
+
+# Signal 5: Code-style comments at start of line (not English sentence starters)
+_CODE_COMMENT_RE = _re.compile(r'^\s*(//)|(^\s*/\*)|(^\s*\*/)', _re.MULTILINE)
+
+# Signal 6: Statement ending with semicolon AND containing an operator/call
+# e.g.  "x = foo.bar();"  but NOT "See section 3; refer to annex."
+_CODE_STATEMENT_RE = _re.compile(
+    r'[a-zA-Z_]\w*\s*[\(\[=]\s*.*;\s*$',
+    _re.MULTILINE
+)
+
+
+def _is_code_block(text: str) -> bool:
+    """
+    Return True only when the text contains unambiguous structural code signals.
+    Plain technical English — even with words like 'type', 'interface',
+    'update', 'error', 'create' — will NOT be flagged.
+    """
+    stripped = text.strip()
+    if not stripped:
+        return False
+
+    # Fenced markers or root XML declaration
+    if _CODE_FENCE_RE.search(stripped):
+        return True
+
+    # Real XML/HTML element structure (matched tags or self-closing)
+    if _XML_ELEMENT_RE.search(stripped):
+        return True
+
+    # Shebang
+    if _SHEBANG_RE.search(stripped):
+        return True
+
+    # Lone brace on its own line
+    if _LONE_BRACE_RE.search(stripped):
+        return True
+
+    # Code-style comment markers at line start
+    if _CODE_COMMENT_RE.search(stripped):
+        return True
+
+    # Code statement: has operator/call AND ends with semicolon
+    if _CODE_STATEMENT_RE.search(stripped):
+        return True
+
+    return False
+
 
 grammar_bp = Blueprint(
     "grammar",
@@ -41,6 +114,23 @@ def _set_path(path: str):
         current_app.config["SET_WORKING_PATH"](sid, path)
 
 
+# ── Field-code detection ──────────────────────────────────────────────────
+
+def _para_has_field_codes(para) -> bool:
+    """
+    Return True if the paragraph contains any Word field codes (fldChar,
+    instrText, or fldSimple).  These cover TOC, TOF, page-number, cross-
+    reference, and similar auto-generated fields that must never be rewritten.
+    """
+    ns = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+    for tag in (f'{{{ns}}}fldChar',
+                f'{{{ns}}}instrText',
+                f'{{{ns}}}fldSimple'):
+        if para._element.find('.//' + tag) is not None:
+            return True
+    return False
+
+
 # ── Document helpers ──────────────────────────────────────────────────────
 
 def extract_sentences_from_docx(path):
@@ -52,6 +142,11 @@ def extract_sentences_from_docx(path):
         paragraph_index += 1
         if not para.text.strip():
             continue
+        # Skip TOC / TOF / any paragraph driven by field codes — they are
+        # auto-generated and must not be touched by grammar analysis.
+        if _para_has_field_codes(para):
+            continue
+        is_code = _is_code_block(para.text)
         blob = TextBlob(para.text)
         for sentence in blob.sentences:
             sentences.append({
@@ -59,6 +154,7 @@ def extract_sentences_from_docx(path):
                 "location_label": f"\u00b6{paragraph_index}",
                 "source": "paragraph",
                 "sentence": str(sentence),
+                "is_code": is_code,
             })
 
     for t_idx, table in enumerate(doc.tables, start=1):
@@ -69,6 +165,7 @@ def extract_sentences_from_docx(path):
                     continue
                 paragraph_index += 1
                 label = f"T{t_idx} R{r_idx} C{c_idx}"
+                is_code = _is_code_block(cell_text)
                 blob = TextBlob(cell_text)
                 for sentence in blob.sentences:
                     sentences.append({
@@ -76,6 +173,7 @@ def extract_sentences_from_docx(path):
                         "location_label": label,
                         "source": "table",
                         "sentence": str(sentence),
+                        "is_code": is_code,
                     })
 
     return sentences
@@ -140,6 +238,7 @@ def analyze_docx(path):
                 "paragraph":        para_idx,
                 "location_label":   label,
                 "source":           source,
+                "is_code":          s.get("is_code", False),
                 "occurrences":      [para_idx],
                 "occurrence_labels": [label],
                 "sentence":         sentence,
@@ -153,6 +252,10 @@ def analyze_docx(path):
 
 
 def set_paragraph_text(para, new_text):
+    """
+    Replace the visible text of a paragraph while preserving the formatting
+    of the first run.  All subsequent runs are cleared so text isn't doubled.
+    """
     if not para.runs:
         para.add_run(new_text)
         return
@@ -189,6 +292,10 @@ def apply_corrections_to_docx(doc_path, report, decisions):
     for para in doc.paragraphs:
         para_counter += 1
         if para_counter in para_corrections:
+            # Never rewrite paragraphs that contain field codes (TOC, TOF,
+            # page numbers, cross-references, etc.) — doing so destroys them.
+            if _para_has_field_codes(para):
+                continue
             new_text = para.text
             for old, replacement in para_corrections[para_counter]:
                 new_text = new_text.replace(old, replacement, 1)
@@ -210,6 +317,9 @@ def apply_corrections_to_docx(doc_path, report, decisions):
                         remaining = new_text
                         for p in cell.paragraphs:
                             if p.text and remaining:
+                                if _para_has_field_codes(p):
+                                    remaining = remaining[len(p.text):]
+                                    continue
                                 set_paragraph_text(p, remaining[:len(p.text)])
                                 remaining = remaining[len(p.text):]
 

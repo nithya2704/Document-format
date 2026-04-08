@@ -59,10 +59,18 @@
     .file-badge .clear-file { cursor: pointer; color: var(--ink-soft); font-size: 1rem; font-weight: bold; border: none; background: none; padding: 0; transition: color 0.15s; }
     .file-badge .clear-file:hover { color: var(--rust); }
 
-    .status-bar { margin: 8px 16px 0; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; display: none; }
-    .status-bar.info  { background: var(--cream-mid); color: var(--ink-mid); display: block; }
-    .status-bar.error { background: #fee2e2; color: #b91c1c; display: block; }
-    .status-bar.ok    { background: #d1fae5; color: #065f46; display: block; }
+    .status-bar { display: none; }
+
+    /* ── NOTIFICATION BAR above preview tabs ── */
+    .notify-bar {
+      display: none; align-items: center; gap: 10px;
+      padding: 9px 18px; font-size: 0.82rem; font-weight: 500;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .notify-bar .notify-icon { font-size: 1rem; flex-shrink: 0; }
+    .notify-bar.info  { display: flex; background: var(--cream-mid); color: var(--ink-mid); }
+    .notify-bar.error { display: flex; background: #fee2e2;          color: #b91c1c; }
+    .notify-bar.ok    { display: flex; background: #d1fae5;          color: #065f46; }
 
     /* ── SECTIONS ── */
     .section { margin: 14px 16px 0; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
@@ -89,14 +97,6 @@
       cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; outline: none;
     }
     select:focus { border-color: var(--rust); box-shadow: 0 0 0 3px rgba(200,82,42,0.12); }
-
-    .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
-    .check-item { display: flex; align-items: center; gap: 8px; background: var(--cream); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer; transition: border-color 0.15s, background 0.15s; font-size: 0.78rem; font-weight: 500; color: var(--ink-mid); }
-    .check-item:hover { border-color: var(--rust-lt); background: #FDF7F4; }
-    .check-item input[type="checkbox"] { display: none; }
-    .checkmark { width: 15px; height: 15px; border: 1.5px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; background: white; }
-    .check-item input:checked ~ .checkmark { background: var(--rust); border-color: var(--rust); }
-    .check-item input:checked ~ .checkmark::after { content: ''; width: 4px; height: 7px; border: 1.5px solid white; border-top: none; border-left: none; transform: rotate(45deg) translateY(-1px); display: block; }
 
     /* ── ACTIONS ── */
     .actions { padding: 14px 16px 32px; display: flex; flex-direction: column; gap: 8px; }
@@ -232,9 +232,6 @@
     </div>
 
     <!-- No file upload — document comes from the session -->
-    <div class="status-bar info" id="statusBar" style="margin:16px 16px 0;">
-      Document loaded from session. Click "Analyse Document" to begin.
-    </div>
 
     <div class="section">
       <div class="section-title">Detected Element Types</div>
@@ -271,6 +268,10 @@
 
   <!-- ═══════════════════ RIGHT PANEL ═══════════════════ -->
   <div class="panel-right">
+    <div class="notify-bar" id="notifyBar">
+      <span class="notify-icon" id="notifyIcon"></span>
+      <span id="notifyMsg">Document loaded from session. Click "Analyse Document" to begin.</span>
+    </div>
     <div class="preview-tabs">
       <button class="preview-tab active" id="tabOriginal">
         <div class="tab-spinner"></div>
@@ -310,7 +311,9 @@
 let detectedTypes = [];
 
 // ── DOM refs ──────────────────────────────────────────────────────────────
-const statusBar          = document.getElementById('statusBar');
+const statusBar          = document.getElementById('notifyBar');
+const notifyMsg          = document.getElementById('notifyMsg');
+const notifyIcon         = document.getElementById('notifyIcon');
 const detectedList       = document.getElementById('detectedList');
 const formatSection      = document.getElementById('formatSection');
 const formatSections     = document.getElementById('formatSections');
@@ -346,8 +349,13 @@ tabOriginal.addEventListener('click',  () => switchTab('original'));
 tabFormatted.addEventListener('click', () => switchTab('formatted'));
 
 // ── Status / Toast ────────────────────────────────────────────────────────
-function showStatus(msg, type = 'info') { statusBar.textContent = msg; statusBar.className = 'status-bar ' + type; }
-function hideStatus() { statusBar.className = 'status-bar'; }
+const NOTIFY_ICONS = { info: 'ℹ️', error: '❌', ok: '✅' };
+function showStatus(msg, type = 'info') {
+  statusBar.className = 'notify-bar ' + type;
+  notifyMsg.textContent = msg;
+  notifyIcon.textContent = NOTIFY_ICONS[type] || '';
+}
+function hideStatus() { statusBar.className = 'notify-bar'; }
 function showToast(msg, success = true) {
   const t = document.getElementById('toast');
   document.getElementById('toastMsg').textContent = msg;
@@ -392,6 +400,7 @@ async function loadFrame(frame, placeholder, fetchFn, tabEl) {
 
 // Auto-load original preview on page load using session's working file.
 (async function loadOriginalPreview() {
+  showStatus('Document loaded from session. Click "Analyse Document" to begin.', 'info');
   try {
     await loadFrame(
       frameOriginal, placeholderOriginal,
@@ -465,6 +474,7 @@ function renderDetectedTypes(types) {
 // ── Sample content & icons ────────────────────────────────────────────────
 const SAMPLE_PARA = `Typography is the art of arranging type to make written language legible and readable. Good formatting guides the reader's eye and establishes visual hierarchy throughout the document.`;
 const SAMPLE_LIST = ['Design principles for clear typography', 'Alignment affects readability and tone', 'Line spacing guides the reader\'s eye', 'Consistent formatting builds structure'];
+const SAMPLE_TABLE = [['Name', 'Role', 'Status'], ['Alice', 'Designer', 'Active'], ['Bob', 'Developer', 'Active']];
 
 const ALIGN_ICONS = {
   left:    `<svg viewBox="0 0 28 18" fill="none"><rect x="0" y="1" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="6" width="20" height="2" rx="1" fill="currentColor"/><rect x="0" y="11" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="16" width="16" height="2" rx="1" fill="currentColor"/></svg>`,
@@ -486,10 +496,21 @@ function buildFormatUI(types) {
   formatSections.innerHTML = '';
 
   types.forEach(t => {
-    const isList = t === 'list';
-    const previewContent = isList
-      ? `<ul style="padding-left:18px;margin:0;list-style:disc;">${SAMPLE_LIST.map(i => `<li class="preview-text" style="transition:line-height 0.25s;">${i}</li>`).join('')}</ul>`
-      : `<div class="preview-text" id="${t}_preview_text">${SAMPLE_PARA}</div>`;
+    const isList  = t === 'list';
+    const isTable = t === 'table';
+
+    let previewContent;
+    if (isList) {
+      previewContent = `<ul style="padding-left:18px;margin:0;list-style:disc;">${SAMPLE_LIST.map(i => `<li class="preview-text" style="transition:line-height 0.25s;">${i}</li>`).join('')}</ul>`;
+    } else if (isTable) {
+      const headerRow = `<tr>${SAMPLE_TABLE[0].map(h => `<th style="border:1px solid #c8c8c8;padding:5px 8px;background:#f3f0eb;font-size:11px;">${h}</th>`).join('')}</tr>`;
+      const dataRows  = SAMPLE_TABLE.slice(1).map(row =>
+        `<tr class="preview-text" style="transition:line-height 0.25s;">${row.map(c => `<td style="border:1px solid #c8c8c8;padding:5px 8px;font-size:11px;">${c}</td>`).join('')}</tr>`
+      ).join('');
+      previewContent = `<table style="border-collapse:collapse;width:100%;" id="${t}_preview_text">${headerRow}${dataRows}</table>`;
+    } else {
+      previewContent = `<div class="preview-text" id="${t}_preview_text">${SAMPLE_PARA}</div>`;
+    }
 
     const g = document.createElement('div');
     g.className = 'format-group';
@@ -559,9 +580,9 @@ function buildFormatUI(types) {
     const previewBox = document.getElementById(`${t}_preview_box`);
 
     function getPreviewEls() {
-      return isList
-        ? [...previewBox.querySelectorAll('li')]
-        : [document.getElementById(`${t}_preview_text`)];
+      if (isList)  return [...previewBox.querySelectorAll('li')];
+      if (isTable) return [...previewBox.querySelectorAll('td, th')];
+      return [document.getElementById(`${t}_preview_text`)];
     }
     function updatePreview() {
       const align   = alignSel.value;
@@ -617,42 +638,6 @@ function buildFormatUI(types) {
     updatePreview();
   });
 
-  if (types.includes('paragraph')) {
-    const g = document.createElement('div');
-    g.className = 'format-group';
-    g.innerHTML = `
-      <h4>Paragraph Spacing</h4>
-      <div class="checkbox-grid">
-        <label class="check-item"><input type="checkbox" class="spacingOpt" value="add_before"><span class="checkmark"></span><span>Add space before paragraph</span></label>
-        <label class="check-item"><input type="checkbox" class="spacingOpt" value="add_after"><span class="checkmark"></span><span>Add space after paragraph</span></label>
-        <label class="check-item"><input type="checkbox" class="spacingOpt" value="remove_before"><span class="checkmark"></span><span>Remove space before paragraph</span></label>
-        <label class="check-item"><input type="checkbox" class="spacingOpt" value="remove_after"><span class="checkmark"></span><span>Remove space after paragraph</span></label>
-      </div>
-
-      <div class="live-preview-wrap">
-        <div class="live-preview-label">Paragraph Spacing Preview</div>
-        <div class="live-preview-doc" id="para_spacing_preview">
-          <p class="preview-text" id="para_p1" style="margin:0;">${SAMPLE_PARA.slice(0, 130)}</p>
-          <p class="preview-text" id="para_p2" style="margin:0;">${SAMPLE_PARA.slice(130)}</p>
-        </div>
-      </div>`;
-    formatSections.appendChild(g);
-
-    g.querySelectorAll('.spacingOpt').forEach(cb => cb.addEventListener('change', updateParaSpacingPreview));
-
-    function updateParaSpacingPreview() {
-      const checked = [...g.querySelectorAll('.spacingOpt:checked')].map(c => c.value);
-      const p1 = document.getElementById('para_p1');
-      const p2 = document.getElementById('para_p2');
-      let mt1 = 0, mb1 = 0, mt2 = 0, mb2 = 0;
-      if (checked.includes('add_before'))    { mt1 = 12; mt2 = 12; }
-      if (checked.includes('add_after'))     { mb1 = 12; mb2 = 12; }
-      if (checked.includes('remove_before')) { mt1 = 0;  mt2 = 0; }
-      if (checked.includes('remove_after'))  { mb1 = 0;  mb2 = 0; }
-      p1.style.marginTop    = mt1 + 'px'; p1.style.marginBottom = mb1 + 'px';
-      p2.style.marginTop    = mt2 + 'px'; p2.style.marginBottom = mb2 + 'px';
-    }
-  }
 }
 
 // ── Build config ──────────────────────────────────────────────────────────
@@ -664,7 +649,9 @@ function buildConfig() {
     if (aVal) cfg[`${t}_alignment`] = aVal;
     if (sVal) cfg[`${t}_spacing`]   = sVal;
   });
-  cfg['paragraph_spacing_options'] = [...document.querySelectorAll('.spacingOpt:checked')].map(c => c.value);
+  cfg['paragraph_spacing_options'] = [];
+  cfg['list_spacing_options']      = [];
+  cfg['table_spacing_options']     = [];
   return cfg;
 }
 
