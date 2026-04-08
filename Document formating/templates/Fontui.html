@@ -8,830 +8,702 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  :root {
-    --cream:     #F5F0EA;
-    --cream-mid: #EDE6DC;
-    --paper:     #FDFAF6;
-    --ink:       #1A1614;
-    --ink-mid:   #4A3F38;
-    --ink-soft:  #8A7F78;
-    --rust:      #C8522A;
-    --rust-lt:   #E07050;
-    --border:    #D8CFC6;
-    --success:   #3A7D6A;
-    --card:      #FFFFFF;
-    --shadow:    0 2px 16px rgba(26,22,20,0.08);
-    --shadow-lg: 0 8px 40px rgba(26,22,20,0.14);
-    --radius:    14px;
-  }
+:root {
+  --cream:     #F5F0EA;
+  --cream-mid: #EDE6DC;
+  --paper:     #FDFAF6;
+  --ink:       #1A1614;
+  --ink-mid:   #4A3F38;
+  --ink-soft:  #8A7F78;
+  --rust:      #C8522A;
+  --rust-lt:   #E07050;
+  --border:    #D8CFC6;
+  --success:   #3A7D6A;
+  --card:      #FFFFFF;
+  --shadow:    0 2px 16px rgba(26,22,20,0.08);
+  --radius:    14px;
+}
 
-  html, body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--cream);
-    color: var(--ink);
-    height: 100%;
-    margin: 0;
-    padding: 0;
-  }
+html, body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  height: 100%;
+}
 
-  /* ── Layout ── */
-  .shell { display: flex; height: 100vh; }
+/* ── Layout ── */
+.shell { display: flex; height: 100vh; }
 
-  /* ── Left panel ── */
-  .panel-left {
-    width: 500px;
-    min-width: 300px;
-    background: var(--paper);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    flex-shrink: 0;
-    /* No overflow here — children handle scroll */
-  }
+/* ── Left panel ── */
+.panel-left {
+  width: 480px;
+  min-width: 280px;
+  background: var(--paper);
+  border-right: 1px solid var(--border);
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
 
-  /* ── Sticky status bar at top of left panel ── */
-  .status-bar-wrap {
-    flex-shrink: 0;
-    padding: 0 16px;
-    background: var(--paper);
-    /* Always reserve space so layout doesn't jump */
-    min-height: 48px;
-    display: flex;
-    align-items: center;
-  }
+.panel-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.panel-header h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-header p { font-size: 0.78rem; color: var(--ink-soft); margin-top: 3px; }
 
-  /* ── Scrollable body below header + status ── */
-  .panel-scroll {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
+/* ── Section cards ── */
+.section {
+  margin: 12px 14px 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.section-title {
+  padding: 8px 13px;
+  font-size: 0.69rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-body { padding: 10px 13px; }
 
-  .panel-header {
-    padding: 20px 22px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--paper);
-  }
-  .panel-header h2 {
-    font-family: 'DM Serif Display', serif;
-    font-size: 1.15rem;
-    font-weight: 400;
-    color: var(--ink);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .panel-header p {
-    font-size: 0.78rem;
-    color: var(--ink-soft);
-    margin-top: 4px;
-  }
+/* ── Detected element chips ── */
+.detected-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.det-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 20px;
+  padding: 3px 10px 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+}
+.det-chip .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.no-doc-msg { font-size: 0.8rem; color: var(--ink-soft); font-style: italic; }
 
-  /* ── Section cards ── */
-  .section {
-    margin: 14px 16px 0;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    box-shadow: var(--shadow);
-  }
-  .section-title {
-    padding: 10px 14px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-soft);
-    background: var(--cream);
-    border-bottom: 1px solid var(--border);
-  }
-  .section-body { padding: 12px 14px; }
+/* Element type colours */
+.c-h1 { background:#00FF00; color:#145a32; border-color:#a9dfbf; }
+.c-h1 .dot { background:#00FF00; }
+.c-h2 { background:#00FFFF; color:#0e6655; border-color:#a2d9ce; }
+.c-h2 .dot { background:#00FFFF; }
+.c-h3 { background:#FF00FF; color:#7d3c98; border-color:#d2b4de; }
+.c-h3 .dot { background:#FF00FF; }
+.c-h4 { background:#800080; color:#000000; border-color:#f9e79f; }
+.c-h4 .dot { background:#800080; }
+.c-h5 { background:#fdf2e9; color:#784212; border-color:#f0b27a; }
+.c-h5 .dot { background:#e67e22; }
+.c-h6 { background:#fdedec; color:#78281f; border-color:#f1948a; }
+.c-h6 .dot { background:#e74c3c; }
+.c-para { background:#f4f4f4; color:#424242; border-color:#ccc; }
+.c-para .dot { background:#888; }
+.c-list { background:#FFFF00; color:#6d4c00; border-color:#ffe082; }
+.c-list .dot { background:#FFFF00; }
+.c-table { background:#FF0000; color:#000000; border-color:#a5d6a7; }
+.c-table .dot { background:#FF0000; }
 
-  /* ── Detected types list ── */
-  .detected-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 4px;
-  }
-  .type-chip {
-    background: var(--cream-mid);
-    color: var(--ink-mid);
-    border-radius: 20px;
-    padding: 3px 10px;
-    font-size: 0.74rem;
-    font-weight: 600;
-    border: 1px solid var(--border);
-  }
-  .no-doc-msg {
-    font-size: 0.8rem;
-    color: var(--ink-soft);
-    font-style: italic;
-  }
+/* ── Per-type config table ── */
+.type-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+.type-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.69rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.type-table td { padding: 4px 3px; vertical-align: middle; }
+.type-table tr:not(:last-child) td { border-bottom: 1px solid var(--cream-mid); }
 
-  /* ── Config rows ── */
-  .cfg-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  .cfg-row label {
-    flex: 0 0 110px;
-    font-size: 0.8rem;
-    color: var(--ink-mid);
-    font-weight: 500;
-  }
-  .cfg-row input[type=number],
-  .cfg-row select {
-    flex: 1;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px 9px;
-    font-size: 0.82rem;
-    color: var(--ink);
-    background: var(--cream);
-    font-family: 'DM Sans', sans-serif;
-    transition: border-color 0.15s;
-    outline: none;
-  }
-  .cfg-row input:focus,
-  .cfg-row select:focus {
-    border-color: var(--rust);
-    box-shadow: 0 0 0 3px rgba(200,82,42,0.12);
-  }
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 14px;
+  padding: 2px 8px 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1.5px solid transparent;
+}
+.type-badge .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 
-  /* ── Toggle row ── */
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  .toggle-row > label:first-child {
-    font-size: 0.82rem;
-    color: var(--ink-mid);
-    font-weight: 500;
-    flex: 1;
-  }
-  .toggle {
-    position: relative;
-    flex-shrink: 0;
-    width: 72px;
-    height: 28px;
-  }
-  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
-  .toggle-slider {
-    position: absolute;
-    inset: 0;
-    border-radius: 28px;
-    background: var(--cream-mid);
-    border: 1.5px solid var(--border);
-    cursor: pointer;
-    transition: background 0.22s, border-color 0.22s;
-    overflow: hidden;
-  }
-  .toggle-slider::after {
-    content: 'OFF';
-    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
-    color: var(--ink-soft); transition: opacity 0.18s;
-    pointer-events: none; user-select: none;
-  }
-  .toggle-slider::before {
-    content: 'ON';
-    position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
-    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.04em;
-    color: #fff; opacity: 0; transition: opacity 0.18s;
-    pointer-events: none; user-select: none; z-index: 2;
-  }
-  .toggle-thumb {
-    position: absolute;
-    width: 22px; height: 22px; top: 2px; left: 2px;
-    border-radius: 50%; background: #fff;
-    box-shadow: 0 1px 4px rgba(26,22,20,0.18);
-    transition: transform 0.22s cubic-bezier(.4,0,.2,1);
-    z-index: 3; pointer-events: none;
-  }
-  .toggle input:checked + .toggle-slider { background: var(--rust); border-color: var(--rust); }
-  .toggle input:checked + .toggle-slider::before { opacity: 1; }
-  .toggle input:checked + .toggle-slider::after  { opacity: 0; }
-  .toggle input:checked + .toggle-slider .toggle-thumb { transform: translateX(44px); }
-  .toggle-slider:hover { border-color: var(--rust-lt); }
+.cur-font-badge {
+  display: inline-block;
+  background: #F0FAF6;
+  border: 1px solid #A7D7C5;
+  color: var(--success);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 0.67rem;
+  font-weight: 500;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.cur-font-badge.unknown {
+  background: var(--cream);
+  border-color: var(--border);
+  color: var(--ink-soft);
+  font-style: italic;
+}
 
-  /* ── Per-type config table ── */
-  .type-config-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.78rem;
-  }
-  .type-config-table th {
-    text-align: left;
-    font-weight: 600;
-    color: var(--ink-soft);
-    padding: 4px 6px;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-    font-size: 0.72rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-  .type-config-table td { padding: 4px 4px; vertical-align: middle; }
-  .type-config-table tr:not(:last-child) td { border-bottom: 1px solid var(--cream-mid); }
-  .type-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 20px;
-    white-space: nowrap;
-  }
-  .type-config-table input[type=number],
-  .type-config-table select {
-    width: 100%;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 6px;
-    font-size: 0.75rem;
-    color: var(--ink);
-    background: var(--cream);
-    font-family: 'DM Sans', sans-serif;
-    outline: none;
-  }
-  .type-config-table input:focus,
-  .type-config-table select:focus {
-    border-color: var(--rust);
-    box-shadow: 0 0 0 2px rgba(200,82,42,0.12);
-  }
+.type-table select,
+.type-table input[type=number] {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 5px;
+  font-size: 0.72rem;
+  color: var(--ink);
+  background: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.type-table select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A7F78' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  padding-right: 20px !important;
+}
+.type-table select:focus,
+.type-table input:focus {
+  border-color: var(--rust);
+  box-shadow: 0 0 0 2px rgba(200,82,42,0.12);
+}
 
-  /* ── Action buttons ── */
-  .actions { padding: 14px 16px 32px; display: flex; flex-direction: column; gap: 8px; }
+/* ── Global options ── */
+.cfg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.cfg-row label {
+  flex: 0 0 105px;
+  font-size: 0.79rem;
+  color: var(--ink-mid);
+  font-weight: 500;
+}
+.cfg-row select, .cfg-row input[type=number] {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 0.81rem;
+  color: var(--ink);
+  background: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.cfg-row select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A7F78' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px !important;
+  cursor: pointer;
+}
+.cfg-row select:focus, .cfg-row input:focus {
+  border-color: var(--rust);
+  box-shadow: 0 0 0 3px rgba(200,82,42,0.12);
+}
 
-  .btn {
-    width: 100%;
-    padding: 11px 0;
-    border-radius: 10px;
-    border: none;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.88rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.18s, transform 0.15s, box-shadow 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-  }
-  .btn:active { transform: scale(0.98); }
-  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+/* ── Toggle ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.toggle-row > label:first-child {
+  font-size: 0.79rem;
+  color: var(--ink-mid);
+  font-weight: 500;
+  flex: 1;
+}
+.toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 68px;
+  height: 26px;
+}
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background: var(--cream-mid);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: background 0.22s, border-color 0.22s;
+  overflow: hidden;
+}
+.toggle-slider::after {
+  content: 'OFF';
+  position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+  font-size: 0.59rem; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--ink-soft); pointer-events: none; user-select: none;
+}
+.toggle-slider::before {
+  content: 'ON';
+  position: absolute; left: 7px; top: 50%; transform: translateY(-50%);
+  font-size: 0.59rem; font-weight: 700; letter-spacing: 0.04em;
+  color: #fff; opacity: 0; pointer-events: none; user-select: none; z-index: 2;
+}
+.toggle-thumb {
+  position: absolute;
+  width: 20px; height: 20px; top: 2px; left: 2px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 4px rgba(26,22,20,0.18);
+  transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+  z-index: 3; pointer-events: none;
+}
+.toggle input:checked + .toggle-slider { background: var(--rust); border-color: var(--rust); }
+.toggle input:checked + .toggle-slider::before { opacity: 1; }
+.toggle input:checked + .toggle-slider::after  { opacity: 0; }
+.toggle input:checked + .toggle-slider .toggle-thumb { transform: translateX(42px); }
 
-  .btn-analyse { background: var(--ink); color: #fff; }
-  .btn-analyse:hover:not(:disabled) {
-    background: #2E2420;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(26,22,20,0.18);
-  }
+/* ── Colour picker ── */
+.color-picker-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 9px; }
+.color-label { font-size: 0.79rem; color: var(--ink-mid); font-weight: 500; }
+.color-main-row { display: flex; align-items: center; gap: 8px; }
+input[type=color] {
+  width: 38px; height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 7px; padding: 2px;
+  cursor: pointer; background: #fff; flex-shrink: 0;
+}
+input[type=color]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 5px; }
+input[type=color]::-webkit-color-swatch { border: none; border-radius: 5px; }
+.hex-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 9px;
+  font-size: 0.82rem;
+  font-family: 'Consolas', monospace;
+  color: var(--ink);
+  background: var(--cream);
+  outline: none;
+  text-transform: uppercase;
+}
+.hex-input:focus { border-color: var(--rust); box-shadow: 0 0 0 3px rgba(200,82,42,0.12); }
+.swatch-preview {
+  width: 34px; height: 34px; border-radius: 7px;
+  border: 1px solid var(--border); flex-shrink: 0;
+}
+.presets-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.preset-label { font-size: 0.7rem; color: var(--ink-soft); white-space: nowrap; }
+.preset-btn {
+  width: 20px; height: 20px; border-radius: 4px;
+  border: 2px solid transparent; cursor: pointer; padding: 0;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.preset-btn:hover { transform: scale(1.22); border-color: var(--rust); }
+.preset-btn[data-color="#ffffff"] { border-color: var(--border); }
+.preset-btn.active { border-color: var(--rust); transform: scale(1.15); }
 
-  .btn-preview { background: var(--rust); color: #fff; }
-  .btn-preview:hover:not(:disabled) {
-    background: #B24420;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(200,82,42,0.3);
-  }
+/* bg-default toggle */
+.bg-default-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.default-pill-label { display: flex; align-items: center; cursor: pointer; }
+.default-pill-label input { display: none; }
+.default-pill {
+  font-size: 0.68rem; font-weight: 600;
+  padding: 2px 9px; border-radius: 20px;
+  border: 1.5px solid var(--rust); color: var(--rust);
+  background: #FDF7F4; cursor: pointer;
+  transition: background 0.15s, color 0.15s; user-select: none;
+}
+.default-pill-label input:not(:checked) + .default-pill {
+  background: var(--cream); color: var(--ink-soft); border-color: var(--border);
+}
+.color-widget.is-default { opacity: 0.35; pointer-events: none; filter: grayscale(0.5); }
 
-  .btn-format { background: var(--success); color: #fff; }
-  .btn-format:hover:not(:disabled) {
-    background: #2d6355;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(58,125,106,0.3);
-  }
+/* ── Action buttons ── */
+.actions { padding: 12px 14px 36px; display: flex; flex-direction: column; gap: 7px; }
+.btn {
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 10px;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; transform: none; }
+.btn-analyse { background: var(--ink); color: #fff; }
+.btn-analyse:hover:not(:disabled) { background: #2E2420; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,22,20,0.18); }
+.btn-preview  { background: var(--rust); color: #fff; }
+.btn-preview:hover:not(:disabled)  { background: #B24420; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(200,82,42,0.3); }
+.btn-format   { background: var(--success); color: #fff; }
+.btn-format:hover:not(:disabled)   { background: #2d6355; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(58,125,106,0.3); }
+.spinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  .spinner {
-    width: 16px; height: 16px;
-    border: 2px solid rgba(255,255,255,0.4);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    display: none;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* ── Status bar ── */
+.status-bar {
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: none;
+  border-bottom: 1px solid var(--border);
+}
+.status-bar.info  { background: var(--cream-mid); color: var(--ink-mid); display: block; }
+.status-bar.error { background: #fee2e2; color: #b91c1c; display: block; }
+.status-bar.ok    { background: #d1fae5; color: #065f46; display: block; }
 
-  /* ── Status bar (now lives in sticky .status-bar-wrap) ── */
-  .status-bar {
-    width: 100%;
-    padding: 9px 13px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    /* Hidden by default — takes no space */
-    display: none;
-  }
-  .status-bar.info  { background: var(--cream-mid); color: var(--ink-mid); display: block; border: 1px solid var(--border); }
-  .status-bar.error { background: #fee2e2; color: #b91c1c; display: block; border: 1px solid #fca5a5; }
-  .status-bar.ok    { background: #d1fae5; color: #065f46; display: block; border: 1px solid #6ee7b7; }
+/* ── Resizer ── */
+.resizer {
+  width: 5px; min-width: 5px;
+  background: var(--border);
+  cursor: col-resize; position: relative; flex-shrink: 0;
+  transition: background 0.15s; z-index: 10;
+}
+.resizer:hover, .resizer.dragging { background: var(--rust); }
+body.is-resizing { cursor: col-resize !important; user-select: none !important; }
+body.is-resizing * { pointer-events: none !important; }
+body.is-resizing .resizer { pointer-events: all !important; }
 
-  /* "Always visible" variant — shown during async ops so user sees progress */
-  .status-bar.loading {
-    background: var(--cream-mid);
-    color: var(--ink-mid);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border: 1px solid var(--border);
-  }
-  .status-bar.loading .status-spin {
-    width: 14px; height: 14px; flex-shrink: 0;
-    border: 2px solid var(--border);
-    border-top-color: var(--rust);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
+/* ── Right panel ── */
+.panel-right {
+  flex: 1;
+  background: var(--cream);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100vh;
+}
 
-  /* ── Right panel ── */
-  .panel-right {
-    flex: 1;
-    background: var(--cream);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    height: 100vh;
-  }
+/* ── Preview tabs ── */
+.preview-tabs {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  height: 44px;
+  gap: 0;
+}
+.preview-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 16px;
+  height: 100%;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  position: relative;
+  top: 1px;
+  white-space: nowrap;
+}
+.preview-tab:hover { color: var(--ink-mid); }
+.preview-tab.active { color: var(--rust); border-bottom-color: var(--rust); }
+.tab-spinner {
+  width: 11px; height: 11px;
+  border: 2px solid rgba(200,82,42,0.25);
+  border-top-color: var(--rust);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+.preview-tab.loading .tab-spinner { display: inline-block; }
+.preview-tab-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
 
-  /* ── Preview tabs ── */
-  .preview-tabs {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    padding: 0 18px;
-    background: var(--paper);
-    border-bottom: 1px solid var(--border);
-    height: 46px;
-  }
-  .preview-tab {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0 18px;
-    height: 100%;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--ink-soft);
-    border: none;
-    background: none;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    transition: color 0.15s, border-color 0.15s;
-    white-space: nowrap;
-    position: relative;
-    top: 1px;
-  }
-  .preview-tab:hover { color: var(--ink-mid); }
-  .preview-tab.active { color: var(--rust); border-bottom-color: var(--rust); }
-  .preview-tab .tab-spinner {
-    width: 12px; height: 12px;
-    border: 2px solid rgba(200,82,42,0.25);
-    border-top-color: var(--rust);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    display: none;
-  }
-  .preview-tab.loading .tab-spinner { display: inline-block; }
-  .preview-tab-sep {
-    width: 1px; height: 20px;
-    background: var(--border);
-    margin: 0 4px;
-    flex-shrink: 0;
-  }
+.preview-area { flex: 1; overflow: hidden; display: none; flex-direction: column; min-height: 0; }
+.preview-area.active { display: flex; }
 
-  .preview-area {
-    flex: 1;
-    overflow: hidden;
-    display: none;
-    flex-direction: column;
-    min-height: 0;
-  }
-  .preview-area.active { display: flex; }
+#frameOriginal, #frameFormatted {
+  width: 100%; flex: 1; border: none; display: none; min-height: 0;
+}
+#frameOriginal.loaded, #frameFormatted.loaded { display: block; }
 
-  #frameOriginal, #frameFormatted {
-    width: 100%;
-    flex: 1;
-    border: none;
-    display: none;
-    min-height: 0;
-  }
-  #frameOriginal.loaded, #frameFormatted.loaded { display: block; }
+.preview-placeholder {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; gap: 10px; color: var(--ink-soft);
+}
+.preview-placeholder .ph-icon { font-size: 3rem; opacity: 0.45; }
+.preview-placeholder p { font-size: 0.88rem; }
+.preview-placeholder strong { color: var(--rust); }
 
-  .preview-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 12px;
-    color: var(--ink-soft);
-  }
-  .preview-placeholder .ph-icon { font-size: 3.5rem; opacity: 0.5; }
-  .preview-placeholder p { font-size: 0.9rem; }
-  .preview-placeholder strong { color: var(--rust); }
-
-  /* ── Colour chips for element types ── */
-  .chip-TITLE         { background:#fff59d;color:#5d4037; }
-  .chip-COVER_PAGE    { background:#fff9c4;color:#5d4037; }
-  .chip-TOC_TITLE     { background:#ffcdd2;color:#b71c1c; }
-  .chip-TOC_HEADING_1,.chip-TOC_HEADING_2,
-  .chip-TOC_HEADING_3,.chip-TOC_HEADING_4 { background:#f5f5f5;color:#424242; }
-  .chip-HEADING_1     { background:#00FE00;color:#1b5e20; }
-  .chip-HEADING_2     { background:#b2ebf2;color:#006064; }
-  .chip-HEADING_3     { background:#fce4ec;color:#880e4f; }
-  .chip-HEADING_4     { background:#e1bee7;color:#4a148c; }
-  .chip-HEADING_5     { background:#b2dfdb;color:#004d40; }
-  .chip-HEADING_6     { background:#c5cae9;color:#1a237e; }
-  .chip-PARAGRAPH     { background:#f5f5f5;color:#424242; }
-  .chip-LIST_ITEM     { background:#ffcdd2;color:#b71c1c; }
-  .chip-TABLE         { background:#dcedc8;color:#33691e; }
-
-  /* ── Font select dropdowns ── */
-  select {
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A7F78' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    padding-right: 30px !important;
-    cursor: pointer;
-  }
-  select:focus {
-    border-color: var(--rust);
-    box-shadow: 0 0 0 3px rgba(200,82,42,0.12);
-  }
-  .type-config-table select {
-    font-size: 0.73rem;
-    padding: 3px 24px 3px 5px !important;
-    background-position: right 5px center;
-  }
-
-  /* ── Colour picker widget ── */
-  .color-picker-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-  .color-label { font-size: 0.8rem; color: var(--ink-mid); font-weight: 500; }
-  .color-widget { display: flex; flex-direction: column; gap: 8px; }
-  .color-main-row { display: flex; align-items: center; gap: 8px; }
-  input[type=color] {
-    width: 40px; height: 36px;
-    border: 1px solid var(--border);
-    border-radius: 7px; padding: 2px;
-    cursor: pointer; background: #fff; flex-shrink: 0;
-  }
-  input[type=color]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 5px; }
-  input[type=color]::-webkit-color-swatch { border: none; border-radius: 5px; }
-  .hex-input {
-    flex: 1;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 6px 10px;
-    font-size: 0.85rem;
-    font-family: 'Consolas', monospace;
-    color: var(--ink);
-    background: var(--cream);
-    outline: none;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .hex-input:focus { border-color: var(--rust); box-shadow: 0 0 0 3px rgba(200,82,42,0.12); }
-  .color-swatch-preview {
-    width: 36px; height: 36px; border-radius: 7px;
-    border: 1px solid var(--border); flex-shrink: 0; transition: background 0.15s;
-  }
-  .color-presets { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
-  .preset-label { font-size: 0.72rem; color: var(--ink-soft); margin-right: 2px; white-space: nowrap; }
-  .preset-btn {
-    width: 22px; height: 22px; border-radius: 5px;
-    border: 2px solid transparent; cursor: pointer; padding: 0;
-    transition: transform 0.1s, border-color 0.1s; flex-shrink: 0;
-  }
-  .preset-btn:hover { transform: scale(1.2); border-color: var(--rust); }
-  .preset-btn[data-color="#ffffff"] { border-color: var(--border); }
-  .preset-btn.active { border-color: var(--rust); transform: scale(1.15); }
-
-  /* ── Tooltip ── */
-  .tooltip-wrap {
-    display: inline-flex; align-items: center;
-    margin-left: 5px; position: relative; vertical-align: middle;
-  }
-  .tooltip-icon {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 15px; height: 15px; border-radius: 50%;
-    background: var(--rust); color: #fff;
-    font-size: 0.65rem; font-weight: 700; cursor: help;
-    flex-shrink: 0; line-height: 1; user-select: none;
-  }
-  .tooltip-box {
-    visibility: hidden; opacity: 0; pointer-events: none;
-    position: fixed;
-    background: var(--ink); color: var(--paper);
-    font-size: 0.76rem; font-weight: 400; line-height: 1.55;
-    padding: 10px 13px; border-radius: 8px;
-    width: 230px; max-width: calc(100vw - 24px);
-    box-shadow: var(--shadow-lg);
-    transition: opacity 0.18s, visibility 0.18s;
-    z-index: 9999; text-transform: none; letter-spacing: normal; white-space: normal;
-  }
-  .tooltip-box::before {
-    content: '';
-    position: absolute; bottom: 100%; left: var(--arrow-left, 16px);
-    border: 6px solid transparent; border-bottom-color: var(--ink);
-  }
-  .tooltip-wrap:hover .tooltip-box, .tooltip-box.visible { visibility: visible; opacity: 1; }
-
-  /* ── Resizer ── */
-  .resizer {
-    width: 6px; min-width: 6px;
-    background: var(--border);
-    cursor: col-resize; position: relative; flex-shrink: 0;
-    transition: background 0.15s; z-index: 10;
-  }
-  .resizer:hover, .resizer.dragging { background: var(--rust); }
-  .resizer::before {
-    content: '';
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 2px; height: 40px;
-    background: var(--ink-soft); border-radius: 2px; transition: background 0.15s;
-  }
-  .resizer:hover::before, .resizer.dragging::before { background: #fff; }
-  .resizer::after {
-    content: '⋮';
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    color: var(--ink-soft); font-size: 1.1rem;
-    letter-spacing: -1px; line-height: 1; pointer-events: none;
-  }
-  .resizer:hover::after, .resizer.dragging::after { color: #fff; }
-  body.is-resizing { cursor: col-resize !important; user-select: none !important; }
-  body.is-resizing * { pointer-events: none !important; }
-  body.is-resizing .resizer { pointer-events: all !important; }
-
-  /* ── Current font badge ── */
-  .current-font-badge {
-    display: inline-block;
-    background: #F0FAF6;
-    border: 1px solid #A7D7C5;
-    color: var(--success);
-    border-radius: 5px;
-    padding: 2px 7px;
-    font-size: 0.70rem;
-    font-weight: 500;
-    white-space: nowrap;
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    vertical-align: middle;
-  }
-  .current-font-badge.unknown {
-    background: var(--cream);
-    border-color: var(--border);
-    color: var(--ink-soft);
-    font-style: italic;
-  }
-
-  /* ── Default (keep as-is) controls ── */
-  .color-default-row {
-    display: flex; align-items: center;
-    justify-content: space-between; margin-bottom: 8px;
-  }
-  .color-default-toggle { display: flex; align-items: center; cursor: pointer; gap: 0; }
-  .color-default-toggle input { display: none; }
-  .default-pill {
-    font-size: 0.72rem; font-weight: 600;
-    padding: 3px 10px; border-radius: 20px;
-    border: 1.5px solid var(--rust); color: var(--rust);
-    background: #FDF7F4; cursor: pointer;
-    transition: background 0.15s, color 0.15s; white-space: nowrap; user-select: none;
-  }
-  .color-default-toggle input:not(:checked) + .default-pill {
-    background: var(--cream); color: var(--ink-soft); border-color: var(--border);
-  }
-  .color-widget.is-default { opacity: 0.38; pointer-events: none; filter: grayscale(0.5); }
-
-  .default-notice {
-    font-size: 0.72rem; color: var(--rust);
-    background: #FDF7F4; border: 1px solid #F0C0A8;
-    border-radius: 6px; padding: 4px 8px; margin-bottom: 8px; display: none;
-  }
-  .default-notice.show { display: block; }
-
+/* ── Legend note ── */
+.legend-note {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  padding: 6px 13px 8px;
+  font-style: italic;
+  border-top: 1px solid var(--cream-mid);
+}
 </style>
 </head>
 <body>
 <div class="shell">
 
-  <!-- ════════════════════ LEFT PANEL ════════════════════ -->
+  <!-- ══════════ LEFT PANEL ══════════ -->
   <div class="panel-left">
 
     <!-- Fixed header -->
     <div class="panel-header">
       <h2>🔤 Font Formatter</h2>
-      <p>Apply consistent fonts &amp; sizes across your document</p>
+      <p>Apply consistent fonts &amp; sizes to your document's content</p>
     </div>
 
-    <!-- ── Sticky status bar — always at top, always visible when active ── -->
-    <div class="status-bar-wrap">
-      <div class="status-bar info" id="statusBar">
-        Document loaded from session. Click "Analyse Document" to begin.
-      </div>
-    </div>
-
-    <!-- Scrollable content -->
-    <div class="panel-scroll">
-
-      <!-- Detected types -->
-      <div class="section">
-        <div class="section-title">Detected Element Types</div>
-        <div class="section-body">
-          <div class="detected-list" id="detectedList">
-            <span class="no-doc-msg">Upload &amp; analyse to see elements</span>
-          </div>
+    <!-- Detected element types -->
+    <div class="section">
+      <div class="section-title">📋 Detected Element Types</div>
+      <div class="section-body">
+        <div class="detected-grid" id="detectedGrid">
+          <span class="no-doc-msg">Click "Analyse Document" to detect element types</span>
         </div>
       </div>
+    </div>
 
-      <!-- Global options -->
-      <div class="section">
-        <div class="section-title">Global Options</div>
-        <div class="section-body">
-          <div class="cfg-row" style="margin-bottom:4px;">
-            <label>Default font</label>
-            <select id="globalFont">
-              <option value="" selected>Default</option>
-              <optgroup label="Sans Serif">
-                <option value="Arial">Arial</option>
-                <option value="Calibri">Calibri</option>
-                <option value="Calibri Light">Calibri Light</option>
-                <option value="Helvetica">Helvetica</option>
-                <option value="Tahoma">Tahoma</option>
-                <option value="Trebuchet MS">Trebuchet MS</option>
-                <option value="Verdana">Verdana</option>
-                <option value="Gill Sans MT">Gill Sans MT</option>
-                <option value="Century Gothic">Century Gothic</option>
-                <option value="Segoe UI">Segoe UI</option>
-              </optgroup>
-              <optgroup label="Serif">
-                <option value="Times New Roman">Times New Roman</option>
-                <option value="Georgia">Georgia</option>
-                <option value="Garamond">Garamond</option>
-                <option value="Book Antiqua">Book Antiqua</option>
-                <option value="Palatino Linotype">Palatino Linotype</option>
-                <option value="Cambria">Cambria</option>
-              </optgroup>
-              <optgroup label="Monospace">
-                <option value="Courier New">Courier New</option>
-                <option value="Consolas">Consolas</option>
-                <option value="Lucida Console">Lucida Console</option>
-              </optgroup>
-              <optgroup label="Corporate / Other">
-                <option value="Oracle Sans">Oracle Sans</option>
-                <option value="Franklin Gothic Medium">Franklin Gothic Medium</option>
-                <option value="Rockwell">Rockwell</option>
-                <option value="Tw Cen MT">Tw Cen MT</option>
-              </optgroup>
-            </select>
-          </div>
-          <div class="toggle-row">
-            <label>Bold headings</label>
-            <label class="toggle"><input type="checkbox" id="boldHeadings" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
-          </div>
-          <div class="toggle-row">
-            <label>Bold titles</label>
-            <label class="toggle"><input type="checkbox" id="boldTitles" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
-          </div>
-          <div class="toggle-row">
-            <label>Bold lists</label>
-            <label class="toggle"><input type="checkbox" id="boldLists"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
-          </div>
-          <div class="toggle-row">
-            <label>Highlight elements
-              <span class="tooltip-wrap">
-                <span class="tooltip-icon">?</span>
-                <span class="tooltip-box">If you enable this option, you can see colours highlighting each section in the preview — making it easy to identify Titles, Headings, Paragraphs, Lists and Tables at a glance. The highlights only appear in the preview and are also saved in the downloaded document.</span>
-              </span>
+    <!-- Per-element-type configuration — hidden until analysed -->
+    <div class="section" id="perTypeSection" style="display:none">
+      <div class="section-title">
+        🎨 Font &amp; Size per Element Type
+        <span style="font-weight:400;text-transform:none;font-size:0.7rem;color:var(--ink-soft)">(leave blank to keep original)</span>
+      </div>
+      <div class="section-body" style="overflow-x:auto;padding:8px 8px;">
+        <table class="type-table" id="perTypeTable">
+          <thead>
+            <tr>
+              <th style="min-width:90px">Type</th>
+              <th style="min-width:68px">Current Font</th>
+              <th style="min-width:110px">New Font</th>
+              <th style="width:52px">Size</th>
+            </tr>
+          </thead>
+          <tbody id="perTypeBody"></tbody>
+        </table>
+      </div>
+    <!-- Table header background colour -->
+        <div class="color-picker-row">
+          <div class="bg-default-row">
+            <span class="color-label">Table header background</span>
+            <label class="default-pill-label">
+              <input type="checkbox" id="bgDefault" checked>
+              <span class="default-pill">Keep as-is</span>
             </label>
-            <label class="toggle"><input type="checkbox" id="highlightElems"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
           </div>
-
-          <!-- Table header background colour picker -->
-          <div class="color-picker-row">
-            <div class="color-default-row">
-              <label class="color-label">Table header bg</label>
-              <label class="color-default-toggle">
-                <input type="checkbox" id="tableHeadingBgDefault" checked>
-                <span class="default-pill">Default (keep as-is)</span>
-              </label>
+          <div class="color-widget" id="colorWidget">
+            <div class="color-main-row">
+              <input type="color" id="bgPicker" value="#1e3a5f" title="Pick a colour">
+              <input type="text"  id="bgHex" value="#1E3A5F" maxlength="7" placeholder="#1e3a5f" class="hex-input" spellcheck="false">
+              <div class="swatch-preview" id="bgSwatch" style="background:#1E3A5F"></div>
             </div>
-            <div class="color-widget" id="colorWidget">
-              <div class="color-main-row">
-                <input type="color" id="tableHeadingBgPicker" value="#1e3a5f" title="Pick a colour">
-                <input type="text"  id="tableHeadingBg" value="#1e3a5f" maxlength="7" placeholder="#1e3a5f" class="hex-input" spellcheck="false">
-                <div class="color-swatch-preview" id="colorSwatchPreview" style="background:#1e3a5f"></div>
-              </div>
-              <div class="color-presets" id="detectedPresetsRow" style="display:none; margin-bottom: 8px;">
-                <span class="preset-label">Detected in Doc:</span>
-                <div id="detectedPresetsList" style="display: flex; gap: 5px; flex-wrap: wrap;"></div>
-              </div>
-              <div class="color-presets">
-                <span class="preset-label">Standard:</span>
-                <button class="preset-btn" data-color="#4472C4" style="background:#4472C4" title="Blue"></button>
-                <button class="preset-btn" data-color="#70AD47" style="background:#70AD47" title="Green"></button>
-                <button class="preset-btn" data-color="#FFC000" style="background:#FFC000" title="Gold"></button>
-                <button class="preset-btn" data-color="#ED7D31" style="background:#ED7D31" title="Orange"></button>
-                <button class="preset-btn" data-color="#A5A5A5" style="background:#A5A5A5" title="Gray"></button>
-                <button class="preset-btn" data-color="#44546A" style="background:#44546A" title="Dark Gray"></button>
-                <button class="preset-btn" data-color="#BDD7EE" style="background:#BDD7EE" title="Light Blue"></button>
-                <button class="preset-btn" data-color="#C6EFCE" style="background:#C6EFCE" title="Light Green"></button>
-                <button class="preset-btn" data-color="#FFE699" style="background:#FFE699" title="Light Yellow"></button>
-                <button class="preset-btn" data-color="#F4B084" style="background:#F4B084" title="Light Orange"></button>
-              </div>
+            <div class="presets-row">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn active" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy"></button>
+              <button class="preset-btn" data-color="#1f4e79" style="background:#1f4e79" title="Dark Blue"></button>
+              <button class="preset-btn" data-color="#2e4057" style="background:#2e4057" title="Steel Blue"></button>
+              <button class="preset-btn" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
+              <button class="preset-btn" data-color="#375623" style="background:#375623" title="Dark Green"></button>
+              <button class="preset-btn" data-color="#7b2d8b" style="background:#7b2d8b" title="Purple"></button>
+              <button class="preset-btn" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
+              <button class="preset-btn" data-color="#000000" style="background:#000000" title="Black"></button>
+              <button class="preset-btn" data-color="#ffffff" style="background:#ffffff" title="White"></button>
             </div>
           </div>
         </div>
+        <div class="legend-note">Cover page, Table of Contents and Table of Figures are detected and preserved automatically — no font changes applied to those sections.</div>
       </div>
+    <!-- Font Preview -->
+<div class="section" id="fontPreviewSection" style="display:none">
+  <div class="section-title">🔎 Font Preview</div>
+  <div class="section-body">
+    <div class="cfg-row">
+      <label for="previewFontFamily">Font family</label>
+      <select id="previewFontFamily">
+        <option value="">— keep original —</option>
+        <optgroup label="Sans Serif">
+          <option>Arial</option><option>Calibri</option><option>Calibri Light</option>
+          <option>Helvetica</option><option>Tahoma</option><option>Trebuchet MS</option>
+          <option>Verdana</option><option>Gill Sans MT</option><option>Century Gothic</option>
+          <option>Segoe UI</option>
+        </optgroup>
+        <optgroup label="Serif">
+          <option>Times New Roman</option><option>Georgia</option><option>Garamond</option>
+          <option>Book Antiqua</option><option>Palatino Linotype</option><option>Cambria</option>
+        </optgroup>
+        <optgroup label="Monospace">
+          <option>Courier New</option><option>Consolas</option><option>Lucida Console</option>
+        </optgroup>
+        <optgroup label="Corporate / Other">
+          <option>Oracle Sans</option><option>Franklin Gothic Medium</option>
+          <option>Rockwell</option><option>Tw Cen MT</option>
+        </optgroup>
+      </select>
+    </div>
 
-      <!-- Per-type overrides (populated after analyse) -->
-      <div class="section" id="perTypeSection" style="display:none">
-        <div class="section-title">Per-Type Overrides <span style="font-weight:400;text-transform:none;font-size:0.75rem;color:var(--ink-soft)">(leave blank to use global)</span></div>
-        <div class="section-body" style="overflow-x:auto;">
-          <table class="type-config-table" id="perTypeTable">
-            <thead>
-              <tr>
-                <th>Type</th>
-                <th>Current Font
-                  <span class="tooltip-wrap">
-                    <span class="tooltip-icon">?</span>
-                    <span class="tooltip-box">Shows the most commonly used font across all paragraphs of this type in your document.</span>
-                  </span>
-                </th>
-                <th>New Font</th>
-                <th style="width:60px">Size</th>
-              </tr>
-            </thead>
-            <tbody id="perTypeBody"></tbody>
-          </table>
+    <div class="cfg-row">
+      <label for="previewFontSize">Font size</label>
+      <input type="number" id="previewFontSize" min="6" max="72" value="12">
+    </div>
+
+    <div
+      id="fontPreviewSample"
+      style="
+        margin-top: 8px;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--cream);
+        color: var(--ink);
+        line-height: 1.5;
+        transition: font-family 0.15s, font-size 0.15s;
+      "
+    >
+      The quick brown fox jumps over the lazy dog
+    </div>
+  </div>
+</div>
+    <!-- Global options -->
+    <div class="section" id="globalSection" style="display:none">
+      <div class="section-title">⚙️ Global Options</div>
+      <div class="section-body">
+        <div class="toggle-row">
+          <label>Bold headings</label>
+          <label class="toggle"><input type="checkbox" id="boldHeadings" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
         </div>
-      </div>
+        <div class="toggle-row">
+          <label>Bold list items</label>
+          <label class="toggle"><input type="checkbox" id="boldLists"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
+        </div>
+        <div class="toggle-row">
+          <label>Highlight element types
+            <span style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--rust);color:#fff;font-size:0.6rem;font-weight:700;cursor:help" title="Colours each element type in the preview so you can visually verify what was detected.">?</span>
+            </span>
+          </label>
+          <label class="toggle"><input type="checkbox" id="highlightElems"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
+        </div>
+        
 
-      <!-- Actions -->
-      <div class="actions" style="padding-bottom:40px;">
-        <button class="btn btn-analyse" id="btnAnalyse">
-          <div class="spinner" id="spinAnalyse"></div>
-          <span id="lblAnalyse">🔍 Analyse Document</span>
-        </button>
-        <button class="btn btn-preview" id="btnPreview" disabled>
-          <div class="spinner" id="spinPreview"></div>
-          <span id="lblPreview">👁 Preview Changes</span>
-        </button>
-        <button class="btn btn-format" id="btnFormat" disabled>
-          <div class="spinner" id="spinFormat"></div>
-          <span id="lblFormat">⬇ Download or Apply another tool</span>
-        </button>
+        
       </div>
+    </div>
 
-    </div><!-- .panel-scroll -->
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-analyse" id="btnAnalyse">
+        <div class="spinner" id="spinAnalyse"></div>
+        <span id="lblAnalyse">🔍 Analyse Document</span>
+      </button>
+      <button class="btn btn-preview" id="btnPreview" disabled>
+        <div class="spinner" id="spinPreview"></div>
+        <span id="lblPreview">👁 Preview Changes</span>
+      </button>
+      <button class="btn btn-format" id="btnFormat" disabled>
+        <div class="spinner" id="spinFormat"></div>
+        <span id="lblFormat">✅ Apply Formatting</span>
+      </button>
+    </div>
   </div><!-- end panel-left -->
 
-  <!-- Drag resizer -->
-  <div class="resizer" id="panelResizer" title="Drag to resize"></div>
+  <div class="resizer" id="panelResizer"></div>
 
-  <!-- ════════════════════ RIGHT PANEL ════════════════════ -->
+  <!-- ══════════ RIGHT PANEL ══════════ -->
   <div class="panel-right">
-    <!-- Tab bar -->
     <div class="preview-tabs">
       <button class="preview-tab active" id="tabOriginal">
         <div class="tab-spinner"></div>
-        📄 Preview Original
+        📄 Original Preview
       </button>
       <div class="preview-tab-sep"></div>
       <button class="preview-tab" id="tabFormatted">
         <div class="tab-spinner"></div>
-        ✨ Preview Formatted
+        ✨ Formatted Preview
       </button>
     </div>
 
-    <!-- Original pane -->
+    <div class="status-bar info" id="statusBar">
+      Document loaded. Click "Analyse Document" to detect element types.
+    </div>
+
     <div class="preview-area active" id="paneOriginal">
       <iframe id="frameOriginal" title="Original Document"></iframe>
       <div class="preview-placeholder" id="placeholderOriginal">
         <div class="ph-icon">📄</div>
-        <p>Upload a file and click <strong>Preview Original</strong> to view</p>
+        <p>Original document preview will appear here</p>
       </div>
     </div>
 
-    <!-- Formatted pane -->
     <div class="preview-area" id="paneFormatted">
       <iframe id="frameFormatted" title="Formatted Preview"></iframe>
       <div class="preview-placeholder" id="placeholderFormatted">
         <div class="ph-icon">✨</div>
-        <p>Click <strong>👁 Preview Changes</strong> to generate formatted preview</p>
+        <p>Click <strong>👁 Preview Changes</strong> to see the formatted result</p>
       </div>
     </div>
   </div>
@@ -839,127 +711,199 @@
 </div><!-- end shell -->
 
 <script>
-// ── State ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  TYPE METADATA  (colours, labels — must match backend USER_TYPES)
+// ═══════════════════════════════════════════════════════════════
+const TYPE_META = {
+  HEADING_1:  { label: 'Heading 1',  cls: 'c-h1'   },
+  HEADING_2:  { label: 'Heading 2',  cls: 'c-h2'   },
+  HEADING_3:  { label: 'Heading 3',  cls: 'c-h3'   },
+  HEADING_4:  { label: 'Heading 4',  cls: 'c-h4'   },
+  HEADING_5:  { label: 'Heading 5',  cls: 'c-h5'   },
+  HEADING_6:  { label: 'Heading 6',  cls: 'c-h6'   },
+  PARAGRAPH:  { label: 'Paragraph',  cls: 'c-para'  },
+  LIST_ITEM:  { label: 'List Item',  cls: 'c-list'  },
+  TABLE_TEXT: { label: 'Table Text', cls: 'c-table' },
+};
+
+const FONT_OPTIONS = `
+  <option value="">— keep original —</option>
+  <optgroup label="Sans Serif">
+    <option>Arial</option><option>Calibri</option><option>Calibri Light</option>
+    <option>Helvetica</option><option>Tahoma</option><option>Trebuchet MS</option>
+    <option>Verdana</option><option>Gill Sans MT</option><option>Century Gothic</option>
+    <option>Segoe UI</option>
+  </optgroup>
+  <optgroup label="Serif">
+    <option>Times New Roman</option><option>Georgia</option><option>Garamond</option>
+    <option>Book Antiqua</option><option>Palatino Linotype</option><option>Cambria</option>
+  </optgroup>
+  <optgroup label="Monospace">
+    <option>Courier New</option><option>Consolas</option><option>Lucida Console</option>
+  </optgroup>
+  <optgroup label="Corporate / Other">
+    <option>Oracle Sans</option><option>Franklin Gothic Medium</option>
+    <option>Rockwell</option><option>Tw Cen MT</option>
+  </optgroup>`;
+// ═══════════════════════════════════════════════════════════════
+//  FONT PREVIEW
+// ═══════════════════════════════════════════════════════════════
+const fontPreviewSection = document.getElementById('fontPreviewSection');
+const previewFontFamily   = document.getElementById('previewFontFamily');
+const previewFontSize     = document.getElementById('previewFontSize');
+const fontPreviewSample   = document.getElementById('fontPreviewSample');
+
+function updateFontPreview() {
+  const fontFamily = previewFontFamily.value.trim();
+  const fontSize = parseInt(previewFontSize.value, 10) || 12;
+
+  fontPreviewSample.style.fontFamily = fontFamily ? `'${fontFamily}', sans-serif` : '';
+  fontPreviewSample.style.fontSize = fontSize + 'px';
+}
+
+previewFontFamily.addEventListener('change', updateFontPreview);
+previewFontSize.addEventListener('input', updateFontPreview);
+
+// optional: show the section when the UI is ready
+
+updateFontPreview();
+// ═══════════════════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════════════════
+const statusBar      = document.getElementById('statusBar');
+const detectedGrid   = document.getElementById('detectedGrid');
+const perTypeSection = document.getElementById('perTypeSection');
+const globalSection  = document.getElementById('globalSection');
+const perTypeBody    = document.getElementById('perTypeBody');
+const btnAnalyse     = document.getElementById('btnAnalyse');
+const btnPreview     = document.getElementById('btnPreview');
+const btnFormat      = document.getElementById('btnFormat');
+const tabOriginal    = document.getElementById('tabOriginal');
+const tabFormatted   = document.getElementById('tabFormatted');
+const paneOriginal   = document.getElementById('paneOriginal');
+const paneFormatted  = document.getElementById('paneFormatted');
+const frameOriginal  = document.getElementById('frameOriginal');
+const frameFormatted = document.getElementById('frameFormatted');
+const placeholderOrig = document.getElementById('placeholderOriginal');
+const placeholderFmt  = document.getElementById('placeholderFormatted');
+const spinAnalyse    = document.getElementById('spinAnalyse');
+const spinPreview    = document.getElementById('spinPreview');
+const spinFormat     = document.getElementById('spinFormat');
+const lblAnalyse     = document.getElementById('lblAnalyse');
+const lblPreview     = document.getElementById('lblPreview');
+const lblFormat      = document.getElementById('lblFormat');
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
 let analysedData = null;
 
-// ── DOM refs ──────────────────────────────────────────────────────────────
-const statusBar            = document.getElementById('statusBar');
-const detectedList         = document.getElementById('detectedList');
-const perTypeSection       = document.getElementById('perTypeSection');
-const perTypeBody          = document.getElementById('perTypeBody');
-const btnAnalyse           = document.getElementById('btnAnalyse');
-const btnPreview           = document.getElementById('btnPreview');
-const btnFormat            = document.getElementById('btnFormat');
-const tabOriginal          = document.getElementById('tabOriginal');
-const tabFormatted         = document.getElementById('tabFormatted');
-const paneOriginal         = document.getElementById('paneOriginal');
-const paneFormatted        = document.getElementById('paneFormatted');
-const frameOriginal        = document.getElementById('frameOriginal');
-const frameFormatted       = document.getElementById('frameFormatted');
-const placeholderOriginal  = document.getElementById('placeholderOriginal');
-const placeholderFormatted = document.getElementById('placeholderFormatted');
-
-// ── Tab switching ─────────────────────────────────────────────────────────
-function switchTab(tab) {
-  if (tab === 'original') {
-    tabOriginal.classList.add('active');
-    tabFormatted.classList.remove('active');
-    paneOriginal.classList.add('active');
-    paneFormatted.classList.remove('active');
-  } else {
-    tabFormatted.classList.add('active');
-    tabOriginal.classList.remove('active');
-    paneFormatted.classList.add('active');
-    paneOriginal.classList.remove('active');
-  }
-}
-tabOriginal.addEventListener('click',  () => switchTab('original'));
-tabFormatted.addEventListener('click', () => switchTab('formatted'));
-
-// ── Status bar ────────────────────────────────────────────────────────────
-// FIX 1: Status bar is always visible when a message is set.
-// We use a dedicated "loading" class that shows a spinner for async ops.
-function showStatus(msg, type = 'info') {
-  // Remove all state classes first
-  statusBar.className = 'status-bar ' + type;
-  // For loading state, wrap message with spinner markup
-  if (type === 'loading') {
-    statusBar.innerHTML = `<div class="status-spin"></div><span>${msg}</span>`;
-  } else {
-    statusBar.textContent = msg;
-  }
-}
-function hideStatus() {
-  statusBar.className = 'status-bar';
-  statusBar.textContent = '';
+// ═══════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════
+function showStatus(msg, kind) {
+  statusBar.textContent = msg;
+  statusBar.className = 'status-bar ' + kind;
 }
 
-// ── Loading state helpers ─────────────────────────────────────────────────
-function setLoading(btnEl, spinEl, lblEl, loading, label) {
-  btnEl.disabled       = loading;
-  spinEl.style.display = loading ? 'block' : 'none';
-  lblEl.textContent    = label;
+function setLoading(btn, spin, lbl, on, defaultText) {
+  btn.disabled = on;
+  spin.style.display = on ? 'block' : 'none';
+  lbl.textContent = on ? '' : defaultText;
 }
 
-// ── Auto-load original preview on page load ───────────────────────────────
-(async function loadOriginalPreview() {
-  tabOriginal.classList.add('loading');
-  showStatus('Loading document preview…', 'loading');
-  try {
-    const res = await fetch('original', { method: 'POST', body: new FormData() });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Original preview failed' }));
-      throw new Error(err.error || 'Original preview failed');
-    }
-    const contentType = res.headers.get('Content-Type') || '';
-    const url = contentType.includes('application/pdf')
-      ? URL.createObjectURL(await res.blob())
-      : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
-    frameOriginal.src = url;
-    frameOriginal.classList.add('loaded');
-    placeholderOriginal.style.display = 'none';
-    showStatus('Document loaded. Click "Analyse Document" to begin.', 'info');
-  } catch (err) {
-    showStatus('Preview error: ' + err.message, 'error');
-  } finally {
-    tabOriginal.classList.remove('loading');
-  }
-})();
+function switchTab(which) {
+  const isOrig = which === 'original';
+  tabOriginal.classList.toggle('active', isOrig);
+  tabFormatted.classList.toggle('active', !isOrig);
+  paneOriginal.classList.toggle('active', isOrig);
+  paneFormatted.classList.toggle('active', !isOrig);
+}
 
-// ── Build config object from UI ───────────────────────────────────────────
+tabOriginal.addEventListener('click',   () => switchTab('original'));
+tabFormatted.addEventListener('click',  () => switchTab('formatted'));
+
+// ═══════════════════════════════════════════════════════════════
+//  BUILD CONFIG  — what gets sent to /preview and /format
+// ═══════════════════════════════════════════════════════════════
 function buildConfig() {
-  const fontVal   = document.getElementById('globalFont').value.trim();
-  const bgDefault = document.getElementById('tableHeadingBgDefault').checked;
+  const bgDefault = document.getElementById('bgDefault').checked;
   const cfg = {
     bold_headings:        document.getElementById('boldHeadings').checked,
-    bold_titles:          document.getElementById('boldTitles').checked,
     bold_lists:           document.getElementById('boldLists').checked,
     highlight:            document.getElementById('highlightElems').checked,
-    preserve_indentation: true,
   };
-  if (fontVal)    cfg.paragraph_font    = fontVal;
-  if (!bgDefault) cfg.table_heading_bg  = document.getElementById('tableHeadingBg').value.trim() || '#1e3a5f';
-
-  const rows = perTypeBody.querySelectorAll('tr');
-  rows.forEach(row => {
-    const ptype   = row.dataset.ptype;
+  if (!bgDefault) {
+    cfg.table_heading_bg = document.getElementById('bgHex').value.trim() || '#1E3A5F';
+  }
+  // Per-type overrides from the table rows
+  perTypeBody.querySelectorAll('tr').forEach(row => {
+    const ptype = row.dataset.ptype;
     if (!ptype) return;
-    const key     = ptype.toLowerCase();
-    const fontVal = row.querySelector('.pt-font').value.trim();
-    const sizeVal = row.querySelector('.pt-size').value.trim();
-    if (fontVal) cfg[key + '_font'] = fontVal;
-    if (sizeVal) cfg[key + '_size'] = parseInt(sizeVal);
+    const key  = ptype.toLowerCase();
+    const font = row.querySelector('.pt-font').value.trim();
+    const size = row.querySelector('.pt-size').value.trim();
+    if (font) cfg[key + '_font'] = font;
+    if (size) cfg[key + '_size'] = parseInt(size);
   });
   return cfg;
 }
 
-// ── Colour chip helper ────────────────────────────────────────────────────
-function chipClass(ptype) { return 'chip-' + ptype.replace(/\s/g,'_'); }
+// ═══════════════════════════════════════════════════════════════
+//  RENDER DETECTED TYPES  (chips + table rows)
+// ═══════════════════════════════════════════════════════════════
+function renderDetectedTypes(data) {
+  detectedGrid.innerHTML = '';
+  data.detected_elements.forEach(t => {
+    const meta  = TYPE_META[t] || { label: t, cls: 'c-para' };
+    const count = data.element_counts[t] || 0;
+    const chip  = document.createElement('span');
+    chip.className = 'det-chip ' + meta.cls;
+    chip.innerHTML = `<span class="dot"></span>${meta.label} ×${count}`;
+    chip.title = data.sample_texts[t] ? '"' + data.sample_texts[t].slice(0, 80) + '…"' : '';
+    detectedGrid.appendChild(chip);
+  });
+}
 
-// ── Analyse ───────────────────────────────────────────────────────────────
+function renderPerTypeTable(types, currentFonts) {
+  perTypeBody.innerHTML = '';
+  types.forEach(ptype => {
+    const meta     = TYPE_META[ptype] || { label: ptype, cls: 'c-para' };
+    const fontName = currentFonts[ptype] || '';
+    const tr       = document.createElement('tr');
+    tr.dataset.ptype = ptype;
+    tr.innerHTML = `
+      <td>
+        <span class="type-badge ${meta.cls}">
+          <span class="dot"></span>${meta.label}
+        </span>
+      </td>
+      <td>
+        ${fontName
+          ? `<span class="cur-font-badge" title="${fontName}">${fontName}</span>`
+          : `<span class="cur-font-badge unknown">—</span>`}
+      </td>
+      <td>
+        <select class="pt-font" title="New font for ${meta.label}">
+          ${FONT_OPTIONS}
+        </select>
+      </td>
+      <td>
+        <input class="pt-size" type="number" placeholder="—" min="6" max="72"
+               title="Font size for ${meta.label}">
+      </td>`;
+    perTypeBody.appendChild(tr);
+  });
+  perTypeSection.style.display = 'block';
+  globalSection.style.display  = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ANALYSE
+// ═══════════════════════════════════════════════════════════════
 btnAnalyse.addEventListener('click', async () => {
-  setLoading(btnAnalyse, spinAnalyse, lblAnalyse, true, 'Analysing…');
-  showStatus('Analysing document structure…', 'loading');
+  setLoading(btnAnalyse, spinAnalyse, lblAnalyse, true, '🔍 Analyse Document');
+  showStatus('Analysing document structure…', 'info');
   try {
     const res  = await fetch('analyse', { method: 'POST', body: new FormData() });
     const data = await res.json();
@@ -967,11 +911,14 @@ btnAnalyse.addEventListener('click', async () => {
     analysedData = data;
     renderDetectedTypes(data);
     renderPerTypeTable(data.detected_elements, data.current_fonts || {});
-    populateDetectedColors(data.detected_table_bgs || []);
+    fontPreviewSection.style.display = 'block';
     btnPreview.disabled = false;
     btnFormat.disabled  = false;
-    const total = Object.values(data.element_counts).reduce((a,b)=>a+b,0);
-    showStatus(`✓ Found ${data.detected_elements.length} element type(s) — ${total} total paragraphs/tables.`, 'ok');
+    const total = Object.values(data.element_counts).reduce((a, b) => a + b, 0);
+    showStatus(
+      `Found ${data.detected_elements.length} element type(s) — ${total} total items. ` +
+      `Cover page, TOC and Table of Figures are automatically excluded.`,
+      'ok');
     window.parent.postMessage({ type: 'toolDirty' }, '*');
   } catch (err) {
     showStatus('Error: ' + err.message, 'error');
@@ -980,165 +927,31 @@ btnAnalyse.addEventListener('click', async () => {
   }
 });
 
-// ── tabResumed — session file may have changed while away ─────────────────
-window.addEventListener('message', e => {
-  if (e.data && e.data.type === 'tabResumed') {
-    analysedData = null;
-    detectedList.innerHTML = '<span class="no-doc-msg">Session file was updated — click Analyse to reload</span>';
-    perTypeSection.style.display = 'none';
-    btnPreview.disabled = true;
-    btnFormat.disabled  = true;
-    frameFormatted.src = '';
-    frameFormatted.classList.remove('loaded');
-    placeholderFormatted.style.display = 'flex';
-    showStatus('Another tool updated the document — please re-analyse.', 'info');
-    window.parent.postMessage({ type: 'toolClean' }, '*');
-    (async function() {
-      tabOriginal.classList.add('loading');
-      showStatus('Reloading updated document…', 'loading');
-      try {
-        const res = await fetch('original', { method: 'POST', body: new FormData() });
-        if (!res.ok) return;
-        const contentType = res.headers.get('Content-Type') || '';
-        const url = contentType.includes('application/pdf')
-          ? URL.createObjectURL(await res.blob())
-          : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
-        frameOriginal.src = url;
-        frameOriginal.classList.add('loaded');
-        placeholderOriginal.style.display = 'none';
-        switchTab('original');
-        showStatus('Document updated. Please re-analyse before applying changes.', 'info');
-      } catch(err) {
-        showStatus('Reload error: ' + err.message, 'error');
-      } finally {
-        tabOriginal.classList.remove('loading');
-      }
-    })();
-  }
-});
-
-function renderDetectedTypes(data) {
-  const detectedList = document.getElementById('detectedList');
-  if (!detectedList) return;
-  detectedList.innerHTML = '';
-  if (!data.detected_elements || data.detected_elements.length === 0) {
-    detectedList.innerHTML = '<span class="no-doc-msg">No elements detected</span>';
-    return;
-  }
-  data.detected_elements.forEach(ptype => {
-    const chip = document.createElement('span');
-    chip.className = 'type-chip ' + ('chip-' + ptype.replace(/\s/g,'_'));
-    const count = data.element_counts[ptype] || 0;
-    chip.textContent = ptype.replace(/_/g,' ') + (count ? ` ×${count}` : '');
-    if (data.sample_texts && data.sample_texts[ptype]) {
-      chip.title = '"' + data.sample_texts[ptype].slice(0, 80) + '…"';
-    }
-    detectedList.appendChild(chip);
-  });
-}
-
-function populateDetectedColors(detectedColors) {
-  const row  = document.getElementById('detectedPresetsRow');
-  const list = document.getElementById('detectedPresetsList');
-  if (!detectedColors || detectedColors.length === 0) {
-    row.style.display = 'none';
-    return;
-  }
-  list.innerHTML = '';
-  detectedColors.forEach(hex => {
-    const btn = document.createElement('button');
-    btn.className = 'preset-btn';
-    btn.dataset.color = hex;
-    btn.style.background = hex;
-    btn.title = hex;
-    btn.addEventListener('click', () => {
-      document.getElementById('tableHeadingBgPicker').value = hex;
-      document.getElementById('tableHeadingBgPicker').dispatchEvent(new Event('input'));
-    });
-    list.appendChild(btn);
-  });
-  row.style.display = 'flex';
-}
-
-function renderPerTypeTable(types, currentFonts) {
-  perTypeBody.innerHTML = '';
-  types.forEach(ptype => {
-    const tr = document.createElement('tr');
-    tr.dataset.ptype = ptype;
-    const fontName = (currentFonts && currentFonts[ptype]) || '';
-    const badgeHtml = fontName
-      ? `<span class="current-font-badge" title="${fontName}">${fontName}</span>`
-      : `<span class="current-font-badge unknown">—</span>`;
-    tr.innerHTML = `
-      <td><span class="type-label ${chipClass(ptype)}">${ptype.replace(/_/g,' ')}</span></td>
-      <td>${badgeHtml}</td>
-      <td>
-        <select class="pt-font" title="Font for ${ptype}">
-          <option value="">— default —</option>
-          <optgroup label="Sans Serif">
-            <option value="Arial">Arial</option>
-            <option value="Calibri">Calibri</option>
-            <option value="Calibri Light">Calibri Light</option>
-            <option value="Helvetica">Helvetica</option>
-            <option value="Tahoma">Tahoma</option>
-            <option value="Trebuchet MS">Trebuchet MS</option>
-            <option value="Verdana">Verdana</option>
-            <option value="Gill Sans MT">Gill Sans MT</option>
-            <option value="Century Gothic">Century Gothic</option>
-            <option value="Segoe UI">Segoe UI</option>
-          </optgroup>
-          <optgroup label="Serif">
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Georgia">Georgia</option>
-            <option value="Garamond">Garamond</option>
-            <option value="Book Antiqua">Book Antiqua</option>
-            <option value="Palatino Linotype">Palatino Linotype</option>
-            <option value="Cambria">Cambria</option>
-          </optgroup>
-          <optgroup label="Monospace">
-            <option value="Courier New">Courier New</option>
-            <option value="Consolas">Consolas</option>
-            <option value="Lucida Console">Lucida Console</option>
-          </optgroup>
-          <optgroup label="Corporate / Other">
-            <option value="Oracle Sans">Oracle Sans</option>
-            <option value="Franklin Gothic Medium">Franklin Gothic Medium</option>
-            <option value="Rockwell">Rockwell</option>
-            <option value="Tw Cen MT">Tw Cen MT</option>
-          </optgroup>
-        </select>
-      </td>
-      <td><input class="pt-size" type="number" placeholder="–" min="6" max="72" title="Size for ${ptype}"></td>
-    `;
-    perTypeBody.appendChild(tr);
-  });
-  perTypeSection.style.display = 'block';
-}
-
-// ── Preview Changes ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  PREVIEW
+// ═══════════════════════════════════════════════════════════════
 btnPreview.addEventListener('click', async () => {
-  setLoading(btnPreview, spinPreview, lblPreview, true, 'Generating preview…');
+  setLoading(btnPreview, spinPreview, lblPreview, true, '👁 Preview Changes');
   tabFormatted.classList.add('loading');
-  showStatus('Generating formatted preview, please wait…', 'loading');
+  showStatus('Generating formatted preview…', 'info');
   try {
     const fd = new FormData();
     fd.append('config', JSON.stringify(buildConfig()));
     const res = await fetch('preview', { method: 'POST', body: fd });
     if (!res.ok) {
-      const body = await res.text();
       let msg = 'Preview failed';
-      try { msg = JSON.parse(body).error || msg; } catch { msg = body.slice(0, 200) || msg; }
+      try { msg = (await res.json()).error || msg; } catch { msg = (await res.text()).slice(0, 200) || msg; }
       throw new Error(msg);
     }
-    const contentType = res.headers.get('Content-Type') || '';
-    const url = contentType.includes('application/pdf')
+    const ct  = res.headers.get('Content-Type') || '';
+    const url = ct.includes('application/pdf')
       ? URL.createObjectURL(await res.blob())
       : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
     frameFormatted.src = url;
     frameFormatted.classList.add('loaded');
-    placeholderFormatted.style.display = 'none';
+    placeholderFmt.style.display = 'none';
     switchTab('formatted');
-    showStatus('✓ Preview ready — review your changes on the right.', 'ok');
+    showStatus('Formatted preview ready.', 'ok');
   } catch (err) {
     showStatus('Preview error: ' + err.message, 'error');
   } finally {
@@ -1147,10 +960,12 @@ btnPreview.addEventListener('click', async () => {
   }
 });
 
-// ── Format ────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+//  FORMAT (apply + save)
+// ═══════════════════════════════════════════════════════════════
 btnFormat.addEventListener('click', async () => {
-  setLoading(btnFormat, spinFormat, lblFormat, true, 'Formatting…');
-  showStatus('Applying font formatting to document…', 'loading');
+  setLoading(btnFormat, spinFormat, lblFormat, true, '✅ Apply Formatting');
+  showStatus('Applying font formatting…', 'info');
   try {
     const fd = new FormData();
     fd.append('config', JSON.stringify(buildConfig()));
@@ -1160,29 +975,82 @@ btnFormat.addEventListener('click', async () => {
       throw new Error(err.error || 'Format failed');
     }
     await res.blob();
-    showStatus('✓ Formatting complete!', 'ok');
+    showStatus('Formatting applied successfully!', 'ok');
     window.parent.postMessage({ type: 'toolClean' }, '*');
     window.parent.postMessage({ type: 'taskComplete' }, '*');
   } catch (err) {
     showStatus('Error: ' + err.message, 'error');
   } finally {
-    setLoading(btnFormat, spinFormat, lblFormat, false, '⬇ Apply Formatting');
+    setLoading(btnFormat, spinFormat, lblFormat, false, '✅ Apply Formatting');
   }
 });
 
-// ── Spinner references ─────────────────────────────────────────────────────
-const spinAnalyse = document.getElementById('spinAnalyse');
-const spinPreview = document.getElementById('spinPreview');
-const spinFormat  = document.getElementById('spinFormat');
-const lblAnalyse  = document.getElementById('lblAnalyse');
-const lblPreview  = document.getElementById('lblPreview');
-const lblFormat   = document.getElementById('lblFormat');
+// ═══════════════════════════════════════════════════════════════
+//  tabResumed  — another tool updated the session file
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'tabResumed') return;
+  analysedData = null;
+  detectedGrid.innerHTML = '<span class="no-doc-msg">Session file updated — click Analyse to reload</span>';
+  perTypeSection.style.display = 'none';
+  globalSection.style.display  = 'none';
+  fontPreviewSection.style.display = 'none';
+  btnPreview.disabled = true;
+  btnFormat.disabled  = true;
+  frameFormatted.src = '';
+  frameFormatted.classList.remove('loaded');
+  placeholderFmt.style.display = 'flex';
+  showStatus('Document was updated by another tool — please re-analyse.', 'info');
+  window.parent.postMessage({ type: 'toolClean' }, '*');
+  (async () => {
+    tabOriginal.classList.add('loading');
+    try {
+      const res = await fetch('original', { method: 'POST', body: new FormData() });
+      if (!res.ok) return;
+      const ct  = res.headers.get('Content-Type') || '';
+      const url = ct.includes('application/pdf')
+        ? URL.createObjectURL(await res.blob())
+        : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
+      frameOriginal.src = url;
+      frameOriginal.classList.add('loaded');
+      placeholderOrig.style.display = 'none';
+      switchTab('original');
+    } catch (e) { /* silent */ } finally {
+      tabOriginal.classList.remove('loading');
+    }
+  })();
+});
 
-// ── Colour picker sync ─────────────────────────────────────────────────────
-(function() {
-  const picker   = document.getElementById('tableHeadingBgPicker');
-  const hexInput = document.getElementById('tableHeadingBg');
-  const swatch   = document.getElementById('colorSwatchPreview');
+// ═══════════════════════════════════════════════════════════════
+//  AUTO-LOAD ORIGINAL PREVIEW ON PAGE LOAD
+// ═══════════════════════════════════════════════════════════════
+(async () => {
+  tabOriginal.classList.add('loading');
+  try {
+    const res = await fetch('original', { method: 'POST', body: new FormData() });
+    if (!res.ok) return;
+    const ct  = res.headers.get('Content-Type') || '';
+    const url = ct.includes('application/pdf')
+      ? URL.createObjectURL(await res.blob())
+      : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
+    frameOriginal.src = url;
+    frameOriginal.classList.add('loaded');
+    placeholderOrig.style.display = 'none';
+    switchTab('original');
+  } catch (e) { /* silent — no file uploaded yet */ } finally {
+    tabOriginal.classList.remove('loading');
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  TABLE HEADER BACKGROUND COLOUR PICKER  (sync picker ↔ hex ↔ swatch ↔ presets)
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const picker  = document.getElementById('bgPicker');
+  const hexInp  = document.getElementById('bgHex');
+  const swatch  = document.getElementById('bgSwatch');
+  const defChk  = document.getElementById('bgDefault');
+  const widget  = document.getElementById('colorWidget');
 
   function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
 
@@ -1190,108 +1058,66 @@ const lblFormat   = document.getElementById('lblFormat');
     const h = hex.startsWith('#') ? hex : '#' + hex;
     if (!isValidHex(h)) return;
     const upper = h.toUpperCase();
-    picker.value   = upper;
-    hexInput.value = upper;
+    picker.value  = upper;
+    hexInp.value  = upper;
     swatch.style.background = upper;
     document.querySelectorAll('.preset-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
     });
   }
 
+  function applyDefaultState() {
+    widget.classList.toggle('is-default', defChk.checked);
+  }
+
   picker.addEventListener('input', () => syncAll(picker.value));
-  hexInput.addEventListener('input', () => {
-    let v = hexInput.value.trim();
+  hexInp.addEventListener('input', () => {
+    let v = hexInp.value.trim();
     if (!v.startsWith('#')) v = '#' + v;
     if (isValidHex(v)) syncAll(v);
   });
-  hexInput.addEventListener('blur', () => {
-    if (!isValidHex(hexInput.value)) hexInput.value = picker.value;
-    hexInput.value = hexInput.value.toUpperCase();
+  hexInp.addEventListener('blur', () => {
+    if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
+    hexInp.value = hexInp.value.toUpperCase();
   });
-  document.querySelectorAll('.preset-btn').forEach(btn => {
-    btn.addEventListener('click', () => syncAll(btn.dataset.color));
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.addEventListener('click', () => syncAll(b.dataset.color));
   });
+  defChk.addEventListener('change', applyDefaultState);
   syncAll(picker.value);
-})();
-
-// ── Tooltip positioning ────────────────────────────────────────────────────
-document.querySelectorAll('.tooltip-wrap').forEach(wrap => {
-  const icon = wrap.querySelector('.tooltip-icon');
-  const box  = wrap.querySelector('.tooltip-box');
-  if (!icon || !box) return;
-  icon.addEventListener('mouseenter', () => {
-    const rect = icon.getBoundingClientRect();
-    let top  = rect.bottom + 8;
-    let left = rect.left;
-    const boxW = 230;
-    if (left + boxW > window.innerWidth - 12) left = window.innerWidth - boxW - 12;
-    if (left < 8) left = 8;
-    box.style.top  = top  + 'px';
-    box.style.left = left + 'px';
-    const arrowLeft = Math.max(8, rect.left + rect.width / 2 - left - 6);
-    box.style.setProperty('--arrow-left', arrowLeft + 'px');
-    box.classList.add('visible');
-  });
-  icon.addEventListener('mouseleave', () => box.classList.remove('visible'));
-});
-
-// ── Panel resizer ──────────────────────────────────────────────────────────
-(function() {
-  const resizer   = document.getElementById('panelResizer');
-  const leftPanel = document.querySelector('.panel-left');
-  if (!resizer || !leftPanel) return;
-  const MIN_WIDTH = 260, MAX_WIDTH = 600;
-  let startX = 0, startWidth = 0;
-  resizer.addEventListener('mousedown', function(e) {
-    e.preventDefault();
-    startX     = e.clientX;
-    startWidth = leftPanel.offsetWidth;
-    resizer.classList.add('dragging');
-    document.body.classList.add('is-resizing');
-    function onMouseMove(e) {
-      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + e.clientX - startX));
-      leftPanel.style.width    = newWidth + 'px';
-      leftPanel.style.minWidth = newWidth + 'px';
-    }
-    function onMouseUp() {
-      resizer.classList.remove('dragging');
-      document.body.classList.remove('is-resizing');
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup',   onMouseUp);
-    }
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup',   onMouseUp);
-  });
-  resizer.addEventListener('touchstart', function(e) {
-    startX     = e.touches[0].clientX;
-    startWidth = leftPanel.offsetWidth;
-    resizer.classList.add('dragging');
-    function onTouchMove(e) {
-      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + e.touches[0].clientX - startX));
-      leftPanel.style.width    = newWidth + 'px';
-      leftPanel.style.minWidth = newWidth + 'px';
-    }
-    function onTouchEnd() {
-      resizer.classList.remove('dragging');
-      document.removeEventListener('touchmove', onTouchMove);
-      document.removeEventListener('touchend',  onTouchEnd);
-    }
-    document.addEventListener('touchmove', onTouchMove);
-    document.addEventListener('touchend',  onTouchEnd);
-  }, { passive: true });
-})();
-
-// ── Default (keep as-is) toggle for Table header bg ──────────────────────
-(function() {
-  const defaultChk  = document.getElementById('tableHeadingBgDefault');
-  const colorWidget = document.getElementById('colorWidget');
-  function applyDefaultState() {
-    colorWidget.classList.toggle('is-default', defaultChk.checked);
-  }
-  defaultChk.addEventListener('change', applyDefaultState);
   applyDefaultState();
 })();
 
+// ═══════════════════════════════════════════════════════════════
+//  PANEL RESIZER
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const resizer   = document.getElementById('panelResizer');
+  const leftPanel = document.querySelector('.panel-left');
+  const MIN = 260, MAX = 620;
+  let startX = 0, startW = 0;
+
+  resizer.addEventListener('mousedown', e => {
+    e.preventDefault();
+    startX = e.clientX;
+    startW = leftPanel.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.classList.add('is-resizing');
+
+    const onMove = e => {
+      const w = Math.min(MAX, Math.max(MIN, startW + e.clientX - startX));
+      leftPanel.style.width = leftPanel.style.minWidth = w + 'px';
+    };
+    const onUp = () => {
+      resizer.classList.remove('dragging');
+      document.body.classList.remove('is-resizing');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
 </script>
 </body>
 </html>
