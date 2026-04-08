@@ -653,9 +653,6 @@ body.is-resizing .resizer { pointer-events: all !important; }
           </label>
           <label class="toggle"><input type="checkbox" id="highlightElems"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
         </div>
-        
-
-        
       </div>
     </div>
 
@@ -768,8 +765,6 @@ function updateFontPreview() {
 
 previewFontFamily.addEventListener('change', updateFontPreview);
 previewFontSize.addEventListener('input', updateFontPreview);
-
-// optional: show the section when the UI is ready
 
 updateFontPreview();
 // ═══════════════════════════════════════════════════════════════
@@ -1079,7 +1074,7 @@ window.addEventListener('message', e => {
 })();
 
 // ═══════════════════════════════════════════════════════════════
-//  TABLE HEADER BACKGROUND COLOUR PICKER  (sync picker ↔ hex ↔ swatch ↔ presets)
+//  TABLE HEADER BACKGROUND COLOUR PICKER
 // ═══════════════════════════════════════════════════════════════
 (function () {
   const picker  = document.getElementById('bgPicker');
