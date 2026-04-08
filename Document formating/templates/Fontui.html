@@ -1,3 +1,4 @@
+<!-- fontui.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,11 +45,29 @@
     min-width: 300px;
     background: var(--paper);
     border-right: 1px solid var(--border);
-    display: block;
+    display: flex;
+    flex-direction: column;
     height: 100vh;
+    flex-shrink: 0;
+    /* No overflow here — children handle scroll */
+  }
+
+  /* ── Sticky status bar at top of left panel ── */
+  .status-bar-wrap {
+    flex-shrink: 0;
+    padding: 0 16px;
+    background: var(--paper);
+    /* Always reserve space so layout doesn't jump */
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ── Scrollable body below header + status ── */
+  .panel-scroll {
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    flex-shrink: 0;
   }
 
   .panel-header {
@@ -70,46 +89,6 @@
     color: var(--ink-soft);
     margin-top: 4px;
   }
-
-  /* ── Upload zone ── */
-  .upload-zone {
-    margin: 16px 16px 0;
-    border: 2px dashed var(--rust-lt);
-    border-radius: var(--radius);
-    padding: 22px 16px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    background: #FDF7F4;
-  }
-  .upload-zone:hover, .upload-zone.drag-over {
-    border-color: var(--rust);
-    background: #FAF0EC;
-  }
-  .upload-zone .upload-icon { font-size: 2rem; margin-bottom: 6px; }
-  .upload-zone p { font-size: 0.82rem; color: var(--ink-soft); }
-  .upload-zone strong { color: var(--rust); }
-  #fileInput { display: none; }
-
-  .file-badge {
-    display: none;
-    margin: 10px 16px 0;
-    background: var(--paper);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 12px;
-    font-size: 0.82rem;
-    color: var(--ink-mid);
-    align-items: center;
-    gap: 8px;
-  }
-  .file-badge.show { display: flex; }
-  .file-badge .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .file-badge .clear-file {
-    cursor: pointer; color: var(--ink-soft); font-size: 1rem; font-weight: bold;
-    border: none; background: none; padding: 0; transition: color 0.15s;
-  }
-  .file-badge .clear-file:hover { color: var(--rust); }
 
   /* ── Section cards ── */
   .section {
@@ -340,17 +319,36 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Status bar (now lives in sticky .status-bar-wrap) ── */
   .status-bar {
-    margin: 0 16px 8px;
-    padding: 8px 12px;
+    width: 100%;
+    padding: 9px 13px;
     border-radius: 8px;
     font-size: 0.8rem;
     font-weight: 500;
+    /* Hidden by default — takes no space */
     display: none;
   }
-  .status-bar.info  { background: var(--cream-mid); color: var(--ink-mid); display: block; }
-  .status-bar.error { background: #fee2e2; color: #b91c1c; display: block; }
-  .status-bar.ok    { background: #d1fae5; color: #065f46; display: block; }
+  .status-bar.info  { background: var(--cream-mid); color: var(--ink-mid); display: block; border: 1px solid var(--border); }
+  .status-bar.error { background: #fee2e2; color: #b91c1c; display: block; border: 1px solid #fca5a5; }
+  .status-bar.ok    { background: #d1fae5; color: #065f46; display: block; border: 1px solid #6ee7b7; }
+
+  /* "Always visible" variant — shown during async ops so user sees progress */
+  .status-bar.loading {
+    background: var(--cream-mid);
+    color: var(--ink-mid);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+  }
+  .status-bar.loading .status-spin {
+    width: 14px; height: 14px; flex-shrink: 0;
+    border: 2px solid var(--border);
+    border-top-color: var(--rust);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
 
   /* ── Right panel ── */
   .panel-right {
@@ -440,13 +438,13 @@
   .preview-placeholder p { font-size: 0.9rem; }
   .preview-placeholder strong { color: var(--rust); }
 
-  /* ── Colour chips for element types (kept as-is — functional colours) ── */
+  /* ── Colour chips for element types ── */
   .chip-TITLE         { background:#fff59d;color:#5d4037; }
   .chip-COVER_PAGE    { background:#fff9c4;color:#5d4037; }
   .chip-TOC_TITLE     { background:#ffcdd2;color:#b71c1c; }
   .chip-TOC_HEADING_1,.chip-TOC_HEADING_2,
   .chip-TOC_HEADING_3,.chip-TOC_HEADING_4 { background:#f5f5f5;color:#424242; }
-  .chip-HEADING_1     { background:#b9f6ca;color:#1b5e20; }
+  .chip-HEADING_1     { background:#00FE00;color:#1b5e20; }
   .chip-HEADING_2     { background:#b2ebf2;color:#006064; }
   .chip-HEADING_3     { background:#fce4ec;color:#880e4f; }
   .chip-HEADING_4     { background:#e1bee7;color:#4a148c; }
@@ -618,7 +616,6 @@
   }
   .color-widget.is-default { opacity: 0.38; pointer-events: none; filter: grayscale(0.5); }
 
-  /* "Default" notice badge shown on font select */
   .default-notice {
     font-size: 0.72rem; color: var(--rust);
     background: #FDF7F4; border: 1px solid #F0C0A8;
@@ -633,173 +630,173 @@
 
   <!-- ════════════════════ LEFT PANEL ════════════════════ -->
   <div class="panel-left">
+
+    <!-- Fixed header -->
     <div class="panel-header">
       <h2>🔤 Font Formatter</h2>
       <p>Apply consistent fonts &amp; sizes across your document</p>
     </div>
 
-    <!-- No file upload — document comes from the session -->
-    <!-- Status bar -->
-    <div class="status-bar info" id="statusBar" style="margin:16px 16px 0;">
-      Document loaded from session. Click "Analyse Document" to begin.
-    </div>
-
-    <!-- Detected types -->
-    <div class="section">
-      <div class="section-title">Detected Element Types</div>
-      <div class="section-body">
-        <div class="detected-list" id="detectedList">
-          <span class="no-doc-msg">Upload &amp; analyse to see elements</span>
-        </div>
+    <!-- ── Sticky status bar — always at top, always visible when active ── -->
+    <div class="status-bar-wrap">
+      <div class="status-bar info" id="statusBar">
+        Document loaded from session. Click "Analyse Document" to begin.
       </div>
     </div>
 
-    <!-- Global options -->
-    <div class="section">
-      <div class="section-title">Global Options</div>
-      <div class="section-body">
-        <div class="cfg-row" style="margin-bottom:4px;">
-          <label>Default font</label>
-          <select id="globalFont">
-            <option value="" selected>Default</option>
-            <optgroup label="Sans Serif">
-              <option value="Arial">Arial</option>
-              <option value="Calibri">Calibri</option>
-              <option value="Calibri Light">Calibri Light</option>
-              <option value="Helvetica">Helvetica</option>
-              <option value="Tahoma">Tahoma</option>
-              <option value="Trebuchet MS">Trebuchet MS</option>
-              <option value="Verdana">Verdana</option>
-              <option value="Gill Sans MT">Gill Sans MT</option>
-              <option value="Century Gothic">Century Gothic</option>
-              <option value="Segoe UI">Segoe UI</option>
-            </optgroup>
-            <optgroup label="Serif">
-              <option value="Times New Roman">Times New Roman</option>
-              <option value="Georgia">Georgia</option>
-              <option value="Garamond">Garamond</option>
-              <option value="Book Antiqua">Book Antiqua</option>
-              <option value="Palatino Linotype">Palatino Linotype</option>
-              <option value="Cambria">Cambria</option>
-            </optgroup>
-            <optgroup label="Monospace">
-              <option value="Courier New">Courier New</option>
-              <option value="Consolas">Consolas</option>
-              <option value="Lucida Console">Lucida Console</option>
-            </optgroup>
-            <optgroup label="Corporate / Other">
-              <option value="Oracle Sans">Oracle Sans</option>
-              <option value="Franklin Gothic Medium">Franklin Gothic Medium</option>
-              <option value="Rockwell">Rockwell</option>
-              <option value="Tw Cen MT">Tw Cen MT</option>
-            </optgroup>
-          </select>
-        </div>
-        <div class="toggle-row">
-          <label>Bold headings</label>
-          <label class="toggle"><input type="checkbox" id="boldHeadings" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
-        </div>
-        <div class="toggle-row">
-          <label>Bold titles</label>
-          <label class="toggle"><input type="checkbox" id="boldTitles" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
-        </div>
-        <div class="toggle-row">
-          <label>Bold lists</label>
-          <label class="toggle"><input type="checkbox" id="boldLists"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
-        </div>
-        <div class="toggle-row">
-          <label>Highlight elements
-            <span class="tooltip-wrap">
-              <span class="tooltip-icon">?</span>
-              <span class="tooltip-box">If you enable this option, you can see colours highlighting each section in the preview — making it easy to identify Titles, Headings, Paragraphs, Lists and Tables at a glance. The highlights only appear in the preview and are also saved in the downloaded document.</span>
-            </span>
-          </label>
-          <label class="toggle"><input type="checkbox" id="highlightElems"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
-        </div>
+    <!-- Scrollable content -->
+    <div class="panel-scroll">
 
-        <!-- Table header background colour picker -->
-        <div class="color-picker-row">
-          <div class="color-default-row">
-            <label class="color-label">Table header bg</label>
-            <label class="color-default-toggle">
-              <input type="checkbox" id="tableHeadingBgDefault" checked>
-              <span class="default-pill">Default (keep as-is)</span>
+      <!-- Detected types -->
+      <div class="section">
+        <div class="section-title">Detected Element Types</div>
+        <div class="section-body">
+          <div class="detected-list" id="detectedList">
+            <span class="no-doc-msg">Upload &amp; analyse to see elements</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Global options -->
+      <div class="section">
+        <div class="section-title">Global Options</div>
+        <div class="section-body">
+          <div class="cfg-row" style="margin-bottom:4px;">
+            <label>Default font</label>
+            <select id="globalFont">
+              <option value="" selected>Default</option>
+              <optgroup label="Sans Serif">
+                <option value="Arial">Arial</option>
+                <option value="Calibri">Calibri</option>
+                <option value="Calibri Light">Calibri Light</option>
+                <option value="Helvetica">Helvetica</option>
+                <option value="Tahoma">Tahoma</option>
+                <option value="Trebuchet MS">Trebuchet MS</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Gill Sans MT">Gill Sans MT</option>
+                <option value="Century Gothic">Century Gothic</option>
+                <option value="Segoe UI">Segoe UI</option>
+              </optgroup>
+              <optgroup label="Serif">
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Garamond">Garamond</option>
+                <option value="Book Antiqua">Book Antiqua</option>
+                <option value="Palatino Linotype">Palatino Linotype</option>
+                <option value="Cambria">Cambria</option>
+              </optgroup>
+              <optgroup label="Monospace">
+                <option value="Courier New">Courier New</option>
+                <option value="Consolas">Consolas</option>
+                <option value="Lucida Console">Lucida Console</option>
+              </optgroup>
+              <optgroup label="Corporate / Other">
+                <option value="Oracle Sans">Oracle Sans</option>
+                <option value="Franklin Gothic Medium">Franklin Gothic Medium</option>
+                <option value="Rockwell">Rockwell</option>
+                <option value="Tw Cen MT">Tw Cen MT</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="toggle-row">
+            <label>Bold headings</label>
+            <label class="toggle"><input type="checkbox" id="boldHeadings" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
+          </div>
+          <div class="toggle-row">
+            <label>Bold titles</label>
+            <label class="toggle"><input type="checkbox" id="boldTitles" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
+          </div>
+          <div class="toggle-row">
+            <label>Bold lists</label>
+            <label class="toggle"><input type="checkbox" id="boldLists"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
+          </div>
+          <div class="toggle-row">
+            <label>Highlight elements
+              <span class="tooltip-wrap">
+                <span class="tooltip-icon">?</span>
+                <span class="tooltip-box">If you enable this option, you can see colours highlighting each section in the preview — making it easy to identify Titles, Headings, Paragraphs, Lists and Tables at a glance. The highlights only appear in the preview and are also saved in the downloaded document.</span>
+              </span>
             </label>
+            <label class="toggle"><input type="checkbox" id="highlightElems"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
           </div>
-          <div class="color-widget" id="colorWidget">
-            <div class="color-main-row">
-              <input type="color" id="tableHeadingBgPicker" value="#1e3a5f" title="Pick a colour">
-              <input type="text"  id="tableHeadingBg" value="#1e3a5f" maxlength="7" placeholder="#1e3a5f" class="hex-input" spellcheck="false">
-              <div class="color-swatch-preview" id="colorSwatchPreview" style="background:#1e3a5f"></div>
-            </div>
-            <div class="color-presets" id="detectedPresetsRow" style="display:none; margin-bottom: 8px;">
-              <span class="preset-label">Detected in Doc:</span>
-              <div id="detectedPresetsList" style="display: flex; gap: 5px; flex-wrap: wrap;"></div>
-            </div>
-            <!-- Detected colors section (populated by JavaScript after analyse) -->
-            <div class="color-presets" id="detectedPresetsRow" style="display:none; margin-bottom: 8px;">
-              <span class="preset-label">Detected in Doc:</span>
-              <div id="detectedPresetsList" style="display: flex; gap: 5px; flex-wrap: wrap;"></div>
-            </div>
 
-            <!-- Standard colors section -->
-            <div class="color-presets">
-              <span class="preset-label">Standard:</span>
-              <button class="preset-btn" data-color="#4472C4" style="background:#4472C4" title="Blue"></button>
-              <button class="preset-btn" data-color="#70AD47" style="background:#70AD47" title="Green"></button>
-              <button class="preset-btn" data-color="#FFC000" style="background:#FFC000" title="Gold"></button>
-              <button class="preset-btn" data-color="#ED7D31" style="background:#ED7D31" title="Orange"></button>
-              <button class="preset-btn" data-color="#A5A5A5" style="background:#A5A5A5" title="Gray"></button>
-              <button class="preset-btn" data-color="#44546A" style="background:#44546A" title="Dark Gray"></button>
-              <button class="preset-btn" data-color="#BDD7EE" style="background:#BDD7EE" title="Light Blue"></button>
-              <button class="preset-btn" data-color="#C6EFCE" style="background:#C6EFCE" title="Light Green"></button>
-              <button class="preset-btn" data-color="#FFE699" style="background:#FFE699" title="Light Yellow"></button>
-              <button class="preset-btn" data-color="#F4B084" style="background:#F4B084" title="Light Orange"></button>
+          <!-- Table header background colour picker -->
+          <div class="color-picker-row">
+            <div class="color-default-row">
+              <label class="color-label">Table header bg</label>
+              <label class="color-default-toggle">
+                <input type="checkbox" id="tableHeadingBgDefault" checked>
+                <span class="default-pill">Default (keep as-is)</span>
+              </label>
+            </div>
+            <div class="color-widget" id="colorWidget">
+              <div class="color-main-row">
+                <input type="color" id="tableHeadingBgPicker" value="#1e3a5f" title="Pick a colour">
+                <input type="text"  id="tableHeadingBg" value="#1e3a5f" maxlength="7" placeholder="#1e3a5f" class="hex-input" spellcheck="false">
+                <div class="color-swatch-preview" id="colorSwatchPreview" style="background:#1e3a5f"></div>
+              </div>
+              <div class="color-presets" id="detectedPresetsRow" style="display:none; margin-bottom: 8px;">
+                <span class="preset-label">Detected in Doc:</span>
+                <div id="detectedPresetsList" style="display: flex; gap: 5px; flex-wrap: wrap;"></div>
+              </div>
+              <div class="color-presets">
+                <span class="preset-label">Standard:</span>
+                <button class="preset-btn" data-color="#4472C4" style="background:#4472C4" title="Blue"></button>
+                <button class="preset-btn" data-color="#70AD47" style="background:#70AD47" title="Green"></button>
+                <button class="preset-btn" data-color="#FFC000" style="background:#FFC000" title="Gold"></button>
+                <button class="preset-btn" data-color="#ED7D31" style="background:#ED7D31" title="Orange"></button>
+                <button class="preset-btn" data-color="#A5A5A5" style="background:#A5A5A5" title="Gray"></button>
+                <button class="preset-btn" data-color="#44546A" style="background:#44546A" title="Dark Gray"></button>
+                <button class="preset-btn" data-color="#BDD7EE" style="background:#BDD7EE" title="Light Blue"></button>
+                <button class="preset-btn" data-color="#C6EFCE" style="background:#C6EFCE" title="Light Green"></button>
+                <button class="preset-btn" data-color="#FFE699" style="background:#FFE699" title="Light Yellow"></button>
+                <button class="preset-btn" data-color="#F4B084" style="background:#F4B084" title="Light Orange"></button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Per-type overrides (populated after analyse) -->
-    <div class="section" id="perTypeSection" style="display:none">
-      <div class="section-title">Per-Type Overrides <span style="font-weight:400;text-transform:none;font-size:0.75rem;color:var(--ink-soft)">(leave blank to use global)</span></div>
-      <div class="section-body" style="overflow-x:auto;">
-        <table class="type-config-table" id="perTypeTable">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Current Font
-                <span class="tooltip-wrap">
-                  <span class="tooltip-icon">?</span>
-                  <span class="tooltip-box">Shows the most commonly used font across all paragraphs of this type in your document. If a heading type only appears once or uses a theme font that can't be resolved, it may show —.</span>
-                </span>
-              </th>
-              <th>Font</th>
-              <th style="width:60px">Size</th>
-            </tr>
-          </thead>
-          <tbody id="perTypeBody"></tbody>
-        </table>
+      <!-- Per-type overrides (populated after analyse) -->
+      <div class="section" id="perTypeSection" style="display:none">
+        <div class="section-title">Per-Type Overrides <span style="font-weight:400;text-transform:none;font-size:0.75rem;color:var(--ink-soft)">(leave blank to use global)</span></div>
+        <div class="section-body" style="overflow-x:auto;">
+          <table class="type-config-table" id="perTypeTable">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Current Font
+                  <span class="tooltip-wrap">
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltip-box">Shows the most commonly used font across all paragraphs of this type in your document.</span>
+                  </span>
+                </th>
+                <th>New Font</th>
+                <th style="width:60px">Size</th>
+              </tr>
+            </thead>
+            <tbody id="perTypeBody"></tbody>
+          </table>
+        </div>
       </div>
-    </div>
 
-    <!-- Actions -->
-    <div class="actions" style="padding-bottom:40px;">
-      <button class="btn btn-analyse" id="btnAnalyse">
-        <div class="spinner" id="spinAnalyse"></div>
-        <span id="lblAnalyse">🔍 Analyse Document</span>
-      </button>
-      <button class="btn btn-preview" id="btnPreview" disabled>
-        <div class="spinner" id="spinPreview"></div>
-        <span id="lblPreview">👁 Preview Changes</span>
-      </button>
-      <button class="btn btn-format" id="btnFormat" disabled>
-        <div class="spinner" id="spinFormat"></div>
-        <span id="lblFormat">⬇ Download or Apply another tool</span>
-      </button>
-    </div>
+      <!-- Actions -->
+      <div class="actions" style="padding-bottom:40px;">
+        <button class="btn btn-analyse" id="btnAnalyse">
+          <div class="spinner" id="spinAnalyse"></div>
+          <span id="lblAnalyse">🔍 Analyse Document</span>
+        </button>
+        <button class="btn btn-preview" id="btnPreview" disabled>
+          <div class="spinner" id="spinPreview"></div>
+          <span id="lblPreview">👁 Preview Changes</span>
+        </button>
+        <button class="btn btn-format" id="btnFormat" disabled>
+          <div class="spinner" id="spinFormat"></div>
+          <span id="lblFormat">⬇ Download or Apply another tool</span>
+        </button>
+      </div>
 
+    </div><!-- .panel-scroll -->
   </div><!-- end panel-left -->
 
   <!-- Drag resizer -->
@@ -843,7 +840,6 @@
 
 <script>
 // ── State ─────────────────────────────────────────────────────────────────
-// No currentFile — the working file lives in the Flask session server-side.
 let analysedData = null;
 
 // ── DOM refs ──────────────────────────────────────────────────────────────
@@ -881,11 +877,22 @@ tabOriginal.addEventListener('click',  () => switchTab('original'));
 tabFormatted.addEventListener('click', () => switchTab('formatted'));
 
 // ── Status bar ────────────────────────────────────────────────────────────
+// FIX 1: Status bar is always visible when a message is set.
+// We use a dedicated "loading" class that shows a spinner for async ops.
 function showStatus(msg, type = 'info') {
-  statusBar.textContent = msg;
+  // Remove all state classes first
   statusBar.className = 'status-bar ' + type;
+  // For loading state, wrap message with spinner markup
+  if (type === 'loading') {
+    statusBar.innerHTML = `<div class="status-spin"></div><span>${msg}</span>`;
+  } else {
+    statusBar.textContent = msg;
+  }
 }
-function hideStatus() { statusBar.className = 'status-bar'; }
+function hideStatus() {
+  statusBar.className = 'status-bar';
+  statusBar.textContent = '';
+}
 
 // ── Loading state helpers ─────────────────────────────────────────────────
 function setLoading(btnEl, spinEl, lblEl, loading, label) {
@@ -895,9 +902,9 @@ function setLoading(btnEl, spinEl, lblEl, loading, label) {
 }
 
 // ── Auto-load original preview on page load ───────────────────────────────
-// Uses the session's working file — no file upload needed.
 (async function loadOriginalPreview() {
   tabOriginal.classList.add('loading');
+  showStatus('Loading document preview…', 'loading');
   try {
     const res = await fetch('original', { method: 'POST', body: new FormData() });
     if (!res.ok) {
@@ -911,8 +918,9 @@ function setLoading(btnEl, spinEl, lblEl, loading, label) {
     frameOriginal.src = url;
     frameOriginal.classList.add('loaded');
     placeholderOriginal.style.display = 'none';
+    showStatus('Document loaded. Click "Analyse Document" to begin.', 'info');
   } catch (err) {
-    showStatus('Original preview error: ' + err.message, 'error');
+    showStatus('Preview error: ' + err.message, 'error');
   } finally {
     tabOriginal.classList.remove('loading');
   }
@@ -949,10 +957,9 @@ function buildConfig() {
 function chipClass(ptype) { return 'chip-' + ptype.replace(/\s/g,'_'); }
 
 // ── Analyse ───────────────────────────────────────────────────────────────
-// No file appended — server reads the session's working file.
 btnAnalyse.addEventListener('click', async () => {
   setLoading(btnAnalyse, spinAnalyse, lblAnalyse, true, 'Analysing…');
-  showStatus('Analysing document structure…', 'info');
+  showStatus('Analysing document structure…', 'loading');
   try {
     const res  = await fetch('analyse', { method: 'POST', body: new FormData() });
     const data = await res.json();
@@ -960,11 +967,11 @@ btnAnalyse.addEventListener('click', async () => {
     analysedData = data;
     renderDetectedTypes(data);
     renderPerTypeTable(data.detected_elements, data.current_fonts || {});
-    populateDetectedColors(data.detected_table_bgs || []);  // ← ADD THIS
+    populateDetectedColors(data.detected_table_bgs || []);
     btnPreview.disabled = false;
     btnFormat.disabled  = false;
-    showStatus(`Found ${data.detected_elements.length} element type(s) — ${Object.values(data.element_counts).reduce((a,b)=>a+b,0)} total paragraphs/tables.`, 'ok');
-    // Tell parent shell this tool now has unsaved work.
+    const total = Object.values(data.element_counts).reduce((a,b)=>a+b,0);
+    showStatus(`✓ Found ${data.detected_elements.length} element type(s) — ${total} total paragraphs/tables.`, 'ok');
     window.parent.postMessage({ type: 'toolDirty' }, '*');
   } catch (err) {
     showStatus('Error: ' + err.message, 'error');
@@ -976,7 +983,6 @@ btnAnalyse.addEventListener('click', async () => {
 // ── tabResumed — session file may have changed while away ─────────────────
 window.addEventListener('message', e => {
   if (e.data && e.data.type === 'tabResumed') {
-    // Reset so user re-analyses the updated document.
     analysedData = null;
     detectedList.innerHTML = '<span class="no-doc-msg">Session file was updated — click Analyse to reload</span>';
     perTypeSection.style.display = 'none';
@@ -987,9 +993,9 @@ window.addEventListener('message', e => {
     placeholderFormatted.style.display = 'flex';
     showStatus('Another tool updated the document — please re-analyse.', 'info');
     window.parent.postMessage({ type: 'toolClean' }, '*');
-    // Reload the original preview with the updated file.
     (async function() {
       tabOriginal.classList.add('loading');
+      showStatus('Reloading updated document…', 'loading');
       try {
         const res = await fetch('original', { method: 'POST', body: new FormData() });
         if (!res.ok) return;
@@ -1001,7 +1007,10 @@ window.addEventListener('message', e => {
         frameOriginal.classList.add('loaded');
         placeholderOriginal.style.display = 'none';
         switchTab('original');
-      } catch(err) { /* silent */ } finally {
+        showStatus('Document updated. Please re-analyse before applying changes.', 'info');
+      } catch(err) {
+        showStatus('Reload error: ' + err.message, 'error');
+      } finally {
         tabOriginal.classList.remove('loading');
       }
     })();
@@ -1011,38 +1020,30 @@ window.addEventListener('message', e => {
 function renderDetectedTypes(data) {
   const detectedList = document.getElementById('detectedList');
   if (!detectedList) return;
-
   detectedList.innerHTML = '';
-  
   if (!data.detected_elements || data.detected_elements.length === 0) {
     detectedList.innerHTML = '<span class="no-doc-msg">No elements detected</span>';
     return;
   }
-
   data.detected_elements.forEach(ptype => {
     const chip = document.createElement('span');
     chip.className = 'type-chip ' + ('chip-' + ptype.replace(/\s/g,'_'));
     const count = data.element_counts[ptype] || 0;
     chip.textContent = ptype.replace(/_/g,' ') + (count ? ` ×${count}` : '');
-    
     if (data.sample_texts && data.sample_texts[ptype]) {
       chip.title = '"' + data.sample_texts[ptype].slice(0, 80) + '…"';
     }
-    
     detectedList.appendChild(chip);
   });
 }
 
-// After renderDetectedTypes() function, add this:
 function populateDetectedColors(detectedColors) {
-  const row = document.getElementById('detectedPresetsRow');
+  const row  = document.getElementById('detectedPresetsRow');
   const list = document.getElementById('detectedPresetsList');
-
   if (!detectedColors || detectedColors.length === 0) {
     row.style.display = 'none';
     return;
   }
-
   list.innerHTML = '';
   detectedColors.forEach(hex => {
     const btn = document.createElement('button');
@@ -1051,13 +1052,11 @@ function populateDetectedColors(detectedColors) {
     btn.style.background = hex;
     btn.title = hex;
     btn.addEventListener('click', () => {
-      // Sync the color picker
       document.getElementById('tableHeadingBgPicker').value = hex;
       document.getElementById('tableHeadingBgPicker').dispatchEvent(new Event('input'));
     });
     list.appendChild(btn);
   });
-
   row.style.display = 'flex';
 }
 
@@ -1117,17 +1116,15 @@ function renderPerTypeTable(types, currentFonts) {
 }
 
 // ── Preview Changes ───────────────────────────────────────────────────────
-// No file appended — server reads the session's working file.
 btnPreview.addEventListener('click', async () => {
   setLoading(btnPreview, spinPreview, lblPreview, true, 'Generating preview…');
   tabFormatted.classList.add('loading');
-  showStatus('Generating preview…', 'info');
+  showStatus('Generating formatted preview, please wait…', 'loading');
   try {
     const fd = new FormData();
     fd.append('config', JSON.stringify(buildConfig()));
     const res = await fetch('preview', { method: 'POST', body: fd });
     if (!res.ok) {
-      // Try to read the real error from the server response.
       const body = await res.text();
       let msg = 'Preview failed';
       try { msg = JSON.parse(body).error || msg; } catch { msg = body.slice(0, 200) || msg; }
@@ -1141,7 +1138,7 @@ btnPreview.addEventListener('click', async () => {
     frameFormatted.classList.add('loaded');
     placeholderFormatted.style.display = 'none';
     switchTab('formatted');
-    showStatus('Preview ready.', 'ok');
+    showStatus('✓ Preview ready — review your changes on the right.', 'ok');
   } catch (err) {
     showStatus('Preview error: ' + err.message, 'error');
   } finally {
@@ -1151,12 +1148,9 @@ btnPreview.addEventListener('click', async () => {
 });
 
 // ── Format ────────────────────────────────────────────────────────────────
-// Server applies font formatting and saves the result as the new session
-// working file.  No browser download here — the parent shell modal handles
-// "Download or apply another tool?" via /download_current.
 btnFormat.addEventListener('click', async () => {
   setLoading(btnFormat, spinFormat, lblFormat, true, 'Formatting…');
-  showStatus('Applying font formatting…', 'info');
+  showStatus('Applying font formatting to document…', 'loading');
   try {
     const fd = new FormData();
     fd.append('config', JSON.stringify(buildConfig()));
@@ -1165,10 +1159,8 @@ btnFormat.addEventListener('click', async () => {
       const err = await res.json().catch(() => ({ error: 'Format failed' }));
       throw new Error(err.error || 'Format failed');
     }
-    // Drain the response so the server finishes writing the file.
     await res.blob();
-    showStatus('Formatting complete!', 'ok');
-    // Tell parent the dirty work is done, then show the modal.
+    showStatus('✓ Formatting complete!', 'ok');
     window.parent.postMessage({ type: 'toolClean' }, '*');
     window.parent.postMessage({ type: 'taskComplete' }, '*');
   } catch (err) {
@@ -1178,7 +1170,7 @@ btnFormat.addEventListener('click', async () => {
   }
 });
 
-// ── Spinner references (needed by setLoading) ─────────────────────────────
+// ── Spinner references ─────────────────────────────────────────────────────
 const spinAnalyse = document.getElementById('spinAnalyse');
 const spinPreview = document.getElementById('spinPreview');
 const spinFormat  = document.getElementById('spinFormat');
@@ -1188,9 +1180,9 @@ const lblFormat   = document.getElementById('lblFormat');
 
 // ── Colour picker sync ─────────────────────────────────────────────────────
 (function() {
-  const picker  = document.getElementById('tableHeadingBgPicker');
+  const picker   = document.getElementById('tableHeadingBgPicker');
   const hexInput = document.getElementById('tableHeadingBg');
-  const swatch  = document.getElementById('colorSwatchPreview');
+  const swatch   = document.getElementById('colorSwatchPreview');
 
   function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
 
@@ -1201,16 +1193,12 @@ const lblFormat   = document.getElementById('lblFormat');
     picker.value   = upper;
     hexInput.value = upper;
     swatch.style.background = upper;
-    // Update active preset
     document.querySelectorAll('.preset-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
     });
   }
 
-  // Native color picker changed
   picker.addEventListener('input', () => syncAll(picker.value));
-
-  // Hex text field changed
   hexInput.addEventListener('input', () => {
     let v = hexInput.value.trim();
     if (!v.startsWith('#')) v = '#' + v;
@@ -1220,146 +1208,88 @@ const lblFormat   = document.getElementById('lblFormat');
     if (!isValidHex(hexInput.value)) hexInput.value = picker.value;
     hexInput.value = hexInput.value.toUpperCase();
   });
-
-  // Preset buttons
   document.querySelectorAll('.preset-btn').forEach(btn => {
     btn.addEventListener('click', () => syncAll(btn.dataset.color));
   });
-
-  // Init active state
   syncAll(picker.value);
 })();
-
 
 // ── Tooltip positioning ────────────────────────────────────────────────────
 document.querySelectorAll('.tooltip-wrap').forEach(wrap => {
   const icon = wrap.querySelector('.tooltip-icon');
   const box  = wrap.querySelector('.tooltip-box');
   if (!icon || !box) return;
-
   icon.addEventListener('mouseenter', () => {
     const rect = icon.getBoundingClientRect();
-    // Position below the icon
     let top  = rect.bottom + 8;
     let left = rect.left;
-
-    // Clamp so box never goes off right edge of viewport
     const boxW = 230;
-    if (left + boxW > window.innerWidth - 12) {
-      left = window.innerWidth - boxW - 12;
-    }
-    // Clamp left edge
+    if (left + boxW > window.innerWidth - 12) left = window.innerWidth - boxW - 12;
     if (left < 8) left = 8;
-
     box.style.top  = top  + 'px';
     box.style.left = left + 'px';
-
-    // Move arrow to point at icon
     const arrowLeft = Math.max(8, rect.left + rect.width / 2 - left - 6);
     box.style.setProperty('--arrow-left', arrowLeft + 'px');
     box.classList.add('visible');
   });
-
-  icon.addEventListener('mouseleave', () => {
-    box.classList.remove('visible');
-  });
+  icon.addEventListener('mouseleave', () => box.classList.remove('visible'));
 });
-
 
 // ── Panel resizer ──────────────────────────────────────────────────────────
 (function() {
   const resizer   = document.getElementById('panelResizer');
   const leftPanel = document.querySelector('.panel-left');
-  const shell     = document.querySelector('.shell');
-
   if (!resizer || !leftPanel) return;
-
-  const MIN_WIDTH = 260;   // px — left panel minimum
-  const MAX_WIDTH = 600;   // px — left panel maximum
-
-  let startX     = 0;
-  let startWidth = 0;
-
+  const MIN_WIDTH = 260, MAX_WIDTH = 600;
+  let startX = 0, startWidth = 0;
   resizer.addEventListener('mousedown', function(e) {
     e.preventDefault();
     startX     = e.clientX;
     startWidth = leftPanel.offsetWidth;
     resizer.classList.add('dragging');
     document.body.classList.add('is-resizing');
-
     function onMouseMove(e) {
-      const dx       = e.clientX - startX;
-      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + e.clientX - startX));
       leftPanel.style.width    = newWidth + 'px';
       leftPanel.style.minWidth = newWidth + 'px';
     }
-
     function onMouseUp() {
       resizer.classList.remove('dragging');
       document.body.classList.remove('is-resizing');
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup',   onMouseUp);
     }
-
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup',   onMouseUp);
   });
-
-  // Touch support
   resizer.addEventListener('touchstart', function(e) {
     startX     = e.touches[0].clientX;
     startWidth = leftPanel.offsetWidth;
     resizer.classList.add('dragging');
-
     function onTouchMove(e) {
-      const dx       = e.touches[0].clientX - startX;
-      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + dx));
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + e.touches[0].clientX - startX));
       leftPanel.style.width    = newWidth + 'px';
       leftPanel.style.minWidth = newWidth + 'px';
     }
-
     function onTouchEnd() {
       resizer.classList.remove('dragging');
       document.removeEventListener('touchmove', onTouchMove);
       document.removeEventListener('touchend',  onTouchEnd);
     }
-
     document.addEventListener('touchmove', onTouchMove);
     document.addEventListener('touchend',  onTouchEnd);
   }, { passive: true });
 })();
 
-
 // ── Default (keep as-is) toggle for Table header bg ──────────────────────
 (function() {
   const defaultChk  = document.getElementById('tableHeadingBgDefault');
   const colorWidget = document.getElementById('colorWidget');
-
   function applyDefaultState() {
-    if (defaultChk.checked) {
-      colorWidget.classList.add('is-default');
-    } else {
-      colorWidget.classList.remove('is-default');
-    }
+    colorWidget.classList.toggle('is-default', defaultChk.checked);
   }
   defaultChk.addEventListener('change', applyDefaultState);
-  applyDefaultState(); // init — checked by default so widget starts greyed
-})();
-
-// ── Default notice for font select ───────────────────────────────────────
-(function() {
-  const fontSel = document.getElementById('globalFont');
-  const notice  = document.getElementById('fontDefaultNotice');
-
-  function updateNotice() {
-    if (!fontSel.value) {
-      notice.classList.add('show');
-    } else {
-      notice.classList.remove('show');
-    }
-  }
-  fontSel.addEventListener('change', updateNotice);
-  updateNotice(); // init
+  applyDefaultState();
 })();
 
 </script>

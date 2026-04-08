@@ -1,3 +1,4 @@
+#font1.py
 import os
 import re
 import json
@@ -313,6 +314,36 @@ def _is_table_footer_row(table, row_idx: int, total_rows: int) -> bool:
 
 
 # =============================================================================
+#  COVER PAGE DETECTION (standalone, usable with any Document instance)
+# =============================================================================
+
+def _detect_cover_page_body_threshold(doc) -> int:
+    """
+    Returns the body-child position index of the last cover-page element,
+    or -1 if no cover page detected.  Works on any Document instance.
+    """
+    paragraphs = doc.paragraphs
+    body_children    = list(doc.element.body)
+    body_elem_to_pos = {id(child): pos for pos, child in enumerate(body_children)}
+
+    cover_end = _ft_detect_cover_page(doc)
+    if cover_end < 0:
+        return -1
+
+    # Map paragraph sequence index → body position
+    para_seq = 0
+    para_body_pos: dict = {}
+    for child in body_children:
+        if child.tag == qn("w:p"):
+            para_body_pos[para_seq] = body_elem_to_pos[id(child)]
+            para_seq += 1
+
+    if cover_end in para_body_pos:
+        return para_body_pos[cover_end]
+    return -1
+
+
+# =============================================================================
 #  TOC DETECTION HELPERS
 # =============================================================================
 
@@ -556,7 +587,7 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
     sample_texts:   dict = {}
     _font_votes:    dict = {}
 
-    detected_table_bg_colors = set() # To store unique hex colors
+    detected_table_bg_colors = set()
 
     theme_resolver    = _make_theme_resolver(doc)
     cover_end         = _ft_detect_cover_page(doc)
@@ -636,8 +667,12 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
             if not ptype:
                 ptype = "PARAGRAPH"
 
-        item = {"type": ptype, "para_idx": idx,
-                "indent": get_paragraph_indentation(para)}
+        item = {
+            "type":     ptype,
+            "para_idx": idx,
+            "indent":   get_paragraph_indentation(para),
+            "in_cover": in_cover,   # ← store cover flag by para index
+        }
         elements.append(item)
         element_counts[ptype] = element_counts.get(ptype, 0) + 1
         detected_types.add(ptype)
@@ -651,25 +686,26 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
 
     # ── Step 2: classify every table AND its cell paragraphs ──────────────────
     for tbl_idx, table in enumerate(doc.tables):
-        # --- NEW: Extract Header Background Colors ---
-        try:
-            if len(table.rows) > 0:
-                first_row = table.rows[0]
-                for cell in first_row.cells:
-                    tcPr = cell._tc.find(qn("w:tcPr"))
-                    if tcPr is not None:
-                        shd = tcPr.find(qn("w:shd"))
-                        if shd is not None:
-                            fill = shd.get(qn("w:fill"))
-                            if fill and fill.upper() not in ("AUTO", "FFFFFF", "000000"):
-                                # Normalize to #RRGGBB format
-                                detected_table_bg_colors.add(f"#{fill.upper()}")
-        except Exception:
-            pass
-        # --- End of New Logic ---
         tbl_body_pos = body_elem_to_pos.get(id(table._tbl), -1)
         on_cover     = (cover_body_threshold >= 0 and
                         0 <= tbl_body_pos <= cover_body_threshold)
+
+        # --- Detect header colors from BODY tables only (skip cover) ---
+        if not on_cover:
+            try:
+                for row_idx, row in enumerate(table.rows):
+                    if _is_table_header_row(table, row_idx):
+                        for cell in row.cells:
+                            tcPr = cell._tc.find(qn("w:tcPr"))
+                            if tcPr is not None:
+                                shd = tcPr.find(qn("w:shd"))
+                                if shd is not None:
+                                    fill = shd.get(qn("w:fill"))
+                                    if fill and fill.upper() not in ("AUTO", "FFFFFF", "000000"):
+                                        detected_table_bg_colors.add(f"#{fill.upper()}")
+            except Exception:
+                pass
+
         total_rows   = len(table.rows)
 
         # One summary entry for the table itself (used by set_table_heading_bg)
@@ -705,7 +741,6 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
                 seen_cell_ids.add(cid)
 
                 for cell_para_idx, para in enumerate(cell.paragraphs):
-                    # Skip paragraphs that belong to a nested table
                     nested = False
                     node   = para._element.getparent()
                     while node is not None and node is not cell._tc:
@@ -988,31 +1023,6 @@ def _hex_to_rgb_str(hex_color: str) -> str:
     return hex_color.lstrip("#").upper()
 
 
-def set_table_heading_bg(table, hex_color: str):
-    if not hex_color:
-        return
-    rgb = _hex_to_rgb_str(hex_color)
-    if rgb.upper() == "FFFFFF":
-        return
-    try:
-        first_row = table.rows[0]
-    except IndexError:
-        return
-    for cell in first_row.cells:
-        tc   = cell._tc
-        tcPr = tc.find(qn("w:tcPr"))
-        if tcPr is None:
-            tcPr = OxmlElement("w:tcPr")
-            tc.insert(0, tcPr)
-        shd = tcPr.find(qn("w:shd"))
-        if shd is None:
-            shd = OxmlElement("w:shd")
-            tcPr.append(shd)
-        shd.set(qn("w:val"),   "clear")
-        shd.set(qn("w:color"), "auto")
-        shd.set(qn("w:fill"),  rgb)
-
-
 # =============================================================================
 #  TOC HIGHLIGHT PASS
 # =============================================================================
@@ -1059,14 +1069,22 @@ def ft_highlight_toc(doc, elements: list, config: dict):
 def ft_format_table_cells(doc, elements: list, config: dict):
     """
     Walk every table in the document and apply font / size / bold / highlight
-    to every cell paragraph, classified by its row role:
-      TABLE_HEADER  – row 0 or rows flagged with w:tblHeader
-      TABLE_FOOTER  – last row when it contains totals keywords
-      TABLE_BODY    – everything else
+    to every cell paragraph, classified by its row role.
+    Skips tables on the cover page.
     """
     do_highlight = config.get("highlight", False)
 
+    # Build a fast lookup: table_idx → on_cover flag
+    tbl_cover_map: dict = {}
+    for e in elements:
+        if e.get("type") == "TABLE" and "table_idx" in e:
+            tbl_cover_map[e["table_idx"]] = e.get("on_cover", False)
+
     for tbl_idx, table in enumerate(doc.tables):
+        # ── FIX 3: skip cover-page tables entirely ────────────────────────────
+        if tbl_cover_map.get(tbl_idx, False):
+            continue
+
         total_rows    = len(table.rows)
         seen_cell_ids: set = set()
 
@@ -1094,7 +1112,6 @@ def ft_format_table_cells(doc, elements: list, config: dict):
                 seen_cell_ids.add(cid)
 
                 for para in cell.paragraphs:
-                    # Skip paragraphs that belong to a nested table
                     nested = False
                     node   = para._element.getparent()
                     while node is not None and node is not cell._tc:
@@ -1121,6 +1138,13 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
     footer_ids = get_footer_paragraph_ids(doc)
     header_ids = get_header_paragraph_ids(doc)
 
+    # ── Recompute cover-page body threshold for THIS Document instance ────────
+    # (elements list was built from a different Document open; id()-based
+    #  on_cover flags for TABLE entries are stale.  We re-derive it here.)
+    cover_body_threshold = _detect_cover_page_body_threshold(doc)
+    body_children    = list(doc.element.body)
+    body_elem_to_pos = {id(child): pos for pos, child in enumerate(body_children)}
+
     para_map = {e["para_idx"]: e for e in elements if "para_idx" in e}
 
     # ── Pass 1: top-level (non-table) paragraphs ──────────────────────────────
@@ -1130,6 +1154,11 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
         elem_info = para_map.get(idx)
         if not elem_info:
             continue
+
+        # ── FIX 3: skip cover-page paragraphs entirely ────────────────────────
+        if elem_info.get("in_cover", False):
+            continue
+
         ptype           = elem_info["type"]
         original_indent = elem_info.get("indent", 0.0)
         font_name, font_size = _ft_get_config_for_type(ptype, config)
@@ -1174,12 +1203,36 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
 
     # ── Pass 2: table heading background colour ────────────────────────────────
     table_heading_bg = config.get("table_heading_bg")
-    tbl_elem_map     = {e.get("table_idx"): e for e in elements if e.get("type") == "TABLE"}
-    for i, table in enumerate(doc.tables):
-        elem_info = tbl_elem_map.get(i)
-        on_cover  = elem_info.get("on_cover", False) if elem_info else False
-        if not on_cover and table_heading_bg:
-            set_table_heading_bg(table, table_heading_bg)
+    if table_heading_bg:
+        rgb = table_heading_bg.lstrip("#").upper()
+        for tbl_idx, table in enumerate(doc.tables):
+            # ── FIX 2 + FIX 3: recompute on_cover using THIS doc's element ids ─
+            tbl_body_pos = body_elem_to_pos.get(id(table._tbl), -1)
+            on_cover = (cover_body_threshold >= 0 and
+                        0 <= tbl_body_pos <= cover_body_threshold)
+            if on_cover:
+                continue  # never touch cover-page tables
+
+            # Apply background to ALL header rows (not just row 0)
+            try:
+                for row_idx, row in enumerate(table.rows):
+                    if not _is_table_header_row(table, row_idx):
+                        continue
+                    for cell in row.cells:
+                        tc   = cell._tc
+                        tcPr = tc.find(qn("w:tcPr"))
+                        if tcPr is None:
+                            tcPr = OxmlElement("w:tcPr")
+                            tc.insert(0, tcPr)
+                        shd = tcPr.find(qn("w:shd"))
+                        if shd is None:
+                            shd = OxmlElement("w:shd")
+                            tcPr.append(shd)
+                        shd.set(qn("w:val"),   "clear")
+                        shd.set(qn("w:color"), "auto")
+                        shd.set(qn("w:fill"),  rgb)
+            except Exception:
+                pass
 
     # ── Pass 3: format every cell paragraph (font / size / bold / highlight) ──
     ft_format_table_cells(doc, elements, config)
@@ -1304,10 +1357,6 @@ def docx_to_html_preview(docx_path: str, elements: list = None) -> str:
         return ""
 
     def _render_table(table) -> str:
-        """
-        Render table with header / body / footer row CSS classes.
-        Each cell's paragraphs are rendered; existing cell shading is preserved.
-        """
         total_rows = len(table.rows)
         rows_html  = ["<table>"]
         seen_cell_ids: set = set()
@@ -1436,7 +1485,6 @@ def ft_analyse():
         return jsonify({"error": "No file uploaded yet. Please upload from the home page."}), 400
     try:
         data = ft_analyze_document_structure(path)
-        # Add standard colors to the response
         data["standard_table_bgs"] = STANDARD_TABLE_BG_COLORS
         return jsonify(data)
     except Exception as e:
@@ -1459,7 +1507,6 @@ def ft_original():
                 pythoncom.CoUninitialize()
             return send_file(pdf_path, mimetype="application/pdf")
 
-        # Non-Windows or Word not installed — fall back to HTML renderer
         html_content = docx_to_html_preview(path)
         return html_content, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
