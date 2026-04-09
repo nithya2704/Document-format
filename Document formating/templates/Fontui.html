@@ -581,6 +581,35 @@ body.is-resizing .resizer { pointer-events: all !important; }
             </div>
           </div>
         </div>
+
+        <!-- Table header text colour -->
+        <div class="color-picker-row" style="margin-top:8px;">
+          <div class="bg-default-row">
+            <span class="color-label">Table header text colour</span>
+            <label class="default-pill-label">
+              <input type="checkbox" id="tcDefault" checked>
+              <span class="default-pill">Keep as-is</span>
+            </label>
+          </div>
+          <div class="color-widget" id="tcWidget">
+            <div class="color-main-row">
+              <input type="color" id="tcPicker" value="#ffffff" title="Pick a text colour">
+              <input type="text"  id="tcHex" value="#FFFFFF" maxlength="7" placeholder="#ffffff" class="hex-input" spellcheck="false">
+              <div class="swatch-preview" id="tcSwatch" style="background:#FFFFFF;border:1px solid var(--border);"></div>
+            </div>
+            <div class="presets-row">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn active tc-preset" data-color="#ffffff" style="background:#ffffff;border-color:var(--border);" title="White"></button>
+              <button class="preset-btn tc-preset" data-color="#000000" style="background:#000000" title="Black"></button>
+              <button class="preset-btn tc-preset" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy"></button>
+              <button class="preset-btn tc-preset" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
+              <button class="preset-btn tc-preset" data-color="#375623" style="background:#375623" title="Dark Green"></button>
+              <button class="preset-btn tc-preset" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
+              <button class="preset-btn tc-preset" data-color="#ffd700" style="background:#ffd700" title="Gold"></button>
+            </div>
+          </div>
+        </div>
+
         <div class="legend-note">Cover page, Table of Contents and Table of Figures are detected and preserved automatically — no font changes applied to those sections.</div>
       </div>
     <!-- Font Preview -->
@@ -835,6 +864,10 @@ function buildConfig() {
   };
   if (!bgDefault) {
     cfg.table_heading_bg = document.getElementById('bgHex').value.trim() || '#1E3A5F';
+  }
+  const tcDefault = document.getElementById('tcDefault').checked;
+  if (!tcDefault) {
+    cfg.table_heading_text_color = document.getElementById('tcHex').value.trim() || '#FFFFFF';
   }
   // Per-type overrides from the table rows
   perTypeBody.querySelectorAll('tr').forEach(row => {
@@ -1117,6 +1150,52 @@ window.addEventListener('message', e => {
   defChk.addEventListener('change', applyDefaultState);
   syncAllColors(picker.value);
   applyDefaultState();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  TABLE HEADER TEXT COLOUR PICKER
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const picker  = document.getElementById('tcPicker');
+  const hexInp  = document.getElementById('tcHex');
+  const swatch  = document.getElementById('tcSwatch');
+  const defChk  = document.getElementById('tcDefault');
+  const widget  = document.getElementById('tcWidget');
+
+  function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
+
+  function syncTcColors(hex) {
+    const h = hex.startsWith('#') ? hex : '#' + hex;
+    if (!isValidHex(h)) return;
+    const upper = h.toUpperCase();
+    picker.value = upper;
+    hexInp.value = upper;
+    swatch.style.background = upper;
+    document.querySelectorAll('.tc-preset').forEach(b => {
+      b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
+    });
+  }
+
+  function applyTcDefaultState() {
+    widget.classList.toggle('is-default', defChk.checked);
+  }
+
+  picker.addEventListener('input', () => syncTcColors(picker.value));
+  hexInp.addEventListener('input', () => {
+    let v = hexInp.value.trim();
+    if (!v.startsWith('#')) v = '#' + v;
+    if (isValidHex(v)) syncTcColors(v);
+  });
+  hexInp.addEventListener('blur', () => {
+    if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
+    hexInp.value = hexInp.value.toUpperCase();
+  });
+  document.querySelectorAll('.tc-preset').forEach(b => {
+    b.addEventListener('click', () => syncTcColors(b.dataset.color));
+  });
+  defChk.addEventListener('change', applyTcDefaultState);
+  syncTcColors(picker.value);
+  applyTcDefaultState();
 })();
 
 // ═══════════════════════════════════════════════════════════════

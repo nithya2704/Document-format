@@ -22,6 +22,8 @@ from docx.oxml.ns import qn
 # ── Platform
 IS_WINDOWS = platform.system() == "Windows"
 WORD_AVAILABLE = False
+pythoncom = None
+convert = None
 if IS_WINDOWS:
     try:
         import pythoncom
@@ -41,16 +43,19 @@ os.makedirs(OUTPUT, exist_ok=True)
 #  SESSION HELPERS
 # =============================================================================
 
+
 def _get_path():
     sid = session.get("sid")
     if not sid:
         return None
     return current_app.config["GET_WORKING_PATH"](sid)
 
+
 def _set_path(path: str):
     sid = session.get("sid")
     if sid:
         current_app.config["SET_WORKING_PATH"](sid, path)
+
 
 def _session_out_dir():
     sid = session.get("sid", "default")
@@ -62,6 +67,7 @@ def _session_out_dir():
 #  UTILITIES
 # =============================================================================
 
+
 def is_in_footer_or_header(para) -> bool:
     _FH = {qn("w:hdr"), qn("w:ftr")}
     node = para._element.getparent()
@@ -71,6 +77,7 @@ def is_in_footer_or_header(para) -> bool:
         node = node.getparent()
     return False
 
+
 def get_paragraph_indentation(para) -> float:
     try:
         if para.paragraph_format.left_indent:
@@ -78,6 +85,7 @@ def get_paragraph_indentation(para) -> float:
     except Exception:
         pass
     return 0.0
+
 
 def has_page_break_before(para) -> bool:
     try:
@@ -95,8 +103,10 @@ def has_page_break_before(para) -> bool:
         pass
     return False
 
+
 # ── Numbered heading detection
 NUMBERED_HEADING_RE = re.compile(r"^\s*(\d+(?:\.\d+)+)\.?(.*)$")
+
 
 def detect_numbered_heading(text: str):
     if not text:
@@ -111,11 +121,13 @@ def detect_numbered_heading(text: str):
         return None, None, None
     return min(6, len(parts)), num, title
 
+
 # ── Numbered list resolution
 _NUMBERED_FMTS = frozenset({
     "decimal", "lowerLetter", "upperLetter", "lowerRoman",
     "upperRoman", "ordinal", "cardinalText", "decimalZero",
 })
+
 
 def _resolve_numFmt(para) -> str:
     try:
@@ -129,7 +141,8 @@ def _resolve_numFmt(para) -> str:
         if numbering_part is None:
             return "bullet"
         nbr = numbering_part._element
-        abs_nodes = nbr.xpath(f".//w:num[@w:numId='{numId_val}']/w:abstractNumId")
+        abs_nodes = nbr.xpath(
+            f".//w:num[@w:numId='{numId_val}']/w:abstractNumId")
         if not abs_nodes:
             return "bullet"
         abstract_id = abs_nodes[0].get(qn("w:val"), "0")
@@ -160,8 +173,10 @@ def _resolve_numFmt(para) -> str:
                 if s_numPr is not None:
                     nid = s_numPr.find(qn("w:numId"))
                     ilvl = s_numPr.find(qn("w:ilvl"))
-                    nid_v = nid.get(qn("w:val"), "0") if nid is not None else "0"
-                    ilvl_v = ilvl.get(qn("w:val"), "0") if ilvl is not None else "0"
+                    nid_v = nid.get(
+                        qn("w:val"), "0") if nid is not None else "0"
+                    ilvl_v = ilvl.get(
+                        qn("w:val"), "0") if ilvl is not None else "0"
                     if nid_v == "0":
                         return ""
                     return _fmt(nid_v, ilvl_v)
@@ -172,6 +187,7 @@ def _resolve_numFmt(para) -> str:
         except Exception:
             break
     return ""
+
 
 def get_list_type(para) -> str:
     try:
@@ -184,6 +200,8 @@ def get_list_type(para) -> str:
     return "LIST_ITEM" if fmt else None
 
 # ── Cover page detection
+
+
 def _detect_cover_end(doc) -> int:
     paragraphs = doc.paragraphs
 
@@ -207,7 +225,8 @@ def _detect_cover_end(doc) -> int:
         r"\b(prepared|author|version|copyright|confidential|restricted|"
         r"january|february|march|april|may|june|july|august|"
         r"september|october|november|december|\d{4})\b", re.IGNORECASE)
-    non_empty = [(i, p) for i, p in enumerate(paragraphs) if (p.text or "").strip()]
+    non_empty = [(i, p) for i, p in enumerate(
+        paragraphs) if (p.text or "").strip()]
     cover_candidate = -1
     for rank, (i, para) in enumerate(non_empty[:25]):
         text = (para.text or "").strip()
@@ -221,6 +240,8 @@ def _detect_cover_end(doc) -> int:
 
 # ── Table header row detection
 # ✅ FIX: Row 0 is ALWAYS the header. Also honour explicit tblHeader XML flag.
+
+
 def _is_table_header_row(table, row_idx: int) -> bool:
     """Row 0 is always treated as a header row. Also honours tblHeader XML flag."""
     if row_idx == 0:
@@ -238,17 +259,22 @@ def _is_table_header_row(table, row_idx: int) -> bool:
         pass
     return False
 
+
 def _is_table_footer_row(table, row_idx: int, total_rows: int) -> bool:
     if row_idx != total_rows - 1:
         return False
     try:
-        row_text = " ".join(cell.text for cell in table.rows[row_idx].cells).lower()
-        FOOTER_KW = re.compile(r"\b(total|sum|grand\s+total|subtotal|average|avg|count)\b", re.IGNORECASE)
+        row_text = " ".join(
+            cell.text for cell in table.rows[row_idx].cells).lower()
+        FOOTER_KW = re.compile(
+            r"\b(total|sum|grand\s+total|subtotal|average|avg|count)\b", re.IGNORECASE)
         return bool(FOOTER_KW.search(row_text))
     except Exception:
         return False
 
 # ── Font resolution
+
+
 def _make_theme_resolver(doc):
     _cache = {}
     try:
@@ -256,6 +282,7 @@ def _make_theme_resolver(doc):
         theme_part = doc.part.part_related_by(RT.THEME)
         theme_root = theme_part._element
         A = "http://schemas.openxmlformats.org/drawingml/2006/main"
+
         def _find(tags):
             el = theme_root
             for tag in tags:
@@ -272,6 +299,7 @@ def _make_theme_resolver(doc):
     except Exception:
         pass
     return lambda v: _cache.get(v, "")
+
 
 def _get_para_font(para, theme_resolver) -> str:
     def _from_rFonts(el):
@@ -341,8 +369,124 @@ def _get_para_font(para, theme_resolver) -> str:
     return ""
 
 # =============================================================================
+#  SKIP-REGION HELPERS  (cover, TOC, Table of Figures)
+# =============================================================================
+
+
+# The ordered list of element types shown in the UI
+USER_TYPES = [
+    "HEADING_1", "HEADING_2", "HEADING_3",
+    "HEADING_4", "HEADING_5", "HEADING_6",
+    "PARAGRAPH", "LIST_ITEM", "TABLE_TEXT",
+]
+
+
+def _style_base(para) -> str:
+    """Return the base style name of a paragraph, stripping ' Char' suffixes."""
+    try:
+        return (para.style.name if para.style else "").split(" Char")[0].strip()
+    except Exception:
+        return ""
+
+
+# Style names that Word uses for TOC / List of Figures / List of Tables entries
+_TOC_STYLE_PREFIXES = (
+    "toc ",        # "TOC 1" … "TOC 9"
+    "TOC ",
+    "table of contents",
+    "contents heading",
+    "figure caption",
+    "table caption",
+    "caption",
+    "list of figures",
+    "list of tables",
+)
+
+# Keywords that identify a heading as a TOC/LOF/LOT section title
+_TOC_HEADING_KW = re.compile(
+    r"^\s*(table\s+of\s+(contents?|figures?|tables?)"
+    r"|contents?"
+    r"|list\s+of\s+(figures?|tables?|abbreviations?|acronyms?))\s*$",
+    re.IGNORECASE,
+)
+
+
+def _detect_toc_ranges(doc) -> set:
+    """
+    Return a set of paragraph indices that belong to:
+      - Table of Contents
+      - Table of Figures / List of Figures
+      - Table of Tables / List of Tables
+
+    Strategy:
+    1. Any paragraph whose style name starts with a known TOC/caption prefix.
+    2. A heading whose text matches _TOC_HEADING_KW triggers skipping of all
+       following paragraphs until the next heading of the same or higher level,
+       or until an explicit page-break is encountered.
+    """
+    skip = set()
+    paragraphs = doc.paragraphs
+
+    i = 0
+    while i < len(paragraphs):
+        para = paragraphs[i]
+        sn = _style_base(para).lower()
+        text = (para.text or "").strip()
+
+        # Rule 1: style-name match — always skip these
+        if any(sn.startswith(pfx.lower()) for pfx in _TOC_STYLE_PREFIXES):
+            skip.add(i)
+            i += 1
+            continue
+
+        # Rule 2: heading text matches TOC/LOF/LOT pattern
+        if _TOC_HEADING_KW.match(text):
+            skip.add(i)
+            # Determine the heading level so we know when the section ends
+            heading_level = None
+            if sn.startswith("heading"):
+                try:
+                    heading_level = int(sn.split()[-1])
+                except Exception:
+                    heading_level = 1
+
+            i += 1
+            while i < len(paragraphs):
+                p = paragraphs[i]
+                p_sn = _style_base(p).lower()
+                p_text = (p.text or "").strip()
+
+                # Stop at a page-break
+                if has_page_break_before(p):
+                    break
+
+                # Stop when we hit a heading of the same or higher level
+                if p_sn.startswith("heading"):
+                    try:
+                        lvl = int(p_sn.split()[-1])
+                    except Exception:
+                        lvl = 1
+                    if heading_level is None or lvl <= heading_level:
+                        break
+
+                # Also stop if the paragraph text looks like a new section heading
+                lvl2, _, _ = detect_numbered_heading(p_text)
+                if lvl2 and (heading_level is None or lvl2 <= heading_level):
+                    break
+
+                skip.add(i)
+                i += 1
+            continue
+
+        i += 1
+
+    return skip
+
+
+# =============================================================================
 #  ANALYSIS
 # =============================================================================
+
 
 HIGHLIGHT_COLORS = {
     "HEADING_1": WD_COLOR_INDEX.BRIGHT_GREEN,
@@ -368,9 +512,11 @@ _COLOR_MAP = {
     WD_COLOR_INDEX.RED: "red"
 }
 
+
 def ft_analyze_document_structure(docx_path: str) -> dict:
     """Analyze document and detect element types + table header colors."""
     doc = Document(docx_path)
+    theme_resolver = _make_theme_resolver(doc)
 
     elements = []
     element_counts = {}
@@ -379,12 +525,14 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
     _font_votes = {}
     detected_table_bg_colors = set()
 
-    theme_resolver = _make_theme_resolver(doc)
+    # Detect regions to ignore
     cover_end = _detect_cover_end(doc)
+    toc_skip_indices = _detect_toc_ranges(doc)
 
     # Build body position map
     body_children = list(doc.element.body)
-    body_elem_to_pos = {id(child): pos for pos, child in enumerate(body_children)}
+    body_elem_to_pos = {id(child): pos for pos,
+                        child in enumerate(body_children)}
 
     para_body_pos = {}
     para_seq = 0
@@ -397,7 +545,8 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
     if cover_end >= 0 and cover_end in para_body_pos:
         cover_body_threshold = para_body_pos[cover_end]
 
-    # Build set of table paragraph IDs
+    # Build set of paragraph element IDs inside table cells so they are not
+    # double-classified in the main paragraph loop.
     table_para_ids = set()
     for tbl in doc.tables:
         for row in tbl.rows:
@@ -420,12 +569,14 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
             continue
         if cover_end >= 0 and idx <= cover_end:
             continue
+        if idx in toc_skip_indices:
+            continue
 
-        sb = (para.style.name if para.style else "").split(" Char")[0].strip()
+        sb = _style_base(para)
         raw_text = (para.text or "").strip()
         ptype = None
 
-        # Numbered heading first
+        # Prefer numbered heading first
         lvl, _, _ = detect_numbered_heading(raw_text)
         if lvl:
             ptype = f"HEADING_{lvl}"
@@ -440,7 +591,11 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
         else:
             ptype = "PARAGRAPH"
 
-        elements.append({"type": ptype, "para_idx": idx, "indent": get_paragraph_indentation(para)})
+        elements.append({
+            "type": ptype,
+            "para_idx": idx,
+            "indent": get_paragraph_indentation(para),
+        })
         element_counts[ptype] = element_counts.get(ptype, 0) + 1
         detected_types.add(ptype)
 
@@ -454,62 +609,109 @@ def ft_analyze_document_structure(docx_path: str) -> dict:
     # ── STEP 2: Tables ──────────────────────────────────────────────────────
     for tbl_idx, table in enumerate(doc.tables):
         tbl_body_pos = body_elem_to_pos.get(id(table._tbl), -1)
-        on_cover = (cover_body_threshold >= 0 and 0 <= tbl_body_pos <= cover_body_threshold)
+        on_cover = (cover_body_threshold >= 0 and 0 <=
+                    tbl_body_pos <= cover_body_threshold)
 
-        # ✅ Detect existing header bg colors from body tables only
+        # Detect existing header bg colors from first row only
         if not on_cover:
             try:
-                for row_idx, row in enumerate(table.rows):
-                    if row_idx == 0:  # Always check row 0
-                        seen_tc = set()
-                        for cell in row.cells:
-                            tc_id = id(cell._tc)
-                            if tc_id in seen_tc:
-                                continue
-                            seen_tc.add(tc_id)
-                            tcPr = cell._tc.find(qn("w:tcPr"))
-                            if tcPr is not None:
-                                shd = tcPr.find(qn("w:shd"))
-                                if shd is not None:
-                                    fill = shd.get(qn("w:fill"))
-                                    if fill and fill.upper().strip() not in ("AUTO", "FFFFFF", ""):
-                                        detected_table_bg_colors.add(f"#{fill.upper().strip()}")
-                                    elif not fill or fill.upper() == "AUTO":
-                                        shade = shd.get(qn("w:themeShade"))
-                                        tint = shd.get(qn("w:themeTint"))
-                                        if shade or tint:
-                                            detected_table_bg_colors.add("#D3D3D3")
+                if table.rows:
+                    first_row = table.rows[0]
+                    seen_tc = set()
+                    for cell in first_row.cells:
+                        tc_id = id(cell._tc)
+                        if tc_id in seen_tc:
+                            continue
+                        seen_tc.add(tc_id)
+
+                        tcPr = cell._tc.find(qn("w:tcPr"))
+                        if tcPr is None:
+                            continue
+
+                        shd = tcPr.find(qn("w:shd"))
+                        if shd is None:
+                            continue
+
+                        fill = (shd.get(qn("w:fill"), "") or "").strip()
+                        if fill and fill.upper() not in ("AUTO", "FFFFFF", ""):
+                            detected_table_bg_colors.add(f"#{fill.upper()}")
+                        else:
+                            shade = shd.get(qn("w:themeShade"))
+                            tint = shd.get(qn("w:themeTint"))
+                            if shade or tint:
+                                detected_table_bg_colors.add("#D3D3D3")
             except Exception:
                 pass
 
-        elements.append({"type": "TABLE", "table_idx": tbl_idx, "on_cover": on_cover})
-        element_counts["TABLE"] = element_counts.get("TABLE", 0) + 1
-        detected_types.add("TABLE")
+        elements.append({
+            "type": "TABLE",
+            "table_idx": tbl_idx,
+            "on_cover": on_cover,
+        })
+        element_counts["TABLE_TEXT"] = element_counts.get("TABLE_TEXT", 0) + 1
+        detected_types.add("TABLE_TEXT")
 
-        if "TABLE" not in sample_texts:
-            for row in table.rows:
-                for cell in row.cells:
-                    if cell.text.strip():
-                        sample_texts["TABLE"] = cell.text.strip()[:250]
-                        break
+        # Detect each table-cell paragraph as TABLE_TEXT
+        for row_idx, row in enumerate(table.rows):
+            seen_tc_ids = set()
+            for cell_idx, cell in enumerate(row.cells):
+                tc_id = id(cell._tc)
+                if tc_id in seen_tc_ids:
+                    continue
+                seen_tc_ids.add(tc_id)
+
+                for para_idx_in_cell, cp in enumerate(cell.paragraphs):
+                    if not (cp.text or "").strip():
+                        continue
+                    if on_cover:
+                        continue
+
+                    elements.append({
+                        "type": "TABLE_TEXT",
+                        "table_idx": tbl_idx,
+                        "row_idx": row_idx,
+                        "cell_idx": cell_idx,
+                        "para_idx_in_cell": para_idx_in_cell,
+                        "indent": get_paragraph_indentation(cp),
+                    })
+                    element_counts["TABLE_TEXT"] = element_counts.get(
+                        "TABLE_TEXT", 0) + 1
+                    detected_types.add("TABLE_TEXT")
+
+                    if "TABLE_TEXT" not in sample_texts:
+                        sample_texts["TABLE_TEXT"] = (
+                            cp.text or "").strip()[:250]
+
+                    font = _get_para_font(cp, theme_resolver)
+                    if font:
+                        _font_votes.setdefault("TABLE_TEXT", []).append(font)
+
+    # Keep UI-facing output aligned with existing types
+    _USER_ORDER = {t: i for i, t in enumerate(USER_TYPES)}
+
+    def _sort_key(x):
+        return _USER_ORDER.get(x, 99)
+
+    visible_types = [t for t in detected_types if t in _USER_ORDER]
 
     current_fonts = {
         pt: Counter(votes).most_common(1)[0][0]
-        for pt, votes in _font_votes.items() if votes
+        for pt, votes in _font_votes.items() if votes and pt in _USER_ORDER
     }
 
     return {
         "elements": elements,
-        "detected_elements": sorted(detected_types),
+        "detected_elements": sorted(visible_types, key=_sort_key),
         "element_counts": element_counts,
         "sample_texts": sample_texts,
         "current_fonts": current_fonts,
-        "detected_table_bgs": sorted(list(detected_table_bg_colors))
+        "detected_table_bgs": sorted(list(detected_table_bg_colors)),
     }
 
 # =============================================================================
 #  STANDARD COLORS
 # =============================================================================
+
 
 STANDARD_TABLE_BG_COLORS = [
     "#4472C4", "#70AD47", "#FFC000", "#ED7D31", "#A5A5A5",
@@ -519,6 +721,7 @@ STANDARD_TABLE_BG_COLORS = [
 # =============================================================================
 #  FORMATTING
 # =============================================================================
+
 
 def _apply_run_props(rPr, font_name, font_size, bold):
     """Apply font/size/bold to rPr element."""
@@ -547,6 +750,7 @@ def _apply_run_props(rPr, font_name, font_size, bold):
             el = OxmlElement(tag)
             rPr.append(el)
         el.set(qn("w:val"), "1" if bold else "0")
+
 
 def _apply_para_format(para, font_name, font_size, bold, highlight_name=None):
     """Apply formatting to paragraph + all runs."""
@@ -586,37 +790,110 @@ def _apply_para_format(para, font_name, font_size, bold, highlight_name=None):
                 r_rPr.append(hl)
             hl.set(qn("w:val"), highlight_name)
 
+
+def _apply_format_to_para(para, elem, config):
+    """Resolve font/size/bold/highlight for one element and apply it."""
+    ptype = elem["type"]
+    font_name = config.get(
+        f"{ptype.lower()}_font") or config.get("paragraph_font")
+    font_size = config.get(f"{ptype.lower()}_size") or config.get(
+        "paragraph_size") or 12
+    try:
+        font_size = int(font_size)
+    except Exception:
+        font_size = 12
+
+    is_heading = ptype.startswith("HEADING_")
+    bold = (is_heading and config.get("bold_headings", True)) or \
+           (ptype == "LIST_ITEM" and config.get("bold_lists", False))
+
+    do_highlight = config.get("highlight", False)
+    hl_name = _COLOR_MAP.get(HIGHLIGHT_COLORS.get(ptype)
+                             ) if do_highlight else None
+
+    _apply_para_format(para, font_name, font_size,
+                       bold, highlight_name=hl_name)
+
+
+def _set_color_on_rPr(rPr, rgb_hex: str):
+    """Set w:color on an rPr element to the given 6-char hex string (no #)."""
+    color_el = rPr.find(qn("w:color"))
+    if color_el is None:
+        color_el = OxmlElement("w:color")
+        rPr.append(color_el)
+    color_el.set(qn("w:val"), rgb_hex.upper())
+    # Remove any theme colour override so our explicit value wins
+    for attr in (qn("w:themeColor"), qn("w:themeTint"), qn("w:themeShade")):
+        if color_el.get(attr) is not None:
+            del color_el.attrib[attr]
+
+
 def ft_format_docx(input_path: str, elements: list, output_path: str, config: dict):
     """Format document."""
     doc = Document(input_path)
 
-    # Build element map
-    para_map = {e["para_idx"]: e for e in elements if "para_idx" in e}
-    tbl_map = {e["table_idx"]: e for e in elements if e.get("type") == "TABLE"}
+    # Body paragraph lookup
+    para_map = {
+        e["para_idx"]: e
+        for e in elements
+        if e.get("type") != "TABLE_TEXT" and "para_idx" in e
+    }
 
-    # ── PASS 1: Format body paragraphs ─────────────────────────────────────
+    # Table-text lookup (IMPORTANT)
+    table_text_map = {
+        (
+            e.get("table_idx"),
+            e.get("row_idx"),
+            e.get("cell_idx"),
+            e.get("para_idx_in_cell"),
+        ): e
+        for e in elements if e.get("type") == "TABLE_TEXT"
+    }
+
+    # Table info (for cover detection)
+    tbl_map = {
+        e["table_idx"]: e
+        for e in elements if e.get("type") == "TABLE"
+    }
+
+    # ── PASS 1: Body paragraphs ─────────────────────────────────────
     for idx, para in enumerate(doc.paragraphs):
         if is_in_footer_or_header(para):
             continue
+
         elem = para_map.get(idx)
         if not elem:
             continue
 
-        ptype = elem["type"]
-        font_name = config.get(f"{ptype.lower()}_font") or config.get("paragraph_font")
-        font_size = config.get(f"{ptype.lower()}_size") or config.get("paragraph_size") or 12
-        try:
-            font_size = int(font_size)
-        except Exception:
-            font_size = 12
+        _apply_format_to_para(para, elem, config)
 
-        is_heading = ptype.startswith("HEADING_")
-        bold = (is_heading and config.get("bold_headings", True)) or \
-               (ptype == "LIST_ITEM" and config.get("bold_lists", False))
+    # ── PASS 2: TABLE TEXT (NEW FIX) ───────────────────────────────
+    for table_idx, table in enumerate(doc.tables):
+        for row_idx, row in enumerate(table.rows):
+            seen_tc_ids = set()
+            for cell_idx, cell in enumerate(row.cells):
+                tc_id = id(cell._tc)
+                if tc_id in seen_tc_ids:
+                    continue
+                seen_tc_ids.add(tc_id)
 
-        _apply_para_format(para, font_name, font_size, bold)
+                for para_idx_in_cell, cp in enumerate(cell.paragraphs):
+                    if not (cp.text or "").strip():
+                        continue
 
-    # ── PASS 2: Table header background color ──────────────────────────────
+                    elem = table_text_map.get((
+                        table_idx,
+                        row_idx,
+                        cell_idx,
+                        para_idx_in_cell,
+                    ))
+
+                    if not elem:
+                        continue
+
+                    _apply_format_to_para(cp, elem, config)
+
+    # ── PASS 3: Table header background ────────────────────────────
     table_heading_bg = config.get("table_heading_bg")
     if table_heading_bg:
         rgb = table_heading_bg.lstrip("#").upper()
@@ -625,15 +902,13 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
             elem = tbl_map.get(tbl_idx)
             on_cover = elem.get("on_cover", False) if elem else False
 
-            # ✅ SKIP cover tables entirely
             if on_cover:
                 continue
 
-            # ✅ Apply to row 0 (always header) + any additional tblHeader-marked rows
             try:
                 for row_idx, row in enumerate(table.rows):
                     if not _is_table_header_row(table, row_idx):
-                        break  # Stop at first non-header row
+                        break
 
                     seen_tc = set()
                     for cell in row.cells:
@@ -641,11 +916,13 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
                         if tc_id in seen_tc:
                             continue
                         seen_tc.add(tc_id)
+
                         tc = cell._tc
                         tcPr = tc.find(qn("w:tcPr"))
                         if tcPr is None:
                             tcPr = OxmlElement("w:tcPr")
                             tc.insert(0, tcPr)
+
                         shd = tcPr.find(qn("w:shd"))
                         if shd is None:
                             shd = OxmlElement("w:shd")
@@ -654,11 +931,59 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
                         shd.set(qn("w:val"), "clear")
                         shd.set(qn("w:color"), "auto")
                         shd.set(qn("w:fill"), rgb)
-                        # ✅ Remove theme shade/tint overrides that block fill
-                        for attr in (qn("w:themeShade"), qn("w:themeTint"),
-                                     qn("w:themeFill"), qn("w:themeFillShade"), qn("w:themeFillTint")):
+
+                        for attr in (
+                            qn("w:themeShade"),
+                            qn("w:themeTint"),
+                            qn("w:themeFill"),
+                            qn("w:themeFillShade"),
+                            qn("w:themeFillTint"),
+                        ):
                             if shd.get(attr) is not None:
                                 del shd.attrib[attr]
+            except Exception:
+                pass
+
+    # ── PASS 3b: Table header text colour ──────────────────────
+    table_heading_text_color = config.get(
+        "table_heading_text_color", "").strip()
+    if table_heading_text_color:
+        rgb = table_heading_text_color.lstrip("#").upper()
+
+        for tbl_idx, table in enumerate(doc.tables):
+            elem = tbl_map.get(tbl_idx)
+            on_cover = elem.get("on_cover", False) if elem else False
+            if on_cover:
+                continue
+
+            try:
+                for row_idx, row in enumerate(table.rows):
+                    if not _is_table_header_row(table, row_idx):
+                        break
+
+                    seen_tc = set()
+                    for cell in row.cells:
+                        tc_id = id(cell._tc)
+                        if tc_id in seen_tc:
+                            continue
+                        seen_tc.add(tc_id)
+
+                        for para in cell.paragraphs:
+                            # Apply to paragraph-level rPr
+                            pPr = para._element.get_or_add_pPr()
+                            p_rPr = pPr.find(qn("w:rPr"))
+                            if p_rPr is None:
+                                p_rPr = OxmlElement("w:rPr")
+                                pPr.append(p_rPr)
+                            _set_color_on_rPr(p_rPr, rgb)
+
+                            # Apply to every run
+                            for r_elem in para._element.xpath(".//w:r"):
+                                r_rPr = r_elem.find(qn("w:rPr"))
+                                if r_rPr is None:
+                                    r_rPr = OxmlElement("w:rPr")
+                                    r_elem.insert(0, r_rPr)
+                                _set_color_on_rPr(r_rPr, rgb)
             except Exception:
                 pass
 
@@ -667,6 +992,7 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
 # =============================================================================
 #  HELPER
 # =============================================================================
+
 
 def _is_dark_color(hex_color: str) -> bool:
     """Return True if hex color (no #) is dark enough to warrant white text."""
@@ -681,6 +1007,7 @@ def _is_dark_color(hex_color: str) -> bool:
 # =============================================================================
 #  HTML PREVIEW  — PDF-style layout (white page on grey background)
 # =============================================================================
+
 
 def docx_to_html_preview(docx_path: str, elements: list = None, highlight: bool = False) -> str:
     """Convert docx to HTML with PDF-style preview and optional element highlighting."""
@@ -766,7 +1093,8 @@ def docx_to_html_preview(docx_path: str, elements: list = None, highlight: bool 
             text = (para.text or "").strip()
             seq_idx = para_seq_idx.get(id(para._element), -1)
             ptype = para_type_map.get(seq_idx, "")
-            bg_color = HIGHLIGHT_MAP.get(ptype) if highlight and ptype else None
+            bg_color = HIGHLIGHT_MAP.get(
+                ptype) if highlight and ptype else None
 
             # Detect heading level from style
             sn = para.style.name if para.style else ""
@@ -788,7 +1116,8 @@ def docx_to_html_preview(docx_path: str, elements: list = None, highlight: bool 
 
             # Block-level background for non-heading types
             if bg_color and highlight:
-                parts.append(f"<{htag} style='background:{bg_color};'>{inner}</{htag}>")
+                parts.append(
+                    f"<{htag} style='background:{bg_color};'>{inner}</{htag}>")
             else:
                 parts.append(f"<{htag}>{inner}</{htag}>")
             para_counter += 1
@@ -814,9 +1143,13 @@ def docx_to_html_preview(docx_path: str, elements: list = None, highlight: bool 
                     for cp in cell.paragraphs:
                         if is_in_footer_or_header(cp):
                             continue
-                        cell_parts.append(render_runs(cp))
+                        # Pass TABLE_TEXT highlight colour into cell runs
+                        cell_bg = HIGHLIGHT_MAP.get(
+                            "TABLE_TEXT") if highlight else None
+                        cell_parts.append(render_runs(cp, cell_bg))
 
-                    content = "<br>".join(p for p in cell_parts if p) or "&nbsp;"
+                    content = "<br>".join(
+                        p for p in cell_parts if p) or "&nbsp;"
                     tag = "th" if is_header else "td"
 
                     # Preserve cell background color
@@ -827,7 +1160,8 @@ def docx_to_html_preview(docx_path: str, elements: list = None, highlight: bool 
                         if shd is not None:
                             fill = shd.get(qn("w:fill"), "").upper()
                             if fill and fill not in ("AUTO", "FFFFFF", ""):
-                                text_col = "white" if _is_dark_color(fill) else "inherit"
+                                text_col = "white" if _is_dark_color(
+                                    fill) else "inherit"
                                 style = f' style="background:#{fill};color:{text_col};font-weight:600;"'
 
                     rows.append(f"<{tag}{style}>{content}</{tag}>")
@@ -843,9 +1177,11 @@ def docx_to_html_preview(docx_path: str, elements: list = None, highlight: bool 
 #  FLASK ROUTES
 # =============================================================================
 
+
 @font_bp.route("/")
 def home():
     return render_template("fontUI.html")
+
 
 @font_bp.route("/analyse", methods=["POST"])
 def ft_analyse():
@@ -859,16 +1195,31 @@ def ft_analyse():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @font_bp.route("/original", methods=["POST"])
 def ft_original():
     path = _get_path()
     if not path or not os.path.exists(path):
         return jsonify({"error": "No file in session"}), 400
     try:
+        if IS_WINDOWS and WORD_AVAILABLE:
+            try:
+                pythoncom.CoInitialize()
+                pdf_path = os.path.join(
+                    _session_out_dir(), f"orig_{uuid.uuid4().hex}.pdf")
+                convert(path, pdf_path)
+                pythoncom.CoUninitialize()
+                return send_file(pdf_path, mimetype="application/pdf")
+            except Exception:
+                try:
+                    pythoncom.CoUninitialize()
+                except Exception:
+                    pass
         html = docx_to_html_preview(path, elements=None, highlight=False)
         return html, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @font_bp.route("/preview", methods=["POST"])
 def ft_preview():
@@ -877,14 +1228,31 @@ def ft_preview():
         return jsonify({"error": "No file in session"}), 400
     try:
         cfg = json.loads(request.form.get("config", "{}"))
-        out_docx = os.path.join(_session_out_dir(), f"ft_preview_{uuid.uuid4().hex}.docx")
+        out_docx = os.path.join(
+            _session_out_dir(), f"ft_preview_{uuid.uuid4().hex}.docx")
         data = ft_analyze_document_structure(path)
+        # ft_format_docx now bakes highlight colours into the docx runs
+        # when cfg["highlight"] is True, so the PDF render picks them up too.
         ft_format_docx(path, data["elements"], out_docx, cfg)
+
+        if IS_WINDOWS and WORD_AVAILABLE:
+            pdf_path = os.path.join(
+                _session_out_dir(), f"ft_preview_{uuid.uuid4().hex}.pdf")
+            pythoncom.CoInitialize()
+            try:
+                convert(out_docx, pdf_path)
+            finally:
+                pythoncom.CoUninitialize()
+            return send_file(pdf_path, mimetype="application/pdf")
+
+        # Non-Windows or Word not installed — fall back to HTML renderer
         highlight = cfg.get("highlight", False)
-        html = docx_to_html_preview(out_docx, elements=data["elements"], highlight=highlight)
+        html = docx_to_html_preview(
+            out_docx, elements=data["elements"], highlight=highlight)
         return html, 200, {"Content-Type": "text/html; charset=utf-8"}
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @font_bp.route("/format", methods=["POST"])
 def ft_format():
@@ -893,7 +1261,9 @@ def ft_format():
         return jsonify({"error": "No file in session"}), 400
     try:
         cfg = json.loads(request.form.get("config", "{}"))
-        out_path = os.path.join(_session_out_dir(), f"font_formatted_{uuid.uuid4().hex}.docx")
+        cfg["highlight"] = False
+        out_path = os.path.join(
+            _session_out_dir(), f"font_formatted_{uuid.uuid4().hex}.docx")
         data = ft_analyze_document_structure(path)
         ft_format_docx(path, data["elements"], out_path, cfg)
         _set_path(out_path)
@@ -904,6 +1274,7 @@ def ft_format():
 # =============================================================================
 #  STANDALONE
 # =============================================================================
+
 
 if __name__ == "__main__":
     app = Flask(__name__, template_folder="templates")
