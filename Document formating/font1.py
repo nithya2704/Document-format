@@ -822,10 +822,16 @@ def _set_color_on_rPr(rPr, rgb_hex: str):
         color_el = OxmlElement("w:color")
         rPr.append(color_el)
     color_el.set(qn("w:val"), rgb_hex.upper())
-    # Remove any theme colour override so our explicit value wins
+    # Remove theme colour overrides from the color element itself
     for attr in (qn("w:themeColor"), qn("w:themeTint"), qn("w:themeShade")):
         if color_el.get(attr) is not None:
             del color_el.attrib[attr]
+    # Also remove theme colour overrides that may sit directly on rPr —
+    # Word honours w:themeColor on rPr even when w:color has an explicit val,
+    # which causes the explicit colour to be ignored in the rendered output.
+    for attr in (qn("w:themeColor"), qn("w:themeTint"), qn("w:themeShade")):
+        if rPr.get(attr) is not None:
+            del rPr.attrib[attr]
 
 
 def ft_format_docx(input_path: str, elements: list, output_path: str, config: dict):
@@ -984,6 +990,195 @@ def ft_format_docx(input_path: str, elements: list, output_path: str, config: di
                                     r_rPr = OxmlElement("w:rPr")
                                     r_elem.insert(0, r_rPr)
                                 _set_color_on_rPr(r_rPr, rgb)
+            except Exception:
+                pass
+
+    # ── PASS 3c: Paragraph text colour ──────────────────────────
+    paragraph_text_color = config.get("paragraph_text_color", "").strip()
+    if paragraph_text_color:
+        rgb = paragraph_text_color.lstrip("#").upper()
+        for idx, para in enumerate(doc.paragraphs):
+            if is_in_footer_or_header(para):
+                continue
+            elem = para_map.get(idx)
+            if not elem or elem.get("type") != "PARAGRAPH":
+                continue
+            try:
+                pPr = para._element.get_or_add_pPr()
+                p_rPr = pPr.find(qn("w:rPr"))
+                if p_rPr is None:
+                    p_rPr = OxmlElement("w:rPr")
+                    pPr.append(p_rPr)
+                _set_color_on_rPr(p_rPr, rgb)
+                for r_elem in para._element.xpath(".//w:r"):
+                    r_rPr = r_elem.find(qn("w:rPr"))
+                    if r_rPr is None:
+                        r_rPr = OxmlElement("w:rPr")
+                        r_elem.insert(0, r_rPr)
+                    _set_color_on_rPr(r_rPr, rgb)
+            except Exception:
+                pass
+
+    # ── PASS 3d: List items text colour ─────────────────────────
+    list_text_color = config.get("list_text_color", "").strip()
+    if list_text_color:
+        rgb = list_text_color.lstrip("#").upper()
+        for idx, para in enumerate(doc.paragraphs):
+            if is_in_footer_or_header(para):
+                continue
+            elem = para_map.get(idx)
+            if not elem or elem.get("type") != "LIST_ITEM":
+                continue
+            try:
+                pPr = para._element.get_or_add_pPr()
+                p_rPr = pPr.find(qn("w:rPr"))
+                if p_rPr is None:
+                    p_rPr = OxmlElement("w:rPr")
+                    pPr.append(p_rPr)
+                _set_color_on_rPr(p_rPr, rgb)
+                for r_elem in para._element.xpath(".//w:r"):
+                    r_rPr = r_elem.find(qn("w:rPr"))
+                    if r_rPr is None:
+                        r_rPr = OxmlElement("w:rPr")
+                        r_elem.insert(0, r_rPr)
+                    _set_color_on_rPr(r_rPr, rgb)
+            except Exception:
+                pass
+
+    # ── PASS 3e: Table body (non-header) text colour ────────────
+    table_body_text_color = config.get("table_body_text_color", "").strip()
+    if table_body_text_color:
+        rgb = table_body_text_color.lstrip("#").upper()
+
+        for tbl_idx, table in enumerate(doc.tables):
+            elem = tbl_map.get(tbl_idx)
+            on_cover = elem.get("on_cover", False) if elem else False
+            if on_cover:
+                continue
+
+            try:
+                total_rows = len(table.rows)
+                for row_idx, row in enumerate(table.rows):
+                    # Skip header rows — only colour body rows
+                    if _is_table_header_row(table, row_idx):
+                        continue
+
+                    seen_tc = set()
+                    for cell in row.cells:
+                        tc_id = id(cell._tc)
+                        if tc_id in seen_tc:
+                            continue
+                        seen_tc.add(tc_id)
+
+                        for para in cell.paragraphs:
+                            pPr = para._element.get_or_add_pPr()
+                            p_rPr = pPr.find(qn("w:rPr"))
+                            if p_rPr is None:
+                                p_rPr = OxmlElement("w:rPr")
+                                pPr.append(p_rPr)
+                            _set_color_on_rPr(p_rPr, rgb)
+
+                            for r_elem in para._element.xpath(".//w:r"):
+                                r_rPr = r_elem.find(qn("w:rPr"))
+                                if r_rPr is None:
+                                    r_rPr = OxmlElement("w:rPr")
+                                    r_elem.insert(0, r_rPr)
+                                _set_color_on_rPr(r_rPr, rgb)
+            except Exception:
+                pass
+
+    # ── PASS 3f: Table header text font & size ──────────────────
+    table_heading_font = config.get("table_heading_font", "").strip()
+    table_heading_font_size_raw = config.get("table_heading_font_size")
+    try:
+        table_heading_font_size = int(
+            table_heading_font_size_raw) if table_heading_font_size_raw else None
+    except (ValueError, TypeError):
+        table_heading_font_size = None
+
+    if table_heading_font or table_heading_font_size:
+        for tbl_idx, table in enumerate(doc.tables):
+            elem = tbl_map.get(tbl_idx)
+            on_cover = elem.get("on_cover", False) if elem else False
+            if on_cover:
+                continue
+
+            try:
+                for row_idx, row in enumerate(table.rows):
+                    if not _is_table_header_row(table, row_idx):
+                        break
+
+                    seen_tc = set()
+                    for cell in row.cells:
+                        tc_id = id(cell._tc)
+                        if tc_id in seen_tc:
+                            continue
+                        seen_tc.add(tc_id)
+
+                        for para in cell.paragraphs:
+                            # Apply to paragraph-level rPr
+                            pPr = para._element.get_or_add_pPr()
+                            p_rPr = pPr.find(qn("w:rPr"))
+                            if p_rPr is None:
+                                p_rPr = OxmlElement("w:rPr")
+                                pPr.append(p_rPr)
+
+                            if table_heading_font:
+                                rFonts = p_rPr.find(qn("w:rFonts"))
+                                if rFonts is None:
+                                    rFonts = OxmlElement("w:rFonts")
+                                    p_rPr.insert(0, rFonts)
+                                for attr, val in (
+                                    ("w:ascii", table_heading_font),
+                                    ("w:hAnsi", table_heading_font),
+                                    ("w:cs", table_heading_font),
+                                    ("w:eastAsia", table_heading_font),
+                                ):
+                                    rFonts.set(qn(attr), val)
+                                for attr in (qn("w:asciiTheme"), qn("w:hAnsiTheme"), qn("w:cstheme")):
+                                    if rFonts.get(attr) is not None:
+                                        del rFonts.attrib[attr]
+
+                            if table_heading_font_size:
+                                half_pts = str(table_heading_font_size * 2)
+                                for tag in ("w:sz", "w:szCs"):
+                                    el = p_rPr.find(qn(tag))
+                                    if el is None:
+                                        el = OxmlElement(tag)
+                                        p_rPr.append(el)
+                                    el.set(qn("w:val"), half_pts)
+
+                            # Apply to every run in the cell paragraph
+                            for r_elem in para._element.xpath(".//w:r"):
+                                r_rPr = r_elem.find(qn("w:rPr"))
+                                if r_rPr is None:
+                                    r_rPr = OxmlElement("w:rPr")
+                                    r_elem.insert(0, r_rPr)
+
+                                if table_heading_font:
+                                    rFonts = r_rPr.find(qn("w:rFonts"))
+                                    if rFonts is None:
+                                        rFonts = OxmlElement("w:rFonts")
+                                        r_rPr.insert(0, rFonts)
+                                    for attr, val in (
+                                        ("w:ascii", table_heading_font),
+                                        ("w:hAnsi", table_heading_font),
+                                        ("w:cs", table_heading_font),
+                                        ("w:eastAsia", table_heading_font),
+                                    ):
+                                        rFonts.set(qn(attr), val)
+                                    for attr in (qn("w:asciiTheme"), qn("w:hAnsiTheme"), qn("w:cstheme")):
+                                        if rFonts.get(attr) is not None:
+                                            del rFonts.attrib[attr]
+
+                                if table_heading_font_size:
+                                    half_pts = str(table_heading_font_size * 2)
+                                    for tag in ("w:sz", "w:szCs"):
+                                        el = r_rPr.find(qn(tag))
+                                        if el is None:
+                                            el = OxmlElement(tag)
+                                            r_rPr.append(el)
+                                        el.set(qn("w:val"), half_pts)
             except Exception:
                 pass
 

@@ -610,6 +610,62 @@ body.is-resizing .resizer { pointer-events: all !important; }
           </div>
         </div>
 
+        <!-- Paragraph text colour -->
+        <div class="color-picker-row" style="margin-top:8px;">
+          <div class="bg-default-row">
+            <span class="color-label">Paragraph text colour</span>
+            <label class="default-pill-label">
+              <input type="checkbox" id="paraDefault" checked>
+              <span class="default-pill">Keep as-is</span>
+            </label>
+          </div>
+          <div class="color-widget" id="paraWidget">
+            <div class="color-main-row">
+              <input type="color" id="paraPicker" value="#000000" title="Pick a paragraph text colour">
+              <input type="text"  id="paraHex" value="#000000" maxlength="7" placeholder="#000000" class="hex-input" spellcheck="false">
+              <div class="swatch-preview" id="paraSwatch" style="background:#000000;"></div>
+            </div>
+            <div class="presets-row">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn para-preset" data-color="#000000" style="background:#000000" title="Black"></button>
+              <button class="preset-btn para-preset" data-color="#ffffff" style="background:#ffffff;border-color:var(--border);" title="White"></button>
+              <button class="preset-btn para-preset" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy"></button>
+              <button class="preset-btn para-preset" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
+              <button class="preset-btn para-preset" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
+              <button class="preset-btn para-preset" data-color="#375623" style="background:#375623" title="Dark Green"></button>
+              <button class="preset-btn para-preset" data-color="#7b2d8b" style="background:#7b2d8b" title="Purple"></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- List items text colour -->
+        <div class="color-picker-row" style="margin-top:8px;">
+          <div class="bg-default-row">
+            <span class="color-label">List items text colour</span>
+            <label class="default-pill-label">
+              <input type="checkbox" id="listDefault" checked>
+              <span class="default-pill">Keep as-is</span>
+            </label>
+          </div>
+          <div class="color-widget" id="listWidget">
+            <div class="color-main-row">
+              <input type="color" id="listPicker" value="#000000" title="Pick a list items text colour">
+              <input type="text"  id="listHex" value="#000000" maxlength="7" placeholder="#000000" class="hex-input" spellcheck="false">
+              <div class="swatch-preview" id="listSwatch" style="background:#000000;"></div>
+            </div>
+            <div class="presets-row">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn list-preset" data-color="#000000" style="background:#000000" title="Black"></button>
+              <button class="preset-btn list-preset" data-color="#ffffff" style="background:#ffffff;border-color:var(--border);" title="White"></button>
+              <button class="preset-btn list-preset" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy"></button>
+              <button class="preset-btn list-preset" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
+              <button class="preset-btn list-preset" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
+              <button class="preset-btn list-preset" data-color="#375623" style="background:#375623" title="Dark Green"></button>
+              <button class="preset-btn list-preset" data-color="#7b2d8b" style="background:#7b2d8b" title="Purple"></button>
+            </div>
+          </div>
+        </div>
+
         <div class="legend-note">Cover page, Table of Contents and Table of Figures are detected and preserved automatically — no font changes applied to those sections.</div>
       </div>
     <!-- Font Preview -->
@@ -868,6 +924,14 @@ function buildConfig() {
   const tcDefault = document.getElementById('tcDefault').checked;
   if (!tcDefault) {
     cfg.table_heading_text_color = document.getElementById('tcHex').value.trim() || '#FFFFFF';
+  }
+  const paraDefault = document.getElementById('paraDefault').checked;
+  if (!paraDefault) {
+    cfg.paragraph_text_color = document.getElementById('paraHex').value.trim() || '#000000';
+  }
+  const listDefault = document.getElementById('listDefault').checked;
+  if (!listDefault) {
+    cfg.list_text_color = document.getElementById('listHex').value.trim() || '#000000';
   }
   // Per-type overrides from the table rows
   perTypeBody.querySelectorAll('tr').forEach(row => {
@@ -1196,6 +1260,98 @@ window.addEventListener('message', e => {
   defChk.addEventListener('change', applyTcDefaultState);
   syncTcColors(picker.value);
   applyTcDefaultState();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  PARAGRAPH TEXT COLOUR PICKER
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const picker  = document.getElementById('paraPicker');
+  const hexInp  = document.getElementById('paraHex');
+  const swatch  = document.getElementById('paraSwatch');
+  const defChk  = document.getElementById('paraDefault');
+  const widget  = document.getElementById('paraWidget');
+
+  function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
+
+  function syncParaColors(hex) {
+    const h = hex.startsWith('#') ? hex : '#' + hex;
+    if (!isValidHex(h)) return;
+    const upper = h.toUpperCase();
+    picker.value = upper;
+    hexInp.value = upper;
+    swatch.style.background = upper;
+    document.querySelectorAll('.para-preset').forEach(b => {
+      b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
+    });
+  }
+
+  function applyParaDefaultState() {
+    widget.classList.toggle('is-default', defChk.checked);
+  }
+
+  picker.addEventListener('input', () => syncParaColors(picker.value));
+  hexInp.addEventListener('input', () => {
+    let v = hexInp.value.trim();
+    if (!v.startsWith('#')) v = '#' + v;
+    if (isValidHex(v)) syncParaColors(v);
+  });
+  hexInp.addEventListener('blur', () => {
+    if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
+    hexInp.value = hexInp.value.toUpperCase();
+  });
+  document.querySelectorAll('.para-preset').forEach(b => {
+    b.addEventListener('click', () => syncParaColors(b.dataset.color));
+  });
+  defChk.addEventListener('change', applyParaDefaultState);
+  syncParaColors(picker.value);
+  applyParaDefaultState();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  LIST ITEMS TEXT COLOUR PICKER
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const picker  = document.getElementById('listPicker');
+  const hexInp  = document.getElementById('listHex');
+  const swatch  = document.getElementById('listSwatch');
+  const defChk  = document.getElementById('listDefault');
+  const widget  = document.getElementById('listWidget');
+
+  function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
+
+  function syncListColors(hex) {
+    const h = hex.startsWith('#') ? hex : '#' + hex;
+    if (!isValidHex(h)) return;
+    const upper = h.toUpperCase();
+    picker.value = upper;
+    hexInp.value = upper;
+    swatch.style.background = upper;
+    document.querySelectorAll('.list-preset').forEach(b => {
+      b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
+    });
+  }
+
+  function applyListDefaultState() {
+    widget.classList.toggle('is-default', defChk.checked);
+  }
+
+  picker.addEventListener('input', () => syncListColors(picker.value));
+  hexInp.addEventListener('input', () => {
+    let v = hexInp.value.trim();
+    if (!v.startsWith('#')) v = '#' + v;
+    if (isValidHex(v)) syncListColors(v);
+  });
+  hexInp.addEventListener('blur', () => {
+    if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
+    hexInp.value = hexInp.value.toUpperCase();
+  });
+  document.querySelectorAll('.list-preset').forEach(b => {
+    b.addEventListener('click', () => syncListColors(b.dataset.color));
+  });
+  defChk.addEventListener('change', applyListDefaultState);
+  syncListColors(picker.value);
+  applyListDefaultState();
 })();
 
 // ═══════════════════════════════════════════════════════════════
