@@ -1,0 +1,2339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Grammar & Spell Check</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --ink: #1a1614;
+      --paper: #faf8f4;
+      --cream: #f2ede3;
+      --warm-mid: #e8dfc8;
+      --accent: #c4451e;
+      --accent-soft: #f5ebe6;
+      --accent-hover: #a83718;
+      --green: #2d6a4f;
+      --green-soft: #e8f5ee;
+      --gold: #b8860b;
+      --gold-soft: #fdf6e3;
+      --muted: #8a7f74;
+      --border: #d9cfc0;
+      --shadow: 0 4px 24px rgba(26,22,20,0.08);
+      --shadow-lg: 0 12px 48px rgba(26,22,20,0.14);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+      background: var(--paper);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: opacity 0.2s ease, height 0.2s ease;
+    }
+
+    body.results-active header {
+      display: none;
+    }
+
+    /* When header is gone, sidebar/right-panel fill from top:0 */
+
+
+    .logo {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .logo-mark {
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.5px;
+    }
+
+    .logo-mark span { color: var(--accent); }
+
+    .logo-sub {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .header-badge {
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 48px 24px 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    /* When two-col layout is active, main has no side padding (sidebar handles it) */
+    main:has(#results-layout.visible) {
+      padding: 0 !important;
+      max-width: 100%;
+    }
+    body.results-active body { overflow: hidden; }
+    main:has(#results-layout.visible) #upload-section { display: none !important; }
+    main:has(#results-layout.visible) #divider { display: none !important; }
+    main:has(#results-layout.visible) #stats-bar { display: none !important; }
+
+    /* Fallback for browsers without :has() support */
+    body.results-active main {
+      padding: 0 !important;
+      max-width: 100%;
+    }
+    body.results-active #upload-section { display: none !important; }
+    body.results-active #divider { display: none !important; }
+    body.results-active #stats-bar { display: none !important; }
+
+
+
+    /* ── TWO-COLUMN RESULTS LAYOUT ── */
+    #results-layout {
+      display: none;
+      gap: 0;
+      height: 100vh;
+    }
+    #results-layout.visible { display: flex; }
+
+    /* LEFT SIDEBAR */
+    #sidebar {
+      width: 210px;
+      flex-shrink: 0;
+      padding: 16px 14px 16px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0 4px;
+    }
+
+    .sidebar-stat {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      text-align: center;
+    }
+
+    .sidebar-stat-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+
+    .sidebar-stat-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    #sidebar-stat-issues .sidebar-stat-number { color: var(--accent); }
+    #sidebar-stat-resolved .sidebar-stat-number { color: var(--green); }
+
+    .sidebar-progress {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .sidebar-progress-big {
+      display: block;
+      font-family: 'Playfair Display', serif;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+
+    .sidebar-saving {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 4px 0;
+    }
+    .sidebar-saving.visible { display: flex; }
+
+    .sidebar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 16px;
+    }
+
+    .sidebar-actions .btn-download,
+    .sidebar-actions .btn-apply-tool {
+      width: 100%;
+      justify-content: center;
+      text-align: center;
+    }
+
+    /* RIGHT PANEL */
+    #right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      overflow: hidden;
+    }
+
+    /* Sticky tab bar + action buttons */
+    #sticky-tab-header {
+      z-index: 90;
+      background: var(--paper);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px 0 24px;
+      gap: 16px;
+      box-shadow: 0 4px 16px rgba(26,22,20,0.06);
+    }
+
+    /* ── OLD STICKY TOOLBAR (suppressed) ── */
+    #sticky-toolbar { display: none !important; }
+
+    /* ── SCROLLABLE ISSUES WRAPPER ── */
+    #issues-scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 24px 40px;
+      height: 0; /* flex child trick to enable scroll */
+    }
+
+    /* suppress old toolbar styles */
+    .toolbar-stats, .toolbar-left, .toolbar-right, .toolbar-progress { display: none; }
+    #toolbar-progress-text { color: var(--ink); font-weight: 500; }
+
+    /* ── UPLOAD ZONE ── */
+    .upload-section { text-align: center; }
+
+    .upload-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .upload-headline {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+
+    .upload-subline {
+      font-size: 17px;
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto 48px;
+      line-height: 1.6;
+    }
+
+    .drop-zone {
+      position: relative;
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 64px 40px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      background: var(--cream);
+      max-width: 560px;
+      margin: 0 auto 32px;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+
+    .drop-icon {
+      width: 56px; height: 56px;
+      margin: 0 auto 20px;
+      background: var(--paper);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: var(--shadow);
+      font-size: 26px;
+    }
+
+    .drop-label { font-size: 17px; font-weight: 500; color: var(--ink); margin-bottom: 6px; }
+    .drop-hint { font-size: 13px; color: var(--muted); }
+    .drop-hint strong { color: var(--accent); }
+
+    .file-name-pill {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 20px;
+      max-width: 560px;
+      margin: 0 auto 24px;
+      font-size: 14px;
+      font-family: 'DM Mono', monospace;
+      color: var(--ink);
+      animation: slideUp 0.3s ease;
+    }
+
+    .file-name-pill.visible { display: flex; }
+
+    .file-icon { font-size: 20px; }
+
+    .file-remove {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .file-remove:hover { color: var(--accent); }
+
+    .btn-analyze {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--ink);
+      color: var(--paper);
+      border: none;
+      padding: 16px 36px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.2px;
+    }
+
+    .btn-analyze:hover { background: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+    .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-analyze .btn-spinner { display: none; }
+    .btn-analyze.loading .btn-spinner { display: inline-flex; align-items: center; gap: 8px; }
+    .btn-analyze.loading .btn-text { display: none; }
+    .btn-spinner-label { font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; }
+
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* ── STATS BAR (legacy, hidden — replaced by sticky toolbar) ── */
+    .stats-bar { display: none !important; }
+
+    .stat-cell {
+      background: var(--paper);
+      padding: 20px 28px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 500; }
+    .stat-cell:nth-child(2) .stat-number { color: var(--accent); }
+    .stat-cell:nth-child(3) .stat-number { color: var(--green); }
+
+    /* ── RESULTS ── */
+    #results-section { display: block; }
+    #results-section.visible { display: block; }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .results-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 600;
+    }
+
+    .progress-track {
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 13px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    #progress-text { color: var(--ink); font-weight: 500; }
+
+    /* ── ISSUE CARD ── */
+    .issue-card {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(26,22,20,0.04);
+    }
+
+    .issue-card.resolved {
+      opacity: 0.45;
+      transform: scale(0.985);
+    }
+
+    .issue-card.accepted { border-left: 4px solid var(--green); }
+    .issue-card.declined { border-left: 4px solid var(--muted); }
+
+    .card-top {
+      padding: 20px 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+
+    .para-chip {
+      flex-shrink: 0;
+      background: var(--cream);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'DM Mono', monospace;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    .sentence-block { flex: 1; }
+
+    .sentence-text {
+      font-size: 15px;
+      line-height: 1.65;
+      color: var(--ink);
+      margin-bottom: 12px;
+    }
+
+    .error-highlight {
+      background: #fde8e4;
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent);
+      border-radius: 2px;
+      padding: 0 1px;
+      font-weight: 500;
+    }
+
+    .error-count-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* ── ERRORS LIST ── */
+    .errors-list { border-top: 1px solid var(--border); }
+
+    .error-item {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--cream);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .error-item:last-child { border-bottom: none; }
+
+    .error-item.resolved-item { background: var(--cream); }
+
+    .error-info {}
+    .error-message { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+    .error-word { font-weight: 600; color: var(--accent); font-family: 'DM Mono', monospace; font-size: 13px; }
+
+    /* ── SUGGESTIONS ── */
+    .suggestions-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .suggestions-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .suggestion-btn {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 13px;
+      font-family: 'DM Mono', monospace;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .suggestion-btn:hover {
+      background: var(--green-soft);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .suggestion-btn.selected {
+      background: var(--green-soft);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* ── ACTION BUTTONS ── */
+    .error-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+
+    .btn-accept {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid var(--green);
+      padding: 7px 16px; border-radius: 7px;
+      font-size: 13px; font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-accept:hover { background: var(--green); color: white; }
+    .btn-accept:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-decline {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 7px 16px; border-radius: 7px;
+      font-size: 13px; font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-decline:hover { background: var(--cream); color: var(--ink); border-color: var(--muted); }
+
+    .btn-undo {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: transparent;
+      color: var(--gold);
+      border: 1px solid var(--gold);
+      padding: 5px 12px; border-radius: 7px;
+      font-size: 12px; font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+      opacity: 0.85;
+    }
+    .btn-undo:hover { background: var(--gold-soft); opacity: 1; }
+
+    .resolved-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 500; padding: 5px 12px;
+      border-radius: 7px;
+    }
+
+    .resolved-badge.accepted-badge { background: var(--green-soft); color: var(--green); }
+    .resolved-badge.declined-badge { background: var(--cream); color: var(--muted); }
+
+    /* ── CLEAN CARDS ── */
+    .clean-card {
+      background: var(--green-soft);
+      border: 1px solid #a8d5be;
+      border-radius: 14px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .clean-icon { font-size: 22px; }
+    .clean-text { font-size: 14px; color: var(--green); line-height: 1.5; }
+    .clean-text strong { font-weight: 600; }
+
+    /* ── ACTION BAR (legacy — replaced by sticky toolbar) ── */
+    #action-bar { display: none !important; }
+
+    .action-bar-info { font-size: 14px; color: var(--muted); line-height: 1.5; }
+    .action-bar-info strong { color: var(--ink); font-weight: 600; display: block; margin-bottom: 2px; font-size: 15px; }
+
+    .action-bar-btns { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 13px 28px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn-download:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+    .btn-download:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    .btn-apply-tool {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--paper);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      padding: 13px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-apply-tool:hover { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+
+    .action-bar-saving {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+    .action-bar-saving.visible { display: flex; }
+    .saving-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 1s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+
+
+    /* ── ANIMATIONS ── */
+    @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── DIVIDER ── */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 48px 0;
+    }
+
+    @media (max-width: 640px) {
+      header { padding: 0 20px; }
+      main { padding: 32px 16px 0; }
+      .error-item { grid-template-columns: 1fr; }
+      .error-actions { flex-direction: row; }
+      #sticky-toolbar { margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+      .toolbar-stat { min-width: 72px; padding: 8px 12px; }
+      .toolbar-stat-number { font-size: 18px; }
+    }
+
+    .para-chips-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .table-chip {
+      background: #eef3fb;
+      border-color: #a8bfdf;
+      color: #2c5282;
+    }
+
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #2c5282;
+      background: #eef3fb;
+      border: 1px solid #a8bfdf;
+      padding: 2px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.2px;
+    }
+
+    .occurrence-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gold);
+      background: var(--gold-soft);
+      border: 1px solid #e8d08a;
+      padding: 2px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.2px;
+    }
+
+    /* ── GROUPED DUPLICATE CARD ── */
+    .grouped-card {
+      border-left: 4px solid var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .grouped-card.resolved {
+      opacity: 0.45;
+      transform: scale(0.985);
+    }
+
+    .group-icon {
+      flex-shrink: 0;
+      width: 36px; height: 36px;
+      background: #faedb5;
+      border: 1px solid #e8d08a;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      color: var(--gold);
+    }
+
+    .group-count-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: var(--gold);
+      background: #faedb5;
+      border: 1px solid #e8d08a;
+      padding: 2px 10px;
+      border-radius: 20px;
+    }
+
+    .group-error-body {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 16px 24px;
+      flex-wrap: wrap;
+    }
+
+    .group-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    .btn-accept-all {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--green-soft);
+      color: var(--green);
+      border: 1px solid var(--green);
+      padding: 7px 16px; border-radius: 7px;
+      font-size: 13px; font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-accept-all:hover { background: var(--green); color: white; }
+
+    .btn-decline-all {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 7px 16px; border-radius: 7px;
+      font-size: 13px; font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-decline-all:hover { background: var(--cream); color: var(--ink); border-color: var(--muted); }
+
+    .group-sentences-toggle {
+      padding: 10px 24px;
+      border-top: 1px solid #e8d08a;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: 0.3px;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .group-sentences-toggle:hover { background: #faedb5; }
+
+    .group-sentences-list {
+      border-top: 1px solid #e8d08a;
+    }
+
+    .group-sentence-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 24px;
+      border-bottom: 1px solid #f0e8c8;
+      font-size: 14px;
+      line-height: 1.6;
+      transition: background 0.15s;
+    }
+    .group-sentence-row:last-child { border-bottom: none; }
+    .group-sentence-row.unchecked {
+      opacity: 0.45;
+      background: #fdf6e3;
+    }
+
+    /* ── SENTENCE CHECKBOX ── */
+    .sentence-checkbox-wrap {
+      flex-shrink: 0;
+      display: flex;
+      align-items: flex-start;
+      padding-top: 3px;
+    }
+    .sentence-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 17px;
+      height: 17px;
+      border: 2px solid var(--border);
+      border-radius: 4px;
+      background: var(--paper);
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .sentence-checkbox:checked {
+      background: var(--green);
+      border-color: var(--green);
+    }
+    .sentence-checkbox:checked::after {
+      content: '';
+      position: absolute;
+      left: 3px;
+      top: 0px;
+      width: 5px;
+      height: 9px;
+      border: 2px solid white;
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+    .sentence-checkbox:hover:not(:checked) {
+      border-color: var(--green);
+      background: var(--green-soft);
+    }
+
+    .group-checkbox-hint {
+      font-size: 11px;
+      color: var(--muted);
+      font-style: italic;
+      padding: 6px 24px 8px;
+      border-top: 1px dashed #e8d08a;
+      display: none;
+    }
+    .group-checkbox-hint.visible { display: block; }
+
+    /* ── TABS ── */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: none;
+      margin-bottom: 0;
+      flex: 1;
+    }
+
+    .tab-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px 13px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.18s;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover { color: var(--ink); }
+
+    .tab-btn.active {
+      color: var(--ink);
+      font-weight: 600;
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'DM Mono', monospace;
+      background: var(--cream);
+      color: var(--muted);
+      transition: background 0.18s, color 0.18s;
+    }
+
+    .tab-btn.active .tab-count {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .tab-btn[data-tab="spelling"].active { border-bottom-color: #7c3aed; }
+    .tab-btn[data-tab="spelling"].active .tab-count { background: #f3eeff; color: #7c3aed; }
+
+    /* Code tab accent colour */
+    .tab-btn[data-tab="code"].active { border-bottom-color: #0f62a8; }
+    .tab-btn[data-tab="code"].active .tab-count { background: #e8f2fc; color: #0f62a8; }
+
+    .tab-panel { display: none; }
+    #issues-scroll-area .tab-panel.active { padding-top: 8px; }
+    .tab-panel.active { display: block; }
+
+    .tab-empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .tab-empty .tab-empty-icon { font-size: 36px; margin-bottom: 12px; }
+    .tab-empty strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 6px; }
+
+    /* ── CUSTOM CORRECTION INPUT ── */
+    .custom-correction-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .custom-correction-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .custom-correction-input {
+      flex: 1;
+      min-width: 0;
+      max-width: 220px;
+      padding: 5px 11px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: 'DM Mono', monospace;
+      background: var(--paper);
+      color: var(--ink);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+
+    .custom-correction-input::placeholder { color: var(--muted); opacity: 0.7; }
+
+    .custom-correction-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(196,69,30,0.10);
+    }
+
+    .custom-correction-input.has-value {
+      border-color: var(--green);
+      background: var(--green-soft);
+      color: var(--green);
+    }
+
+    /* Whitespace-fix suggestion — styled differently so it's clearly visible */
+    .suggestion-btn-ws {
+      background: var(--gold-soft);
+      border-color: #e8d08a;
+      color: var(--gold);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .suggestion-btn-ws::before {
+      content: '␣';
+      font-size: 13px;
+      opacity: 0.75;
+    }
+
+    .suggestion-btn-ws:hover {
+      background: #faedb5;
+      border-color: var(--gold);
+      color: #7a5c00;
+    }
+
+    .suggestion-btn-ws.selected {
+      background: #faedb5;
+      border-color: var(--gold);
+      color: #7a5c00;
+    }
+
+    /* ── CONFIRMATION MODAL ── */
+    #confirm-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26, 22, 20, 0.45);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    #confirm-overlay.visible { display: flex; }
+
+    #confirm-modal {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow-lg);
+      padding: 36px 36px 28px;
+      max-width: 420px;
+      width: calc(100% - 48px);
+      animation: slideUp 0.22s ease;
+      text-align: center;
+    }
+
+    #confirm-modal .modal-icon {
+      font-size: 36px;
+      margin-bottom: 16px;
+      line-height: 1;
+    }
+
+    #confirm-modal .modal-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 12px;
+    }
+
+    #confirm-modal .modal-body {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 28px;
+    }
+
+    #confirm-modal .modal-body strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    #confirm-modal .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    #confirm-cancel {
+      flex: 1;
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--cream);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    #confirm-cancel:hover { background: var(--warm-mid); border-color: var(--muted); }
+
+    #confirm-ok {
+      flex: 1;
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    #confirm-ok:hover { background: var(--accent-hover); box-shadow: var(--shadow); }
+
+  </style>
+</head>
+<body>
+
+<!-- CONFIRMATION MODAL -->
+<div id="confirm-overlay">
+  <div id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="modal-icon">⚠️</div>
+    <div class="modal-title" id="confirm-title">Save changes permanently?</div>
+    <div class="modal-body" id="confirm-body">
+      The corrections you've accepted will be <strong>written into the document permanently</strong>.
+      This action <strong>cannot be undone</strong> once saved.<br/><br/>
+      Are you sure you want to proceed?
+    </div>
+    <div class="modal-actions">
+      <button id="confirm-cancel">Cancel</button>
+      <button id="confirm-ok">OK, proceed</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark"><span>Grammar and Spell Check</span></div>
+    <div class="logo-sub">Document Editor</div>
+  </div>
+ 
+</header>
+
+<main>
+
+  <!-- ANALYSE SECTION — no file upload; document comes from the session -->
+  <section class="upload-section" id="upload-section">
+    <div class="upload-eyebrow">Grammar & Style Analysis</div>
+    <h1 class="upload-headline">Fix your writing,<br/>one word at a time.</h1>
+    <p class="upload-subline">Your document has been uploaded. Click below to detect grammar and spelling issues.</p>
+
+    <div>
+      <button class="btn-analyze" id="analyze-btn">
+        <span class="btn-text">✦ &nbsp;Analyze Document</span>
+        <span class="btn-spinner"><span class="spinner"></span><span class="btn-spinner-label">Analyzing…</span></span>
+      </button>
+    </div>
+  </section>
+
+  <hr class="section-divider" id="divider" style="display:none"/>
+
+  <!-- HIDDEN legacy stats bar (kept for JS compatibility) -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-cell"><div class="stat-number" id="stat-sentences">0</div><div class="stat-label">Sentences</div></div>
+    <div class="stat-cell"><div class="stat-number" id="stat-issues">0</div><div class="stat-label">Issues Found</div></div>
+    <div class="stat-cell"><div class="stat-number" id="stat-resolved">0</div><div class="stat-label">Resolved</div></div>
+  </div>
+
+  <!-- OLD STICKY TOOLBAR (hidden, kept for JS compat) -->
+  <div id="sticky-toolbar" style="display:none!">
+    <div class="toolbar-stats">
+      <div class="toolbar-stat"><div class="toolbar-stat-number" id="tb-sentences">0</div><div class="toolbar-stat-label">Sentences</div></div>
+      <div class="toolbar-stat"><div class="toolbar-stat-number" id="tb-issues">0</div><div class="toolbar-stat-label">Issues</div></div>
+      <div class="toolbar-stat"><div class="toolbar-stat-number" id="tb-resolved">0</div><div class="toolbar-stat-label">Resolved</div></div>
+    </div>
+    <div class="toolbar-progress"><span id="toolbar-progress-text">0</span> of <span id="toolbar-progress-total">0</span> resolved</div>
+    <div class="action-bar-saving" id="saving-indicator-legacy"><span class="saving-dot"></span> Saving…</div>
+    <div class="action-bar-btns">
+      <button class="btn-download" id="btn-download-legacy">⬇ Download</button>
+      <button class="btn-apply-tool" id="btn-apply-tool-legacy">Apply Another Tool →</button>
+    </div>
+  </div>
+
+  <!-- TWO-COLUMN RESULTS LAYOUT -->
+  <div id="results-layout">
+
+    <!-- LEFT SIDEBAR: stats -->
+    <div id="sidebar">
+      <div class="sidebar-label">Document Stats</div>
+      <div class="sidebar-stat" id="sidebar-stat-sentences">
+        <div class="sidebar-stat-number" id="sb-sentences">0</div>
+        <div class="sidebar-stat-label">Sentences</div>
+      </div>
+      <div class="sidebar-stat" id="sidebar-stat-issues">
+        <div class="sidebar-stat-number" id="sb-issues">0</div>
+        <div class="sidebar-stat-label">Issues</div>
+      </div>
+      <div class="sidebar-stat" id="sidebar-stat-resolved">
+        <div class="sidebar-stat-number" id="sb-resolved">0</div>
+        <div class="sidebar-stat-label">Resolved</div>
+      </div>
+      <div class="sidebar-progress">
+        <span class="sidebar-progress-big" id="sb-progress-text">0</span>
+        of <span id="sb-progress-total">0</span> resolved
+      </div>
+      <div class="sidebar-saving" id="sidebar-saving-indicator">
+        <span class="saving-dot"></span> Saving…
+      </div>
+      <div class="sidebar-actions">
+        <button class="btn-download" id="btn-download">⬇ Download</button>
+        <button class="btn-apply-tool" id="btn-apply-tool">Apply Another Tool →</button>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: sticky tab bar + scrollable issues -->
+    <div id="right-panel">
+
+      <!-- STICKY TAB BAR + DOWNLOAD BUTTONS -->
+      <div id="sticky-tab-header">
+        <div class="tab-bar" id="tab-bar">
+          <button class="tab-btn active" data-tab="grammar">
+            ✦ Grammar
+            <span class="tab-count" id="tab-count-grammar">0</span>
+          </button>
+          <button class="tab-btn" data-tab="spelling">
+            ✎ Spelling
+            <span class="tab-count" id="tab-count-spelling">0</span>
+          </button>
+          <button class="tab-btn" data-tab="code">
+            ⟨/⟩ Code Blocks
+            <span class="tab-count" id="tab-count-code">0</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- SCROLLABLE ISSUES -->
+      <div id="issues-scroll-area">
+        <section id="results-section" class="visible">
+          <div class="tab-panel active" id="tab-panel-grammar">
+            <div id="issues-container-grammar"></div>
+          </div>
+          <div class="tab-panel" id="tab-panel-spelling">
+            <div id="issues-container-spelling"></div>
+          </div>
+          <div class="tab-panel" id="tab-panel-code">
+            <div id="issues-container-code"></div>
+          </div>
+          <!-- hidden shims kept for legacy JS refs -->
+          <div id="issues-container" style="display:none;"></div>
+          <div style="display:none;"><span id="progress-text">0</span> of <span id="progress-total">0</span> resolved</div>
+        </section>
+      </div>
+
+    </div><!-- /right-panel -->
+  </div><!-- /results-layout -->
+
+  <!-- HIDDEN legacy action bar (kept for JS compatibility) -->
+  <div id="action-bar">
+    <div class="action-bar-info">
+      <strong>Your document is ready</strong>
+      Accept changes above to apply them, then download.
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div class="action-bar-btns"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ── STATE ──
+let reportData = [];
+let decisions  = {};
+let totalIssues   = 0;
+let resolvedCount = 0;
+
+// groupMap: { groupKey → { keys: ['si_ei', ...], suggestions: [...], resolved: false } }
+// Used by grouped (duplicate) error cards only.
+let groupMap = {};
+
+// ── ELEMENTS ──
+const analyzeBtn           = document.getElementById('analyze-btn');
+const statsBar             = document.getElementById('stats-bar');
+const resultsSection       = document.getElementById('results-section');
+const issuesContainer      = document.getElementById('issues-container'); // legacy shim
+const issuesContainerGrammar  = document.getElementById('issues-container-grammar');
+const issuesContainerSpelling = document.getElementById('issues-container-spelling');
+const issuesContainerCode     = document.getElementById('issues-container-code');
+const divider              = document.getElementById('divider');
+const actionBar            = document.getElementById('action-bar');
+const btnDownload          = document.getElementById('btn-download');
+const btnApplyTool         = document.getElementById('btn-apply-tool');
+const savingIndicator      = document.getElementById('sidebar-saving-indicator');
+const stickyToolbar        = document.getElementById('sticky-toolbar');
+
+// ── TAB SWITCHING ──
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-panel-' + tab).classList.add('active');
+  });
+});
+
+// ── SPELLING MESSAGE CONSTANT ──
+const SPELLING_MSG = 'Possible spelling mistake';
+
+function isSpellingError(err) {
+  return typeof err.message === 'string' && err.message.includes(SPELLING_MSG);
+}
+
+// ── CODE BLOCK HELPER ──
+// Returns true for items flagged as code blocks by the backend
+function isCodeItem(item) {
+  return item.is_code === true;
+}
+
+// ── TOOLBAR SYNC HELPER ──
+function syncToolbar() {
+  // Update sidebar stat numbers
+  document.getElementById('sb-sentences').textContent    = document.getElementById('stat-sentences').textContent;
+  document.getElementById('sb-issues').textContent       = document.getElementById('stat-issues').textContent;
+  document.getElementById('sb-resolved').textContent     = document.getElementById('stat-resolved').textContent;
+  document.getElementById('sb-progress-text').textContent  = document.getElementById('progress-text').textContent;
+  document.getElementById('sb-progress-total').textContent = document.getElementById('progress-total').textContent;
+  // Keep legacy toolbar IDs in sync (they are hidden but JS may reference them)
+  document.getElementById('tb-sentences').textContent  = document.getElementById('stat-sentences').textContent;
+  document.getElementById('tb-issues').textContent     = document.getElementById('stat-issues').textContent;
+  document.getElementById('tb-resolved').textContent   = document.getElementById('stat-resolved').textContent;
+  document.getElementById('toolbar-progress-text').textContent  = document.getElementById('progress-text').textContent;
+  document.getElementById('toolbar-progress-total').textContent = document.getElementById('progress-total').textContent;
+}
+
+// ── CONFIRMATION MODAL HELPER ──
+const confirmOverlay = document.getElementById('confirm-overlay');
+const confirmOkBtn   = document.getElementById('confirm-ok');
+const confirmCancel  = document.getElementById('confirm-cancel');
+const confirmBody    = document.getElementById('confirm-body');
+
+/**
+ * Show the confirmation modal and return a Promise that resolves to true (OK)
+ * or false (Cancel / backdrop click).
+ * @param {string} [bodyHtml] - Optional custom inner HTML for the modal body.
+ */
+function showConfirm(bodyHtml) {
+  if (bodyHtml) confirmBody.innerHTML = bodyHtml;
+  confirmOverlay.classList.add('visible');
+  confirmOkBtn.focus();
+
+  return new Promise(resolve => {
+    function onOk() { cleanup(); resolve(true); }
+    function onCancel() { cleanup(); resolve(false); }
+    function onBackdrop(e) { if (e.target === confirmOverlay) { cleanup(); resolve(false); } }
+    function onKey(e) { if (e.key === 'Escape') { cleanup(); resolve(false); } }
+
+    function cleanup() {
+      confirmOverlay.classList.remove('visible');
+      confirmOkBtn.removeEventListener('click', onOk);
+      confirmCancel.removeEventListener('click', onCancel);
+      confirmOverlay.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey);
+    }
+
+    confirmOkBtn.addEventListener('click', onOk);
+    confirmCancel.addEventListener('click', onCancel);
+    confirmOverlay.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
+// ── ACTION BAR LISTENERS ──
+btnDownload.addEventListener('click', async () => {
+  const confirmed = await showConfirm(
+    `The corrections you've accepted will be <strong>written into the document permanently</strong>.
+     This action <strong>cannot be undone</strong> once saved.<br/><br/>
+     Are you sure you want to download the corrected document?`
+  );
+  if (!confirmed) return;
+
+  btnDownload.disabled = true;
+  btnDownload.textContent = '⬇ Downloading…';
+  try {
+    const formData = new FormData();
+    formData.append('decisions',     JSON.stringify(decisions));
+    formData.append('report',        JSON.stringify(reportData));
+    formData.append('original_name', 'document.docx');
+    const res = await fetch('download', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Download failed');
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'document_corrected.docx';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Download error: ' + err.message);
+  } finally {
+    btnDownload.disabled = false;
+    btnDownload.textContent = '⬇ Download';
+  }
+});
+
+btnApplyTool.addEventListener('click', async () => {
+  const confirmed = await showConfirm(
+    `The corrections you've accepted will be <strong>written into the document permanently</strong>.
+     This action <strong>cannot be undone</strong> once you switch tools.<br/><br/>
+     Are you sure you want to save and apply another tool?`
+  );
+  if (!confirmed) return;
+
+  btnApplyTool.disabled = true;
+  btnApplyTool.textContent = 'Saving…';
+  try {
+    const formData = new FormData();
+    formData.append('decisions',     JSON.stringify(decisions));
+    formData.append('report',        JSON.stringify(reportData));
+    formData.append('original_name', 'document.docx');
+    const res = await fetch('download', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Save failed');
+    await res.blob(); // persist corrected file in session; discard the blob
+  } catch (err) {
+    console.error('Save before tool switch failed:', err);
+  } finally {
+    btnApplyTool.disabled = false;
+    btnApplyTool.textContent = 'Apply Another Tool →';
+  }
+  window.parent.postMessage({ type: 'taskComplete' }, '*');
+});
+
+// ── ANALYZE ──
+analyzeBtn.addEventListener('click', async () => {
+  analyzeBtn.classList.add('loading');
+  analyzeBtn.disabled = true;
+  try {
+    const res  = await fetch('', { method: 'POST', body: new FormData() });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    renderResults(data);
+    window.parent.postMessage({ type: 'toolDirty' }, '*');
+  } catch (err) {
+    console.error(err);
+    alert('An error occurred: ' + err.message);
+  } finally {
+    analyzeBtn.classList.remove('loading');
+    analyzeBtn.disabled = false;
+  }
+});
+
+// ── tabResumed ──
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'tabResumed') {
+    reportData    = [];
+    decisions     = {};
+    groupMap      = {};
+    _groupIdCounter = 0;
+    Object.keys(gidToGk).forEach(k => delete gidToGk[k]);
+    totalIssues   = 0;
+    resolvedCount = 0;
+    statsBar.classList.remove('visible');
+    resultsSection.classList.remove('visible');
+    actionBar.classList.remove('visible');
+    stickyToolbar.classList.remove('visible');
+    document.getElementById('results-layout').classList.remove('visible');
+    document.body.classList.remove('results-active');
+    window.parent.postMessage({ type: 'toolHeader', title: null }, '*');
+    const us = document.getElementById('upload-section');
+    us.style.display = '';
+    us.style.height = '';
+    us.style.overflow = '';
+    us.style.margin = '';
+    us.style.padding = '';
+    issuesContainer.innerHTML = '';
+    issuesContainerGrammar.innerHTML  = '';
+    issuesContainerSpelling.innerHTML = '';
+    issuesContainerCode.innerHTML = '';
+    divider.style.display = 'none';
+    document.getElementById('upload-section').style.display = '';
+    // Reset tabs to grammar
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'grammar'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-panel-grammar'));
+    document.getElementById('tab-count-grammar').textContent  = '0';
+    document.getElementById('tab-count-spelling').textContent = '0';
+    document.getElementById('tab-count-code').textContent     = '0';
+    const subline = document.querySelector('.upload-subline');
+    if (subline) subline.textContent = 'The document was updated by another tool. Click Analyze to reload.';
+    window.parent.postMessage({ type: 'toolClean' }, '*');
+  }
+});
+
+// ── RENDER RESULTS ──
+// Helper: build the duplicate-group index and render cards into the given container
+// errFilter: function(err) → bool  — only include matching errors
+
+// Global counter so each group gets a unique numeric ID with no special chars
+let _groupIdCounter = 0;
+
+function buildContainerCards(container, reportData, handledInGroupSet, errFilter) {
+  // Build group index for this subset
+  const groupIndex = {};
+  reportData.forEach((item, si) => {
+    item.errors.forEach((err, ei) => {
+      if (!errFilter(err)) return;
+      const gk = (err.error_text || '') + '|||' + err.message;
+      if (!groupIndex[gk]) groupIndex[gk] = [];
+      groupIndex[gk].push({ si, ei, item, err });
+    });
+  });
+
+  const duplicateKeys = new Set(
+    Object.keys(groupIndex).filter(gk => groupIndex[gk].length > 1)
+  );
+
+  // Render grouped cards
+  duplicateKeys.forEach(gk => {
+    const instances = groupIndex[gk];
+    const { err } = instances[0];
+    const instanceKeys = instances.map(({ si, ei }) => `${si}_${ei}`);
+    instanceKeys.forEach(k => handledInGroupSet.add(k));
+
+    // Use a simple numeric ID for all DOM references — avoids any special-char
+    // escaping mismatches between setAttribute (escAttr) and getElementById/querySelector.
+    const gid = `grp${++_groupIdCounter}`;
+
+    groupMap[gid] = { keys: instanceKeys, resolved: false, gid, gk };
+    gidToGk[gid]  = gk;  // reverse map kept for legacy undo/decline helpers
+
+    const card = document.createElement('div');
+    card.className = 'issue-card grouped-card';
+    card.id = `group-card-${gid}`;
+
+    const suggestionsArr = (err.suggestions || []).slice(0, 6);
+    const suggestionsHTML = suggestionsArr.map(s => {
+      const label = formatSuggestionLabel(s);
+      const isWs  = isWhitespaceSuggestion(s);
+      return `<button class="suggestion-btn${isWs ? ' suggestion-btn-ws' : ''}" data-group-suggest="${gid}" data-val="${escAttr(s)}" title="${isWs ? 'Replace with corrected spacing' : escAttr(s)}">${escHtml(label)}</button>`;
+    }).join('');
+    const groupCustomInputHTML = `
+      <div class="custom-correction-wrap" style="margin-top:10px;">
+        <span class="custom-correction-label">Or type</span>
+        <input
+          type="text"
+          class="custom-correction-input"
+          id="custom-input-group-${gid}"
+          data-group-custom="${gid}"
+          placeholder="Custom correction…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <span class="custom-correction-label">And accept</span>
+      </div>`;
+
+    const sentenceRows = instances.map(({ si, ei, item: itm }) => {
+      const label = (itm.occurrence_labels || [itm.location_label || `¶${itm.paragraph}`])[0];
+      const icon  = label.startsWith('T') ? '⊞' : '¶';
+      const cls   = label.startsWith('T') ? 'para-chip table-chip' : 'para-chip';
+      const highlighted = buildHighlightedSentence(itm.sentence, [err]);
+      const key = `${si}_${ei}`;
+      return `
+        <div class="group-sentence-row" id="gsr-${key}">
+          <div class="sentence-checkbox-wrap">
+            <input type="checkbox" class="sentence-checkbox" id="chk-${key}" data-group-key="${gid}" data-key="${key}" />
+          </div>
+          <span class="${cls}" style="margin-top:2px;flex-shrink:0;">${icon} ${escHtml(label)}</span>
+          <span class="sentence-text" style="font-size:14px;margin-bottom:0;">${highlighted}</span>
+        </div>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="card-top" style="align-items:center;">
+        <div class="group-icon">⟳</div>
+        <div class="sentence-block">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+            <span class="error-word" style="font-size:15px;">"${escHtml(err.error_text)}"</span>
+            <span class="group-count-badge">${instances.length} occurrences</span>
+          </div>
+          <div class="error-message" style="margin-bottom:0;">${escHtml(err.message)}</div>
+        </div>
+      </div>
+      <div class="errors-list">
+        <div class="group-error-body">
+          <div>
+            <div class="suggestions-label">Suggestions</div>
+            <div class="suggestions-row" id="group-suggestions-${gid}">${suggestionsHTML}</div>
+            ${groupCustomInputHTML}
+          </div>
+          <div class="group-actions" id="group-actions-${gid}">
+            <button class="btn-accept-all" data-group-accept="${gid}">✓ Accept all</button>
+            <button class="btn-decline-all" data-group-decline="${gid}">✕ Ignore all</button>
+          </div>
+        </div>
+        <div class="group-sentences-toggle" data-group-toggle="${gid}">
+          <span class="toggle-label">▸ Show ${instances.length} affected sentences</span>
+        </div>
+        <div class="group-sentences-list" id="group-sentences-${gid}" style="display:none;">
+          <div class="group-checkbox-hint" id="group-hint-${gid}">
+            ✓ Uncheck any sentence below to skip its correction
+          </div>
+          ${sentenceRows}
+        </div>
+      </div>`;
+
+    container.appendChild(card);
+
+    // Attach toggle directly on the rendered element — avoids querySelector
+    // finding the wrong tab's element when the same gid exists in multiple tabs.
+    const toggleEl = card.querySelector(`[data-group-toggle="${gid}"]`);
+    if (toggleEl) {
+      toggleEl.addEventListener('click', () => {
+        const list      = card.querySelector(`#group-sentences-${gid}`);
+        const label     = toggleEl.querySelector('.toggle-label');
+        if (!list || !label) return;
+        const isOpen = list.style.display !== 'none';
+        list.style.display = isOpen ? 'none' : 'block';
+        const count = groupMap[gid] ? groupMap[gid].keys.length : instances.length;
+        label.textContent = isOpen
+          ? `▸ Show ${count} affected sentences`
+          : `▾ Hide affected sentences`;
+      });
+    }
+
+    // Attach accept/decline directly too, for the same reason
+    const acceptAllBtn  = card.querySelector(`[data-group-accept="${gid}"]`);
+    const declineAllBtn = card.querySelector(`[data-group-decline="${gid}"]`);
+    if (acceptAllBtn)  acceptAllBtn.addEventListener('click',  () => acceptGroup(gid));
+    if (declineAllBtn) declineAllBtn.addEventListener('click', () => declineGroup(gid));
+
+    // Suggestion chips
+    card.querySelectorAll(`[data-group-suggest="${gid}"]`).forEach(btn => {
+      btn.addEventListener('click', () => selectGroupSuggestion(btn));
+    });
+
+    // Custom input
+    const groupCustomInput = card.querySelector(`[data-group-custom="${gid}"]`);
+    if (groupCustomInput) {
+      groupCustomInput.addEventListener('input', () => handleGroupCustomInput(groupCustomInput));
+    }
+
+    // Sentence checkboxes
+    card.querySelectorAll('.sentence-checkbox').forEach(chk => {
+      chk.addEventListener('change', () => {
+        const key  = chk.dataset.key;
+        const cgid = chk.dataset.groupKey;
+        const group = groupMap[cgid];
+        if (!group || group.pendingSuggestion === undefined) return;
+        const row = document.getElementById('gsr-' + key);
+        if (row) row.classList.toggle('unchecked', !chk.checked);
+        _applyGroupCheckboxDecisions(cgid);
+      });
+    });
+  });
+
+  // Render singleton cards
+  reportData.forEach((item, si) => {
+    const singletonErrors = item.errors.filter((err, ei) =>
+      errFilter(err) && !handledInGroupSet.has(`${si}_${ei}`)
+    );
+    if (singletonErrors.length === 0) return;
+
+    const card = document.createElement('div');
+    card.className = 'issue-card';
+    card.id = `card-${si}-${container.id}`;
+
+    const highlightedSentence = buildHighlightedSentence(item.sentence, singletonErrors);
+    const errorsHTML = singletonErrors.map(err => {
+      const realEi = item.errors.indexOf(err);
+      return buildErrorItem(err, si, realEi);
+    }).join('');
+
+    const labels = item.occurrence_labels || [item.location_label || `¶${item.paragraph}`];
+    const isTable = item.source === 'table';
+    const locationChips = labels.map(l => {
+      const icon = l.startsWith('T') ? '⊞' : '¶';
+      const cls  = l.startsWith('T') ? 'para-chip table-chip' : 'para-chip';
+      return `<span class="${cls}">${icon} ${l}</span>`;
+    }).join('');
+    const occurrenceBadge = labels.length > 1
+      ? `<span class="occurrence-badge">⟳ Repeats ${labels.length}× — correction will apply to all</span>`
+      : '';
+    const sourceBadge = isTable ? `<span class="source-badge">⊞ Table text</span>` : '';
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div class="para-chips-row">${locationChips}</div>
+        <div class="sentence-block">
+          <div class="sentence-text">${highlightedSentence}</div>
+          <div class="badges-row">
+            <span class="error-count-badge">⚠ ${singletonErrors.length} issue${singletonErrors.length > 1 ? 's' : ''}</span>
+            ${sourceBadge}
+            ${occurrenceBadge}
+          </div>
+        </div>
+      </div>
+      <div class="errors-list">${errorsHTML}</div>`;
+
+    container.appendChild(card);
+  });
+
+  // Return count of errors rendered
+  let count = 0;
+  reportData.forEach(item => {
+    item.errors.forEach(err => { if (errFilter(err)) count++; });
+  });
+  return count;
+}
+
+function renderResults(data) {
+  reportData = data.report;
+  decisions  = {};
+  groupMap   = {};
+  _groupIdCounter = 0;
+  Object.keys(gidToGk).forEach(k => delete gidToGk[k]);
+  resolvedCount = 0;
+  totalIssues   = 0;
+
+  // Filter errors without suggestions
+  reportData.forEach(item => {
+    item.errors = item.errors.filter(err => err.suggestions && err.suggestions.length > 0);
+    totalIssues += item.errors.length;
+  });
+
+  // For grammar/spelling tabs, exclude code-block items entirely
+  const nonCodeReport = reportData.filter(item => !isCodeItem(item));
+
+  const spellingCount = nonCodeReport.reduce((n, item) =>
+    n + item.errors.filter(isSpellingError).length, 0);
+  const grammarCount  = nonCodeReport.reduce((n, item) =>
+    n + item.errors.filter(err => !isSpellingError(err)).length, 0);
+
+  // Code tab: all errors (grammar + spelling) inside code-block items
+  const codeReport = reportData.filter(item => isCodeItem(item));
+  const codeCount  = codeReport.reduce((n, item) => n + item.errors.length, 0);
+
+  // Stats
+  document.getElementById('stat-sentences').textContent = data.sentence_count;
+  document.getElementById('stat-issues').textContent    = totalIssues;
+  document.getElementById('stat-resolved').textContent  = '0';
+  document.getElementById('progress-total').textContent = totalIssues;
+  document.getElementById('progress-text').textContent  = '0';
+
+  document.getElementById('tab-count-grammar').textContent  = grammarCount;
+  document.getElementById('tab-count-spelling').textContent = spellingCount;
+  document.getElementById('tab-count-code').textContent     = codeCount;
+
+  // Show / reset UI
+  statsBar.classList.add('visible');
+  resultsSection.classList.add('visible');
+  actionBar.classList.add('visible');
+  document.getElementById('results-layout').classList.add('visible');
+  document.getElementById('upload-section').style.display = 'none';
+  document.getElementById('upload-section').style.height = '0';
+  document.getElementById('upload-section').style.overflow = 'hidden';
+  document.getElementById('upload-section').style.margin = '0';
+  document.getElementById('upload-section').style.padding = '0';
+  divider.style.display = 'none';
+  document.body.classList.add('results-active');
+  // Ask parent DocFormat to show tool name in its header
+  window.parent.postMessage({ type: 'toolHeader', title: 'Grammar and Spell Check' }, '*');
+  issuesContainerGrammar.innerHTML  = '';
+  issuesContainerSpelling.innerHTML = '';
+  issuesContainerCode.innerHTML = '';
+
+  syncToolbar();
+
+  if (totalIssues === 0 && codeCount === 0) {
+    issuesContainerGrammar.innerHTML = `
+      <div class="clean-card">
+        <span class="clean-icon">✅</span>
+        <div class="clean-text"><strong>No issues found!</strong><br/>Your document looks great — no grammar or spelling errors detected.</div>
+      </div>`;
+    issuesContainerSpelling.innerHTML = issuesContainerGrammar.innerHTML;
+    issuesContainerCode.innerHTML = `
+      <div class="clean-card">
+        <span class="clean-icon">✅</span>
+        <div class="clean-text"><strong>No code block issues found</strong><br/>No errors were detected inside code blocks.</div>
+      </div>`;
+    return;
+  }
+
+  // Render grammar tab (non-code items, non-spelling errors)
+  buildContainerCards(issuesContainerGrammar, nonCodeReport, new Set(), err => !isSpellingError(err));
+  if (grammarCount === 0) {
+    issuesContainerGrammar.innerHTML = `
+      <div class="tab-empty">
+        <div class="tab-empty-icon">✅</div>
+        <strong>No grammar issues found</strong>
+        Your document has no grammar or style errors.
+      </div>`;
+  }
+
+  // Render spelling tab (non-code items, only spelling errors)
+  buildContainerCards(issuesContainerSpelling, nonCodeReport, new Set(), isSpellingError);
+  if (spellingCount === 0) {
+    issuesContainerSpelling.innerHTML = `
+      <div class="tab-empty">
+        <div class="tab-empty-icon">✅</div>
+        <strong>No spelling mistakes found</strong>
+        Every word looks correctly spelled.
+      </div>`;
+  }
+
+  // Render code blocks tab — same card UI as grammar/spelling, all errors inside code items
+  buildContainerCards(issuesContainerCode, codeReport, new Set(), () => true);
+  if (codeCount === 0) {
+    issuesContainerCode.innerHTML = `
+      <div class="tab-empty">
+        <div class="tab-empty-icon">⟨/⟩</div>
+        <strong>No issues in code blocks</strong>
+        No errors were detected inside code or markup blocks.
+      </div>`;
+  }
+
+  // Auto-switch to the tab that has content (prefer grammar)
+  if (grammarCount === 0 && spellingCount > 0) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-tab="spelling"]').classList.add('active');
+    document.getElementById('tab-panel-spelling').classList.add('active');
+  } else if (grammarCount === 0 && spellingCount === 0 && codeCount > 0) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-tab="code"]').classList.add('active');
+    document.getElementById('tab-panel-code').classList.add('active');
+  }
+
+  // ── Attach listeners for singleton cards ──
+  // (Group card listeners — toggle, accept-all, decline-all, suggestions,
+  //  custom-input, checkboxes — are attached directly at build time inside
+  //  buildContainerCards, so they always reference the correct card element
+  //  regardless of how many tabs share similar gid values.)
+  document.querySelectorAll('[data-accept]').forEach(btn => {
+    btn.addEventListener('click', () => acceptError(btn.dataset.accept));
+  });
+  document.querySelectorAll('[data-decline]').forEach(btn => {
+    btn.addEventListener('click', () => declineError(btn.dataset.decline));
+  });
+  document.querySelectorAll('[data-suggest]').forEach(btn => {
+    btn.addEventListener('click', () => selectSuggestion(btn));
+  });
+  // Custom correction inputs — singleton errors only
+  document.querySelectorAll('[data-custom]').forEach(input => {
+    input.addEventListener('input', () => handleCustomInput(input));
+  });
+}
+
+
+// ── RENDER CODE BLOCKS TAB ────────────────────────────────────────────────────
+// ── GROUP HELPERS ──────────────────────────────────────────────────────────
+
+// Reverse map: gid → gk, populated when cards are built
+const gidToGk = {};
+
+function selectGroupSuggestion(btn) {
+  const gid = btn.dataset.groupSuggest;
+  // Scope deselection to just this card, not all tabs
+  const card = document.getElementById(`group-card-${gid}`);
+  if (card) card.querySelectorAll(`[data-group-suggest="${gid}"]`).forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  if (!groupMap[gid]) groupMap[gid] = {};
+  groupMap[gid].selectedSuggestion = btn.dataset.val;
+  const customInput = document.getElementById(`custom-input-group-${gid}`);
+  if (customInput) { customInput.value = ''; customInput.classList.remove('has-value'); }
+}
+
+function getGroupSuggestion(gid) {
+  const customInput = document.getElementById(`custom-input-group-${gid}`);
+  if (customInput && customInput.value.trim()) return customInput.value.trim();
+  const row = document.getElementById(`group-suggestions-${gid}`);
+  if (!row) return null;
+  const selected = row.querySelector('.suggestion-btn.selected');
+  if (selected) return selected.dataset.val;
+  const first = row.querySelector('.suggestion-btn');
+  if (first) { first.classList.add('selected'); return first.dataset.val; }
+  return null;
+}
+
+function acceptGroup(gid) {
+  const suggestion = getGroupSuggestion(gid);
+  const group = groupMap[gid];
+  if (!group) return;
+
+  const card = document.getElementById(`group-card-${gid}`);
+  const sentenceList = document.getElementById(`group-sentences-${gid}`);
+  const toggle = card ? card.querySelector(`[data-group-toggle="${gid}"] .toggle-label`) : null;
+  if (sentenceList && sentenceList.style.display === 'none') {
+    sentenceList.style.display = 'block';
+    if (toggle) toggle.textContent = `▾ Hide ${group.keys.length} affected sentences`;
+  }
+
+  const hint = document.getElementById(`group-hint-${gid}`);
+  if (hint) hint.classList.add('visible');
+
+  group.keys.forEach(key => {
+    const chk = document.getElementById(`chk-${key}`);
+    if (chk) chk.checked = true;
+    const row = document.getElementById(`gsr-${key}`);
+    if (row) row.classList.remove('unchecked');
+  });
+
+  group.pendingSuggestion = suggestion;
+  _applyGroupCheckboxDecisions(gid);
+}
+
+function _applyGroupCheckboxDecisions(gid) {
+  const group = groupMap[gid];
+  if (!group) return;
+
+  const checkedKeys = group.keys.filter(key => {
+    const chk = document.getElementById('chk-' + key);
+    return chk && chk.checked;
+  });
+  const skippedKeys = group.keys.filter(key => {
+    const chk = document.getElementById('chk-' + key);
+    return chk && !chk.checked;
+  });
+
+  checkedKeys.forEach(key => {
+    decisions[key] = { action: 'accept', suggestion: group.pendingSuggestion || null };
+  });
+  skippedKeys.forEach(key => {
+    delete decisions[key];
+  });
+
+  const totalInGroup = group.keys.length;
+  const prevContrib  = group.resolvedContrib || 0;
+  if (prevContrib === 0) {
+    resolvedCount += totalInGroup;
+    group.resolvedContrib = totalInGroup;
+  }
+
+  const acceptedCount = checkedKeys.length;
+
+  const actionsEl = document.getElementById('group-actions-' + gid);
+  if (actionsEl) {
+    const badge = actionsEl.querySelector('.resolved-badge');
+    const newLabel = skippedKeys.length > 0
+      ? (`✓ Accepted ${acceptedCount}, skipped ${skippedKeys.length}`)
+      : (`✓ Accepted all ${acceptedCount}`);
+    if (badge) {
+      badge.textContent = newLabel;
+    } else {
+      actionsEl.innerHTML =
+        `<span class="resolved-badge accepted-badge">${newLabel}</span>` +
+        `<button class="btn-undo" data-group-undo="${gid}" title="Undo">↩ Undo</button>`;
+      actionsEl.querySelector('[data-group-undo]').addEventListener('click', () => undoGroup(gid));
+    }
+  }
+
+  document.getElementById('stat-resolved').textContent = resolvedCount;
+  document.getElementById('progress-text').textContent = resolvedCount;
+  syncToolbar();
+}
+
+function declineGroup(gid) {
+  const group = groupMap[gid];
+  if (!group) return;
+  group.keys.forEach(key => {
+    decisions[key] = { action: 'decline', suggestion: null };
+  });
+  markGroupResolved(gid, 'decline', group.keys.length);
+}
+
+function markGroupResolved(gid, action, count) {
+  const actionsEl = document.getElementById(`group-actions-${gid}`);
+  if (actionsEl) {
+    const label = action === 'accept'
+      ? `<span class="resolved-badge accepted-badge">✓ Accepted all ${count}</span>`
+      : `<span class="resolved-badge declined-badge">✕ Ignored all ${count}</span>`;
+    actionsEl.innerHTML = label + `<button class="btn-undo" data-group-undo="${gid}" title="Undo all">↩ Undo all</button>`;
+    actionsEl.querySelector('[data-group-undo]').addEventListener('click', () => undoGroup(gid));
+  }
+
+  if (groupMap[gid]) groupMap[gid].resolvedContrib = (groupMap[gid].resolvedContrib || 0) + count;
+  resolvedCount += count;
+  document.getElementById('stat-resolved').textContent = resolvedCount;
+  document.getElementById('progress-text').textContent = resolvedCount;
+  syncToolbar();
+}
+
+function undoGroup(gid) {
+  const group = groupMap[gid];
+  if (!group) return;
+
+  const contrib = group.resolvedContrib || 0;
+  resolvedCount -= contrib;
+  group.resolvedContrib = 0;
+  delete group.pendingSuggestion;
+
+  group.keys.forEach(key => {
+    delete decisions[key];
+    const chk = document.getElementById('chk-' + key);
+    if (chk) chk.checked = false;
+    const row = document.getElementById('gsr-' + key);
+    if (row) row.classList.remove('unchecked');
+  });
+
+  const hint = document.getElementById('group-hint-' + gid);
+  if (hint) hint.classList.remove('visible');
+
+  const actionsEl = document.getElementById('group-actions-' + gid);
+  if (actionsEl) {
+    actionsEl.innerHTML =
+      `<button class="btn-accept-all" data-group-accept="${gid}">✓ Accept all</button>` +
+      `<button class="btn-decline-all" data-group-decline="${gid}">✕ Ignore all</button>`;
+    actionsEl.querySelector('[data-group-accept]').addEventListener('click', () => acceptGroup(gid));
+    actionsEl.querySelector('[data-group-decline]').addEventListener('click', () => declineGroup(gid));
+  }
+
+  const card = document.getElementById('group-card-' + gid);
+  if (card) card.classList.remove('resolved');
+
+  document.getElementById('stat-resolved').textContent = resolvedCount;
+  document.getElementById('progress-text').textContent = resolvedCount;
+  syncToolbar();
+}
+
+function toggleGroupSentences(gid) {
+  const card   = document.getElementById(`group-card-${gid}`);
+  const list   = document.getElementById(`group-sentences-${gid}`);
+  const toggle = card ? card.querySelector(`[data-group-toggle="${gid}"] .toggle-label`) : null;
+  if (!list || !toggle) return;
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : 'block';
+  const count = groupMap[gid] ? groupMap[gid].keys.length : '';
+  toggle.textContent = open
+    ? `▸ Show ${count} affected sentences`
+    : `▾ Hide affected sentences`;
+}
+
+// ── SUGGESTION LABEL HELPER ────────────────────────────────────────────────
+// Returns a human-readable label for a suggestion value.
+// Whitespace-only suggestions (e.g. a single space fixing a double-space)
+// are invisible when rendered raw, so we show a descriptive badge instead.
+function formatSuggestionLabel(s) {
+  if (s === null || s === undefined) return '(empty)';
+  const trimmed = s.replace(/ /g, ' '); // normalise non-breaking spaces
+  if (trimmed.trim() === '') {
+    // It's whitespace-only
+    if (trimmed === '' ) return '(remove)';
+    // count spaces
+    const spaceCount = trimmed.length;
+    if (spaceCount === 1) return 'Extra Spaces will be removed';
+    return `· ${spaceCount} spaces`;
+  }
+  return s; // normal word — return as-is
+}
+
+// Returns true if the suggestion is whitespace-only (needs special label)
+function isWhitespaceSuggestion(s) {
+  if (!s && s !== '') return false;
+  return s.replace(/ /g, ' ').trim() === '';
+}
+
+// ── SINGLETON HELPERS ──────────────────────────────────────────────────────
+
+function buildHighlightedSentence(sentence, errors) {
+  let result = escHtml(sentence);
+  const seenTexts = new Set();
+  errors.forEach(err => {
+    if (!err.error_text || seenTexts.has(err.error_text)) return;
+    seenTexts.add(err.error_text);
+    const escaped = escHtml(err.error_text);
+    // Replace ALL occurrences in the sentence, not just the first
+    result = result.split(escaped).join(`<span class="error-highlight">${escaped}</span>`);
+  });
+  return result;
+}
+
+function buildErrorItem(err, si, ei) {
+  const key = `${si}_${ei}`;
+  const suggestionsArr = (err.suggestions || []).slice(0, 6);
+  const suggestionsHTML = suggestionsArr.length > 0
+    ? `<div class="suggestions-label">Suggestions</div>
+       <div class="suggestions-row">
+         ${suggestionsArr.map(s => {
+           const label = formatSuggestionLabel(s);
+           const isWs  = isWhitespaceSuggestion(s);
+           return `<button class="suggestion-btn${isWs ? ' suggestion-btn-ws' : ''}" data-suggest="${key}" data-val="${escAttr(s)}" title="${isWs ? 'Replace with corrected spacing' : escAttr(s)}">${isWs ? escHtml(label) : escHtml(label)}</button>`;
+         }).join('')}
+       </div>`
+    : '';
+
+  const customInputHTML = `
+    <div class="custom-correction-wrap">
+      <span class="custom-correction-label">Or type</span>
+      <input
+        type="text"
+        class="custom-correction-input"
+        id="custom-input-${key}"
+        data-custom="${key}"
+        placeholder="Custom correction…"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <span class="custom-correction-label">And accept</span>
+    </div>`;
+
+  return `
+    <div class="error-item" id="error-item-${key}">
+      <div class="error-info">
+        <div class="error-message">
+          ${err.error_text ? `<span class="error-word">"${escHtml(err.error_text)}"</span> — ` : ''}
+          ${escHtml(err.message)}
+        </div>
+        ${suggestionsHTML}
+        ${customInputHTML}
+      </div>
+      <div class="error-actions" id="actions-${key}">
+        <button class="btn-accept" data-accept="${key}">✓ Accept</button>
+        <button class="btn-decline" data-decline="${key}">✕ Ignore</button>
+      </div>
+    </div>`;
+}
+
+function selectSuggestion(btn) {
+  const key = btn.dataset.suggest;
+  document.querySelectorAll(`[data-suggest="${key}"]`).forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  if (!decisions[key]) decisions[key] = {};
+  decisions[key].suggestion = btn.dataset.val;
+  // Clear the custom input when a suggestion chip is picked
+  const customInput = document.getElementById(`custom-input-${key}`);
+  if (customInput) { customInput.value = ''; customInput.classList.remove('has-value'); }
+}
+
+function selectGroupSuggestionBtn(btn) {
+  // handled via selectGroupSuggestion — this just also clears custom input
+  const gid = btn.dataset.groupSuggest;
+  const customInput = document.getElementById(`custom-input-group-${gid}`);
+  if (customInput) { customInput.value = ''; customInput.classList.remove('has-value'); }
+}
+
+function handleCustomInput(input) {
+  const key = input.dataset.custom;
+  const val = input.value.trim();
+  if (val) {
+    // Deselect all suggestion chips for this error
+    document.querySelectorAll(`[data-suggest="${key}"]`).forEach(b => b.classList.remove('selected'));
+    if (!decisions[key]) decisions[key] = {};
+    decisions[key].suggestion = val;
+    input.classList.add('has-value');
+  } else {
+    input.classList.remove('has-value');
+    if (decisions[key]) delete decisions[key].suggestion;
+  }
+}
+
+function handleGroupCustomInput(input) {
+  const gid = input.dataset.groupCustom;
+  const gk  = gidToGk[gid];
+  const val = input.value.trim();
+  if (val) {
+    document.querySelectorAll(`[data-group-suggest="${gid}"]`).forEach(b => b.classList.remove('selected'));
+    if (gk && groupMap[gk]) groupMap[gk].selectedSuggestion = val;
+    input.classList.add('has-value');
+  } else {
+    input.classList.remove('has-value');
+    if (gk && groupMap[gk]) delete groupMap[gk].selectedSuggestion;
+  }
+}
+
+function acceptError(key) {
+  // Priority: custom typed value > selected suggestion chip > first suggestion chip
+  const customInput = document.getElementById(`custom-input-${key}`);
+  const customVal = customInput ? customInput.value.trim() : '';
+
+  let suggestion = null;
+  if (customVal) {
+    suggestion = customVal;
+  } else {
+    const row = document.querySelector(`#error-item-${key} .suggestions-row`);
+    if (row) {
+      const selected = row.querySelector('.suggestion-btn.selected');
+      if (!selected) {
+        const first = row.querySelector('.suggestion-btn');
+        if (first) { first.classList.add('selected'); suggestion = first.dataset.val; }
+      } else {
+        suggestion = selected.dataset.val;
+      }
+    }
+  }
+  decisions[key] = { action: 'accept', suggestion };
+  markResolved(key, 'accept');
+}
+
+function declineError(key) {
+  decisions[key] = { action: 'decline', suggestion: null };
+  markResolved(key, 'decline');
+}
+
+function markResolved(key, action) {
+  const actionsEl = document.getElementById(`actions-${key}`);
+  const itemEl    = document.getElementById(`error-item-${key}`);
+  if (actionsEl) {
+    const label = action === 'accept'
+      ? `<span class="resolved-badge accepted-badge">✓ Accepted</span>`
+      : `<span class="resolved-badge declined-badge">✕ Ignored</span>`;
+    actionsEl.innerHTML = label + `<button class="btn-undo" data-undo="${key}" title="Undo">↩ Undo</button>`;
+    actionsEl.querySelector('[data-undo]').addEventListener('click', () => undoError(key));
+  }
+  if (itemEl) itemEl.classList.add('resolved-item');
+
+  resolvedCount++;
+  document.getElementById('stat-resolved').textContent = resolvedCount;
+  document.getElementById('progress-text').textContent = resolvedCount;
+  syncToolbar();
+}
+
+function undoError(key) {
+  delete decisions[key];
+  const actionsEl = document.getElementById(`actions-${key}`);
+  const itemEl    = document.getElementById(`error-item-${key}`);
+  if (actionsEl) {
+    actionsEl.innerHTML = `
+      <button class="btn-accept" data-accept="${key}">✓ Accept</button>
+      <button class="btn-decline" data-decline="${key}">✕ Ignore</button>`;
+    actionsEl.querySelector('[data-accept]').addEventListener('click', () => acceptError(key));
+    actionsEl.querySelector('[data-decline]').addEventListener('click', () => declineError(key));
+  }
+  document.querySelectorAll(`[data-suggest="${key}"]`).forEach(b => b.classList.remove('selected'));
+  const customInputUndo = document.getElementById(`custom-input-${key}`);
+  if (customInputUndo) { customInputUndo.value = ''; customInputUndo.classList.remove('has-value'); }
+  if (itemEl) itemEl.classList.remove('resolved-item');
+
+  resolvedCount--;
+  document.getElementById('stat-resolved').textContent = resolvedCount;
+  document.getElementById('progress-text').textContent = resolvedCount;
+  syncToolbar();
+}
+
+// ── APPLY CORRECTIONS (fires on every Accept) ────────────────────────────
+
+async function applyCorrections() {
+  savingIndicator.classList.add('visible');
+  try {
+    const formData = new FormData();
+    formData.append('decisions',     JSON.stringify(decisions));
+    formData.append('report',        JSON.stringify(reportData));
+    formData.append('original_name', 'document.docx');
+    const res = await fetch('download', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Failed to apply corrections');
+    await res.blob(); // server persists updated file; we discard the blob here
+  } catch (err) {
+    console.error('Auto-save error:', err);
+  } finally {
+    savingIndicator.classList.remove('visible');
+  }
+  window.parent.postMessage({ type: 'toolDirty' }, '*');
+}
+
+// ── UTILS ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(str) {
+  return String(str).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>

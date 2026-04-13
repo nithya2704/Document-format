@@ -1,0 +1,719 @@
+<!-- alignmentui.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Document Alignment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:     #F5F0EA;
+      --cream-mid: #EDE6DC;
+      --paper:     #FDFAF6;
+      --ink:       #1A1614;
+      --ink-mid:   #4A3F38;
+      --ink-soft:  #8A7F78;
+      --rust:      #C8522A;
+      --rust-lt:   #E07050;
+      --border:    #D8CFC6;
+      --success:   #3A7D6A;
+      --card:      #FFFFFF;
+      --shadow:    0 2px 16px rgba(26,22,20,0.08);
+      --shadow-lg: 0 8px 40px rgba(26,22,20,0.14);
+      --radius:    14px;
+    }
+
+    html, body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); height: 100%; margin: 0; padding: 0; }
+
+    .shell { display: flex; height: 100vh; }
+
+    /* ── LEFT PANEL ── */
+    .panel-left {
+      width: 360px; min-width: 300px;
+      background: var(--paper); border-right: 1px solid var(--border);
+      height: 100vh; overflow-y: auto; overflow-x: hidden; flex-shrink: 0;
+    }
+    .panel-header { padding: 20px 22px 16px; border-bottom: 1px solid var(--border); }
+    .panel-header h2 { font-family: 'DM Serif Display', serif; font-size: 1.15rem; font-weight: 400; color: var(--ink); }
+    .panel-header p  { font-size: 0.78rem; color: var(--ink-soft); margin-top: 4px; }
+
+    /* ── UPLOAD ── */
+    .upload-zone {
+      margin: 16px 16px 0;
+      border: 2px dashed var(--rust-lt); border-radius: var(--radius);
+      padding: 22px 16px; text-align: center; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s; background: #FDF7F4; position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over { border-color: var(--rust); background: #FAF0EC; }
+    .upload-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .upload-zone .upload-icon { font-size: 2rem; margin-bottom: 6px; }
+    .upload-zone p { font-size: 0.82rem; color: var(--ink-soft); }
+    .upload-zone strong { color: var(--rust); }
+
+    .file-badge { display: none; margin: 10px 16px 0; background: var(--paper); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 0.82rem; color: var(--ink-mid); align-items: center; gap: 8px; }
+    .file-badge.show { display: flex; }
+    .file-badge .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-badge .clear-file { cursor: pointer; color: var(--ink-soft); font-size: 1rem; font-weight: bold; border: none; background: none; padding: 0; transition: color 0.15s; }
+    .file-badge .clear-file:hover { color: var(--rust); }
+
+    .status-bar { display: none; }
+
+    /* ── NOTIFICATION BAR above preview tabs ── */
+    .notify-bar {
+      display: none; align-items: center; gap: 10px;
+      padding: 9px 18px; font-size: 0.82rem; font-weight: 500;
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .notify-bar .notify-icon { font-size: 1rem; flex-shrink: 0; }
+    .notify-bar.info  { display: flex; background: var(--cream-mid); color: var(--ink-mid); }
+    .notify-bar.error { display: flex; background: #fee2e2;          color: #b91c1c; }
+    .notify-bar.ok    { display: flex; background: #d1fae5;          color: #065f46; }
+
+    /* ── SECTIONS ── */
+    .section { margin: 14px 16px 0; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .section-title { padding: 10px 14px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft); background: var(--cream); border-bottom: 1px solid var(--border); }
+    .section-body { padding: 12px 14px; }
+
+    .detected-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+    .type-chip { background: var(--cream-mid); color: var(--ink-mid); border-radius: 20px; padding: 3px 10px; font-size: 0.74rem; font-weight: 600; border: 1px solid var(--border); }
+    .no-doc-msg { font-size: 0.8rem; color: var(--ink-soft); font-style: italic; }
+
+    /* ── FORMAT OPTIONS ── */
+    .format-group { border-bottom: 1px solid var(--cream-mid); padding-bottom: 14px; margin-bottom: 14px; }
+    .format-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .format-group h4 { font-family: 'DM Serif Display', serif; font-size: 0.95rem; color: var(--ink); margin-bottom: 10px; text-transform: capitalize; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+
+    select {
+      appearance: none; -webkit-appearance: none;
+      background: var(--cream) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238A7F78' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 10px center;
+      border: 1px solid var(--border); border-radius: 8px; padding: 7px 28px 7px 10px;
+      font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 500; color: var(--ink);
+      cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; outline: none;
+    }
+    select:focus { border-color: var(--rust); box-shadow: 0 0 0 3px rgba(200,82,42,0.12); }
+
+    /* ── ACTIONS ── */
+    .actions { padding: 14px 16px 32px; display: flex; flex-direction: column; gap: 8px; }
+    .btn { width: 100%; padding: 11px 0; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: background 0.18s, transform 0.15s, box-shadow 0.15s; display: flex; align-items: center; justify-content: center; gap: 7px; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .btn-analyse { background: var(--ink); color: #fff; }
+    .btn-analyse:hover:not(:disabled) { background: #2E2420; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,22,20,0.18); }
+    .btn-preview { background: var(--rust); color: #fff; }
+    .btn-preview:hover:not(:disabled) { background: #B24420; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(200,82,42,0.3); }
+    .btn-format  { background: var(--success); color: #fff; }
+    .btn-format:hover:not(:disabled)  { background: #2d6355; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(58,125,106,0.3); }
+
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── RESIZER ── */
+    .resizer { width: 6px; min-width: 6px; background: var(--border); cursor: col-resize; position: relative; flex-shrink: 0; transition: background 0.15s; z-index: 10; }
+    .resizer:hover, .resizer.dragging { background: var(--rust); }
+    .resizer::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 2px; height: 40px; background: var(--ink-soft); border-radius: 2px; transition: background 0.15s; }
+    .resizer:hover::before, .resizer.dragging::before { background: #fff; }
+    .resizer::after { content: '⋮'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: var(--ink-soft); font-size: 1.1rem; letter-spacing: -1px; line-height: 1; pointer-events: none; }
+    .resizer:hover::after, .resizer.dragging::after { color: #fff; }
+    body.is-resizing { cursor: col-resize !important; user-select: none !important; }
+    body.is-resizing * { pointer-events: none !important; }
+    body.is-resizing .resizer { pointer-events: all !important; }
+
+    /* ── RIGHT PANEL ── */
+    .panel-right { flex: 1; background: var(--cream); display: flex; flex-direction: column; overflow: hidden; height: 100vh; }
+
+    .preview-tabs { display: flex; align-items: center; padding: 0 18px; background: var(--paper); border-bottom: 1px solid var(--border); height: 46px; }
+    .preview-tab { display: flex; align-items: center; gap: 6px; padding: 0 18px; height: 100%; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; font-weight: 600; color: var(--ink-soft); border: none; background: none; cursor: pointer; border-bottom: 3px solid transparent; transition: color 0.15s, border-color 0.15s; white-space: nowrap; position: relative; top: 1px; }
+    .preview-tab:hover { color: var(--ink-mid); }
+    .preview-tab.active { color: var(--rust); border-bottom-color: var(--rust); }
+    .preview-tab .tab-spinner { width: 12px; height: 12px; border: 2px solid rgba(200,82,42,0.25); border-top-color: var(--rust); border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+    .preview-tab.loading .tab-spinner { display: inline-block; }
+    .preview-tab-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+
+    .preview-area { flex: 1; overflow: hidden; display: none; flex-direction: column; min-height: 0; }
+    .preview-area.active { display: flex; }
+    #frameOriginal, #frameFormatted { width: 100%; flex: 1; border: none; display: none; min-height: 0; }
+    #frameOriginal.loaded, #frameFormatted.loaded { display: block; }
+    .preview-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; color: var(--ink-soft); }
+    .preview-placeholder .ph-icon { font-size: 3.5rem; opacity: 0.5; }
+    .preview-placeholder p { font-size: 0.9rem; }
+    .preview-placeholder strong { color: var(--rust); }
+
+    /* ── TOAST ── */
+    #toast { position: fixed; top: 20px; right: 20px; background: var(--ink); color: white; padding: 11px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 500; box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(-8px); transition: opacity 0.3s, transform 0.3s; z-index: 999; pointer-events: none; display: flex; align-items: center; gap: 8px; }
+    #toast.success { background: var(--success); }
+    #toast.show { opacity: 1; transform: translateY(0); }
+    /* ── LIVE PREVIEW ── */
+    .live-preview-wrap { margin-top: 14px; }
+    .live-preview-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.8px;
+      text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .live-preview-label::before {
+      content: ''; display: inline-block; width: 6px; height: 6px;
+      border-radius: 50%; background: var(--rust); animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .live-preview-doc {
+      background: white; border: 1px solid var(--border); border-radius: 10px;
+      padding: 16px 18px; position: relative; overflow: hidden;
+      box-shadow: inset 0 1px 4px rgba(26,22,20,0.04); margin-top: 10px;
+    }
+    .live-preview-doc::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: repeating-linear-gradient(transparent, transparent 27px, #EDE6DC 27px, #EDE6DC 28px);
+      pointer-events: none; opacity: 0.45;
+    }
+    .preview-text {
+      font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--ink);
+      position: relative; z-index: 1;
+      transition: text-align 0.25s ease, line-height 0.25s ease;
+    }
+
+    /* Alignment badges */
+    .align-badges, .spacing-badges { display: flex; gap: 5px; margin-top: 10px; }
+    .align-badge, .spacing-badge {
+      flex: 1; padding: 6px 5px; border-radius: 7px;
+      border: 1.5px solid var(--border); background: var(--cream); cursor: pointer;
+      text-align: center; transition: all 0.15s;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .align-badge:hover,  .spacing-badge:hover  { border-color: var(--rust-lt); background: #FDF7F4; }
+    .align-badge.active, .spacing-badge.active  { border-color: var(--rust); background: #FDF7F4; }
+    .align-badge svg { width: 26px; height: 16px; }
+    .align-badge span, .spacing-badge span {
+      font-size: 9px; font-weight: 600; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--ink-soft);
+    }
+    .align-badge.active span, .spacing-badge.active span { color: var(--rust); }
+
+    /* Leave-as-is badge */
+    .leave-badge {
+      flex: 1; padding: 6px 5px; border-radius: 7px;
+      border: 1.5px dashed var(--border); background: var(--paper); cursor: pointer;
+      text-align: center; transition: all 0.15s;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .leave-badge:hover  { border-color: var(--ink-soft); }
+    .leave-badge.active { border-color: var(--ink); background: var(--cream-mid); }
+    .leave-badge .leave-icon { font-size: 13px; line-height: 1; }
+    .leave-badge span {
+      font-size: 9px; font-weight: 600; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--ink-soft);
+    }
+    .leave-badge.active span { color: var(--ink); }
+
+    /* Spacing badge bullet lines */
+    .spacing-badge .lines { display: flex; flex-direction: column; gap: var(--g, 2px); width: 28px; }
+    .spacing-badge .lines .bline { display: flex; align-items: center; gap: 3px; }
+    .spacing-badge .lines .bullet { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-soft); flex-shrink: 0; }
+    .spacing-badge .lines .btext  { height: 2px; border-radius: 1px; background: var(--ink-soft); flex: 1; }
+    .spacing-badge.active .lines .bullet { background: var(--rust); }
+    .spacing-badge.active .lines .btext  { background: var(--rust); }
+
+  </style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ═══════════════════ LEFT PANEL ═══════════════════ -->
+  <div class="panel-left">
+
+    <div class="panel-header">
+      <h2>📐 Document Alignment</h2>
+      <p>Apply consistent alignment &amp; spacing across your document</p>
+    </div>
+
+    <!-- No file upload — document comes from the session -->
+
+    <div class="section">
+      <div class="section-title">Detected Element Types</div>
+      <div class="section-body">
+        <div class="detected-list" id="detectedList">
+          <span class="no-doc-msg">Upload &amp; analyse to see elements</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="formatSection" style="display:none">
+      <div class="section-title">Formatting Options</div>
+      <div class="section-body" id="formatSections"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-analyse" id="btnAnalyse">
+        <div class="spinner" id="spinAnalyse"></div>
+        <span id="lblAnalyse">🔍 Analyse Document</span>
+      </button>
+      <button class="btn btn-preview" id="btnPreview" disabled>
+        <div class="spinner" id="spinPreview"></div>
+        <span id="lblPreview">👁 Preview Changes</span>
+      </button>
+      <button class="btn btn-format" id="btnFormat" disabled>
+        <div class="spinner" id="spinFormat"></div>
+        <span id="lblFormat">⬇ Download or Apply Another tool</span>
+      </button>
+    </div>
+
+  </div>
+
+  <div class="resizer" id="panelResizer" title="Drag to resize"></div>
+
+  <!-- ═══════════════════ RIGHT PANEL ═══════════════════ -->
+  <div class="panel-right">
+    <div class="notify-bar" id="notifyBar">
+      <span class="notify-icon" id="notifyIcon"></span>
+      <span id="notifyMsg">Document loaded from session. Click "Analyse Document" to begin.</span>
+    </div>
+    <div class="preview-tabs">
+      <button class="preview-tab active" id="tabOriginal">
+        <div class="tab-spinner"></div>
+        📄 Preview Original
+      </button>
+      <div class="preview-tab-sep"></div>
+      <button class="preview-tab" id="tabFormatted">
+        <div class="tab-spinner"></div>
+        ✨ Preview Formatted
+      </button>
+    </div>
+
+    <div class="preview-area active" id="paneOriginal">
+      <iframe id="frameOriginal" title="Original Document"></iframe>
+      <div class="preview-placeholder" id="placeholderOriginal">
+        <div class="ph-icon">📄</div>
+        <p>Upload a file to view the <strong>original</strong> document</p>
+      </div>
+    </div>
+
+    <div class="preview-area" id="paneFormatted">
+      <iframe id="frameFormatted" title="Formatted Preview"></iframe>
+      <div class="preview-placeholder" id="placeholderFormatted">
+        <div class="ph-icon">✨</div>
+        <p>Click <strong>👁 Preview Changes</strong> to see formatted result</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast">✓ <span id="toastMsg"></span></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+// No currentFile — the working file lives in the Flask session server-side.
+let detectedTypes = [];
+
+// ── DOM refs ──────────────────────────────────────────────────────────────
+const statusBar          = document.getElementById('notifyBar');
+const notifyMsg          = document.getElementById('notifyMsg');
+const notifyIcon         = document.getElementById('notifyIcon');
+const detectedList       = document.getElementById('detectedList');
+const formatSection      = document.getElementById('formatSection');
+const formatSections     = document.getElementById('formatSections');
+const btnAnalyse         = document.getElementById('btnAnalyse');
+const btnPreview         = document.getElementById('btnPreview');
+const btnFormat          = document.getElementById('btnFormat');
+const spinAnalyse        = document.getElementById('spinAnalyse');
+const spinPreview        = document.getElementById('spinPreview');
+const spinFormat         = document.getElementById('spinFormat');
+const lblAnalyse         = document.getElementById('lblAnalyse');
+const lblPreview         = document.getElementById('lblPreview');
+const lblFormat          = document.getElementById('lblFormat');
+const tabOriginal        = document.getElementById('tabOriginal');
+const tabFormatted       = document.getElementById('tabFormatted');
+const paneOriginal       = document.getElementById('paneOriginal');
+const paneFormatted      = document.getElementById('paneFormatted');
+const frameOriginal      = document.getElementById('frameOriginal');
+const frameFormatted     = document.getElementById('frameFormatted');
+const placeholderOriginal  = document.getElementById('placeholderOriginal');
+const placeholderFormatted = document.getElementById('placeholderFormatted');
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  if (tab === 'original') {
+    tabOriginal.classList.add('active');   tabFormatted.classList.remove('active');
+    paneOriginal.classList.add('active');  paneFormatted.classList.remove('active');
+  } else {
+    tabFormatted.classList.add('active');  tabOriginal.classList.remove('active');
+    paneFormatted.classList.add('active'); paneOriginal.classList.remove('active');
+  }
+}
+tabOriginal.addEventListener('click',  () => switchTab('original'));
+tabFormatted.addEventListener('click', () => switchTab('formatted'));
+
+// ── Status / Toast ────────────────────────────────────────────────────────
+const NOTIFY_ICONS = { info: 'ℹ️', error: '❌', ok: '✅' };
+function showStatus(msg, type = 'info') {
+  statusBar.className = 'notify-bar ' + type;
+  notifyMsg.textContent = msg;
+  notifyIcon.textContent = NOTIFY_ICONS[type] || '';
+}
+function hideStatus() { statusBar.className = 'notify-bar'; }
+function showToast(msg, success = true) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.className = 'show' + (success ? ' success' : '');
+  setTimeout(() => { t.className = ''; }, 3000);
+}
+
+// ── Loading ───────────────────────────────────────────────────────────────
+function setLoading(btn, spin, lbl, loading, label) {
+  btn.disabled = loading;
+  spin.style.display = loading ? 'block' : 'none';
+  lbl.textContent = label;
+}
+
+// ── Preview helpers ───────────────────────────────────────────────────────
+function clearFormattedPane() {
+  frameFormatted.classList.remove('loaded');
+  frameFormatted.src = '';
+  placeholderFormatted.style.display = 'flex';
+}
+
+async function loadFrame(frame, placeholder, fetchFn, tabEl) {
+  tabEl.classList.add('loading');
+  try {
+    const res = await fetchFn();
+    if (!res.ok) {
+      // Try to read the real error from the server response.
+      const body = await res.text();
+      let msg = 'Failed';
+      try { msg = JSON.parse(body).error || msg; } catch { msg = body.slice(0, 200) || msg; }
+      throw new Error(msg);
+    }
+    const ct  = res.headers.get('Content-Type') || '';
+    const url = URL.createObjectURL(ct.includes('pdf') ? await res.blob() : new Blob([await res.text()], { type: 'text/html' }));
+    frame.src = url;
+    frame.classList.add('loaded');
+    placeholder.style.display = 'none';
+  } finally {
+    tabEl.classList.remove('loading');
+  }
+}
+
+// Auto-load original preview on page load using session's working file.
+(async function loadOriginalPreview() {
+  showStatus('Document loaded from session. Click "Analyse Document" to begin.', 'info');
+  try {
+    await loadFrame(
+      frameOriginal, placeholderOriginal,
+      () => fetch('original', { method: 'POST', body: new FormData() }),
+      tabOriginal
+    );
+  } catch(err) { showStatus('Original preview error: ' + err.message, 'error'); }
+})();
+
+// ── Analyse ───────────────────────────────────────────────────────────────
+// No file appended — server reads the session's working file.
+btnAnalyse.addEventListener('click', async () => {
+  setLoading(btnAnalyse, spinAnalyse, lblAnalyse, true, 'Analysing…');
+  showStatus('Analysing document structure…', 'info');
+  try {
+    const res  = await fetch('analyse', { method: 'POST', body: new FormData() });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Analysis failed');
+    detectedTypes = data.types;
+    renderDetectedTypes(detectedTypes);
+    buildFormatUI(detectedTypes);
+    formatSection.style.display = 'block';
+    btnPreview.disabled = false;
+    btnFormat.disabled  = false;
+    showStatus(`Found ${detectedTypes.length} element type(s).`, 'ok');
+    // Tell parent shell this tool now has unsaved work.
+    window.parent.postMessage({ type: 'toolDirty' }, '*');
+  } catch(err) {
+    showStatus('Error: ' + err.message, 'error');
+  } finally {
+    setLoading(btnAnalyse, spinAnalyse, lblAnalyse, false, '🔍 Analyse Document');
+  }
+});
+
+// ── tabResumed — session file may have changed while away ─────────────────
+window.addEventListener('message', e => {
+  if (e.data && e.data.type === 'tabResumed') {
+    // Reset to clean state so user re-analyses the updated document.
+    detectedTypes = [];
+    detectedList.innerHTML = '<span class="no-doc-msg">Session file was updated — click Analyse to reload</span>';
+    formatSection.style.display = 'none';
+    btnPreview.disabled = true;
+    btnFormat.disabled  = true;
+    clearFormattedPane();
+    showStatus('Another tool updated the document — please re-analyse.', 'info');
+    window.parent.postMessage({ type: 'toolClean' }, '*');
+    // Reload the original preview pane with the updated file.
+    (async function() {
+      try {
+        await loadFrame(
+          frameOriginal, placeholderOriginal,
+          () => fetch('original', { method: 'POST', body: new FormData() }),
+          tabOriginal
+        );
+        switchTab('original');
+      } catch(err) { /* silent — status bar already shows the message */ }
+    })();
+  }
+});
+
+function renderDetectedTypes(types) {
+  detectedList.innerHTML = '';
+  types.forEach(t => {
+    const chip = document.createElement('span');
+    chip.className = 'type-chip';
+    chip.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+    detectedList.appendChild(chip);
+  });
+}
+
+// ── Sample content & icons ────────────────────────────────────────────────
+const SAMPLE_PARA = `Typography is the art of arranging type to make written language legible and readable. Good formatting guides the reader's eye and establishes visual hierarchy throughout the document.`;
+const SAMPLE_LIST = ['Design principles for clear typography', 'Alignment affects readability and tone', 'Line spacing guides the reader\'s eye', 'Consistent formatting builds structure'];
+const SAMPLE_TABLE = [['Name', 'Role', 'Status'], ['Alice', 'Designer', 'Active'], ['Bob', 'Developer', 'Active']];
+
+const ALIGN_ICONS = {
+  left:    `<svg viewBox="0 0 28 18" fill="none"><rect x="0" y="1" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="6" width="20" height="2" rx="1" fill="currentColor"/><rect x="0" y="11" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="16" width="16" height="2" rx="1" fill="currentColor"/></svg>`,
+  right:   `<svg viewBox="0 0 28 18" fill="none"><rect x="0" y="1" width="28" height="2" rx="1" fill="currentColor"/><rect x="8" y="6" width="20" height="2" rx="1" fill="currentColor"/><rect x="0" y="11" width="28" height="2" rx="1" fill="currentColor"/><rect x="12" y="16" width="16" height="2" rx="1" fill="currentColor"/></svg>`,
+  justify: `<svg viewBox="0 0 28 18" fill="none"><rect x="0" y="1" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="6" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="11" width="28" height="2" rx="1" fill="currentColor"/><rect x="0" y="16" width="28" height="2" rx="1" fill="currentColor"/></svg>`,
+};
+
+function bulletLinesHTML(gap) {
+  return `<div class="lines" style="--g:${gap}px">
+    <div class="bline"><div class="bullet"></div><div class="btext"></div></div>
+    <div class="bline"><div class="bullet"></div><div class="btext"></div></div>
+    <div class="bline"><div class="bullet"></div><div class="btext"></div></div>
+    <div class="bline"><div class="bullet"></div><div class="btext"></div></div>
+  </div>`;
+}
+
+// ── Build format UI ───────────────────────────────────────────────────────
+function buildFormatUI(types) {
+  formatSections.innerHTML = '';
+
+  types.forEach(t => {
+    const isList  = t === 'list';
+    const isTable = t === 'table';
+
+    let previewContent;
+    if (isList) {
+      previewContent = `<ul style="padding-left:18px;margin:0;list-style:disc;">${SAMPLE_LIST.map(i => `<li class="preview-text" style="transition:line-height 0.25s;">${i}</li>`).join('')}</ul>`;
+    } else if (isTable) {
+      const headerRow = `<tr>${SAMPLE_TABLE[0].map(h => `<th style="border:1px solid #c8c8c8;padding:5px 8px;background:#f3f0eb;font-size:11px;">${h}</th>`).join('')}</tr>`;
+      const dataRows  = SAMPLE_TABLE.slice(1).map(row =>
+        `<tr class="preview-text" style="transition:line-height 0.25s;">${row.map(c => `<td style="border:1px solid #c8c8c8;padding:5px 8px;font-size:11px;">${c}</td>`).join('')}</tr>`
+      ).join('');
+      previewContent = `<table style="border-collapse:collapse;width:100%;" id="${t}_preview_text">${headerRow}${dataRows}</table>`;
+    } else {
+      previewContent = `<div class="preview-text" id="${t}_preview_text">${SAMPLE_PARA}</div>`;
+    }
+
+    const g = document.createElement('div');
+    g.className = 'format-group';
+    g.innerHTML = `
+      <h4>${t} Settings</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Alignment</label>
+          <select id="${t}_alignment">
+            <option value="">Default</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+            <option value="justify">Justify</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Line Spacing</label>
+          <select id="${t}_spacing">
+            <option value="">Default</option>
+            <option value="1">Single</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">Double</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="live-preview-wrap">
+        <div class="live-preview-label">Live Preview</div>
+
+        <div class="align-badges" id="${t}_align_badges">
+          <div class="leave-badge active" data-type="${t}" data-val="" data-kind="align">
+            <span class="leave-icon">↩</span><span>Default</span>
+          </div>
+          <div class="align-badge" data-type="${t}" data-val="left">
+            ${ALIGN_ICONS.left}<span>Left</span>
+          </div>
+          <div class="align-badge" data-type="${t}" data-val="right">
+            ${ALIGN_ICONS.right}<span>Right</span>
+          </div>
+          <div class="align-badge" data-type="${t}" data-val="justify">
+            ${ALIGN_ICONS.justify}<span>Justify</span>
+          </div>
+        </div>
+
+        <div class="spacing-badges" id="${t}_spacing_badges">
+          <div class="leave-badge active" data-type="${t}" data-val="" data-kind="spacing">
+            <span class="leave-icon">↩</span><span>Default</span>
+          </div>
+          <div class="spacing-badge" data-type="${t}" data-val="1">
+            ${bulletLinesHTML(2)}<span>Single</span>
+          </div>
+          <div class="spacing-badge" data-type="${t}" data-val="1.5">
+            ${bulletLinesHTML(5)}<span>1.5×</span>
+          </div>
+          <div class="spacing-badge" data-type="${t}" data-val="2">
+            ${bulletLinesHTML(9)}<span>Double</span>
+          </div>
+        </div>
+
+        <div class="live-preview-doc" id="${t}_preview_box">${previewContent}</div>
+      </div>`;
+
+    formatSections.appendChild(g);
+
+    const alignSel   = document.getElementById(`${t}_alignment`);
+    const spaceSel   = document.getElementById(`${t}_spacing`);
+    const previewBox = document.getElementById(`${t}_preview_box`);
+
+    function getPreviewEls() {
+      if (isList)  return [...previewBox.querySelectorAll('li')];
+      if (isTable) return [...previewBox.querySelectorAll('td, th')];
+      return [document.getElementById(`${t}_preview_text`)];
+    }
+    function updatePreview() {
+      const align   = alignSel.value;
+      const spacing = spaceSel.value ? parseFloat(spaceSel.value) : null;
+      getPreviewEls().forEach(el => {
+        el.style.textAlign  = align || '';
+        el.style.lineHeight = spacing ? (spacing * 1.6) : '';
+      });
+    }
+
+    // Alignment badge clicks
+    g.querySelectorAll(`#${t}_align_badges [data-type="${t}"]`).forEach(badge => {
+      badge.addEventListener('click', () => {
+        alignSel.value = badge.dataset.val;
+        g.querySelectorAll(`#${t}_align_badges [data-type="${t}"]`).forEach(b => {
+          b.classList.remove('active');
+          if (b.querySelector('svg')) b.querySelector('svg').style.color = '';
+        });
+        badge.classList.add('active');
+        if (badge.querySelector('svg')) badge.querySelector('svg').style.color = 'var(--rust)';
+        updatePreview();
+      });
+    });
+
+    // Spacing badge clicks
+    g.querySelectorAll(`#${t}_spacing_badges [data-type="${t}"]`).forEach(badge => {
+      badge.addEventListener('click', () => {
+        spaceSel.value = badge.dataset.val;
+        g.querySelectorAll(`#${t}_spacing_badges [data-type="${t}"]`).forEach(b => b.classList.remove('active'));
+        badge.classList.add('active');
+        updatePreview();
+      });
+    });
+
+    // Select → badge sync (alignment)
+    alignSel.addEventListener('change', () => {
+      g.querySelectorAll(`#${t}_align_badges [data-type="${t}"]`).forEach(b => {
+        const active = b.dataset.val === alignSel.value;
+        b.classList.toggle('active', active);
+        if (b.querySelector('svg')) b.querySelector('svg').style.color = active ? 'var(--rust)' : '';
+      });
+      updatePreview();
+    });
+
+    // Select → badge sync (spacing)
+    spaceSel.addEventListener('change', () => {
+      g.querySelectorAll(`#${t}_spacing_badges [data-type="${t}"]`).forEach(b => {
+        b.classList.toggle('active', b.dataset.val === spaceSel.value);
+      });
+      updatePreview();
+    });
+
+    updatePreview();
+  });
+
+}
+
+// ── Build config ──────────────────────────────────────────────────────────
+function buildConfig() {
+  const cfg = {};
+  detectedTypes.forEach(t => {
+    const aVal = (document.getElementById(`${t}_alignment`) || {}).value || '';
+    const sVal = (document.getElementById(`${t}_spacing`)   || {}).value || '';
+    if (aVal) cfg[`${t}_alignment`] = aVal;
+    if (sVal) cfg[`${t}_spacing`]   = sVal;
+  });
+  cfg['paragraph_spacing_options'] = [];
+  cfg['list_spacing_options']      = [];
+  cfg['table_spacing_options']     = [];
+  return cfg;
+}
+
+// ── Preview Changes ───────────────────────────────────────────────────────
+// No file appended — server reads the session's working file.
+btnPreview.addEventListener('click', async () => {
+  setLoading(btnPreview, spinPreview, lblPreview, true, 'Generating preview…');
+  showStatus('Generating formatted preview…', 'info');
+  try {
+    const fd = new FormData();
+    fd.append('config', JSON.stringify(buildConfig()));
+    await loadFrame(frameFormatted, placeholderFormatted, () => fetch('preview', { method: 'POST', body: fd }), tabFormatted);
+    switchTab('formatted');
+    showStatus('Preview ready.', 'ok');
+  } catch(err) {
+    showStatus('Preview error: ' + err.message, 'error');
+  } finally {
+    setLoading(btnPreview, spinPreview, lblPreview, false, '👁 Preview Changes');
+  }
+});
+
+// ── Format ────────────────────────────────────────────────────────────────
+// Server applies formatting and saves the result as the new session working
+// file.  No browser download happens here — the parent shell's modal asks
+// "Download or apply another tool?" and calls /download_current if needed.
+btnFormat.addEventListener('click', async () => {
+  setLoading(btnFormat, spinFormat, lblFormat, true, 'Formatting…');
+  showStatus('Applying alignment formatting…', 'info');
+  try {
+    const fd = new FormData();
+    fd.append('config', JSON.stringify(buildConfig()));
+    const res = await fetch('format', { method: 'POST', body: fd });
+    if (!res.ok) { const e = await res.json().catch(() => ({ error: 'Format failed' })); throw new Error(e.error); }
+    // Drain the response so the server finishes writing the file.
+    await res.blob();
+    showStatus('Formatting complete!', 'ok');
+    // Tell parent the dirty work is done, then show the modal.
+    window.parent.postMessage({ type: 'toolClean' }, '*');
+    window.parent.postMessage({ type: 'taskComplete' }, '*');
+  } catch(err) {
+    showStatus('Error: ' + err.message, 'error');
+  } finally {
+    setLoading(btnFormat, spinFormat, lblFormat, false, '⬇ Apply Formatting');
+  }
+});
+
+// ── Panel resizer ─────────────────────────────────────────────────────────
+(function() {
+  const resizer = document.getElementById('panelResizer');
+  const left    = document.querySelector('.panel-left');
+  const MIN = 260, MAX = 600;
+  let sx = 0, sw = 0;
+  resizer.addEventListener('mousedown', e => {
+    e.preventDefault(); sx = e.clientX; sw = left.offsetWidth;
+    resizer.classList.add('dragging'); document.body.classList.add('is-resizing');
+    function mv(e) { const w = Math.min(MAX, Math.max(MIN, sw + e.clientX - sx)); left.style.width = w + 'px'; left.style.minWidth = w + 'px'; }
+    function up() { resizer.classList.remove('dragging'); document.body.classList.remove('is-resizing'); document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); }
+    document.addEventListener('mousemove', mv);
+    document.addEventListener('mouseup', up);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1398 @@
+<!-- fontui.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Font Formatter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --cream:     #F5F0EA;
+  --cream-mid: #EDE6DC;
+  --paper:     #FDFAF6;
+  --ink:       #1A1614;
+  --ink-mid:   #4A3F38;
+  --ink-soft:  #8A7F78;
+  --rust:      #C8522A;
+  --rust-lt:   #E07050;
+  --border:    #D8CFC6;
+  --success:   #3A7D6A;
+  --card:      #FFFFFF;
+  --shadow:    0 2px 16px rgba(26,22,20,0.08);
+  --radius:    14px;
+}
+
+html, body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  height: 100%;
+}
+
+/* ── Layout ── */
+.shell { display: flex; height: 100vh; }
+
+/* ── Left panel ── */
+.panel-left {
+  width: 480px;
+  min-width: 280px;
+  background: var(--paper);
+  border-right: 1px solid var(--border);
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
+
+.panel-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--paper);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.panel-header h2 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-header p { font-size: 0.78rem; color: var(--ink-soft); margin-top: 3px; }
+
+/* ── Section cards ── */
+.section {
+  margin: 12px 14px 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.section-title {
+  padding: 8px 13px;
+  font-size: 0.69rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-body { padding: 10px 13px; }
+
+/* ── Detected element chips ── */
+.detected-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.det-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 20px;
+  padding: 3px 10px 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+}
+.det-chip .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.no-doc-msg { font-size: 0.8rem; color: var(--ink-soft); font-style: italic; }
+
+/* Element type colours */
+.c-h1 { background:#00FF00; color:#145a32; border-color:#a9dfbf; }
+.c-h1 .dot { background:#00FF00; }
+.c-h2 { background:#00FFFF; color:#0e6655; border-color:#a2d9ce; }
+.c-h2 .dot { background:#00FFFF; }
+.c-h3 { background:#FF00FF; color:#7d3c98; border-color:#d2b4de; }
+.c-h3 .dot { background:#FF00FF; }
+.c-h4 { background:#800080; color:#000000; border-color:#f9e79f; }
+.c-h4 .dot { background:#800080; }
+.c-h5 { background:#fdf2e9; color:#784212; border-color:#f0b27a; }
+.c-h5 .dot { background:#e67e22; }
+.c-h6 { background:#fdedec; color:#78281f; border-color:#f1948a; }
+.c-h6 .dot { background:#e74c3c; }
+.c-para { background:#f4f4f4; color:#424242; border-color:#ccc; }
+.c-para .dot { background:#888; }
+.c-list { background:#FFFF00; color:#6d4c00; border-color:#ffe082; }
+.c-list .dot { background:#FFFF00; }
+.c-table { background:#FF0000; color:#000000; border-color:#a5d6a7; }
+.c-table .dot { background:#FF0000; }
+
+/* ── Per-type config table ── */
+.type-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+.type-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.69rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.type-table td { padding: 4px 3px; vertical-align: middle; }
+.type-table tr:not(:last-child) td { border-bottom: 1px solid var(--cream-mid); }
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 14px;
+  padding: 2px 8px 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1.5px solid transparent;
+}
+.type-badge .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cur-font-badge {
+  display: inline-block;
+  background: #F0FAF6;
+  border: 1px solid #A7D7C5;
+  color: var(--success);
+  border-radius: 5px;
+  padding: 1px 6px;
+  font-size: 0.67rem;
+  font-weight: 500;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.cur-font-badge.unknown {
+  background: var(--cream);
+  border-color: var(--border);
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+.type-table select,
+.type-table input[type=number] {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 5px;
+  font-size: 0.72rem;
+  color: var(--ink);
+  background: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.type-table select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A7F78' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 5px center;
+  padding-right: 20px !important;
+}
+.type-table select:focus,
+.type-table input:focus {
+  border-color: var(--rust);
+  box-shadow: 0 0 0 2px rgba(200,82,42,0.12);
+}
+
+/* ── Global options ── */
+.cfg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.cfg-row label {
+  flex: 0 0 105px;
+  font-size: 0.79rem;
+  color: var(--ink-mid);
+  font-weight: 500;
+}
+.cfg-row select, .cfg-row input[type=number] {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 9px;
+  font-size: 0.81rem;
+  color: var(--ink);
+  background: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.cfg-row select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A7F78' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px !important;
+  cursor: pointer;
+}
+.cfg-row select:focus, .cfg-row input:focus {
+  border-color: var(--rust);
+  box-shadow: 0 0 0 3px rgba(200,82,42,0.12);
+}
+
+/* ── Toggle ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.toggle-row > label:first-child {
+  font-size: 0.79rem;
+  color: var(--ink-mid);
+  font-weight: 500;
+  flex: 1;
+}
+.toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 68px;
+  height: 26px;
+}
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background: var(--cream-mid);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: background 0.22s, border-color 0.22s;
+  overflow: hidden;
+}
+.toggle-slider::after {
+  content: 'OFF';
+  position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+  font-size: 0.59rem; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--ink-soft); pointer-events: none; user-select: none;
+}
+.toggle-slider::before {
+  content: 'ON';
+  position: absolute; left: 7px; top: 50%; transform: translateY(-50%);
+  font-size: 0.59rem; font-weight: 700; letter-spacing: 0.04em;
+  color: #fff; opacity: 0; pointer-events: none; user-select: none; z-index: 2;
+}
+.toggle-thumb {
+  position: absolute;
+  width: 20px; height: 20px; top: 2px; left: 2px;
+  border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 4px rgba(26,22,20,0.18);
+  transition: transform 0.22s cubic-bezier(.4,0,.2,1);
+  z-index: 3; pointer-events: none;
+}
+.toggle input:checked + .toggle-slider { background: var(--rust); border-color: var(--rust); }
+.toggle input:checked + .toggle-slider::before { opacity: 1; }
+.toggle input:checked + .toggle-slider::after  { opacity: 0; }
+.toggle input:checked + .toggle-slider .toggle-thumb { transform: translateX(42px); }
+
+/* ── Colour picker ── */
+.color-picker-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 9px; }
+.color-label { font-size: 0.79rem; color: var(--ink-mid); font-weight: 500; }
+.color-main-row { display: flex; align-items: center; gap: 8px; }
+input[type=color] {
+  width: 38px; height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 7px; padding: 2px;
+  cursor: pointer; background: #fff; flex-shrink: 0;
+}
+input[type=color]::-webkit-color-swatch-wrapper { padding: 0; border-radius: 5px; }
+input[type=color]::-webkit-color-swatch { border: none; border-radius: 5px; }
+.hex-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 9px;
+  font-size: 0.82rem;
+  font-family: 'Consolas', monospace;
+  color: var(--ink);
+  background: var(--cream);
+  outline: none;
+  text-transform: uppercase;
+}
+.hex-input:focus { border-color: var(--rust); box-shadow: 0 0 0 3px rgba(200,82,42,0.12); }
+.swatch-preview {
+  width: 34px; height: 34px; border-radius: 7px;
+  border: 1px solid var(--border); flex-shrink: 0;
+}
+.presets-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.preset-label { font-size: 0.7rem; color: var(--ink-soft); white-space: nowrap; }
+.preset-btn {
+  width: 20px; height: 20px; border-radius: 4px;
+  border: 2px solid transparent; cursor: pointer; padding: 0;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.preset-btn:hover { transform: scale(1.22); border-color: var(--rust); }
+.preset-btn[data-color="#ffffff"] { border-color: var(--border); }
+.preset-btn.active { border-color: var(--rust); transform: scale(1.15); }
+
+/* bg-default toggle */
+.bg-default-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.default-pill-label { display: flex; align-items: center; cursor: pointer; }
+.default-pill-label input { display: none; }
+.default-pill {
+  font-size: 0.68rem; font-weight: 600;
+  padding: 2px 9px; border-radius: 20px;
+  border: 1.5px solid var(--rust); color: var(--rust);
+  background: #FDF7F4; cursor: pointer;
+  transition: background 0.15s, color 0.15s; user-select: none;
+}
+.default-pill-label input:not(:checked) + .default-pill {
+  background: var(--cream); color: var(--ink-soft); border-color: var(--border);
+}
+.color-widget.is-default { opacity: 0.35; pointer-events: none; filter: grayscale(0.5); }
+
+/* ── Action buttons ── */
+.actions { padding: 12px 14px 36px; display: flex; flex-direction: column; gap: 7px; }
+.btn {
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 10px;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.15s, box-shadow 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; transform: none; }
+.btn-analyse { background: var(--ink); color: #fff; }
+.btn-analyse:hover:not(:disabled) { background: #2E2420; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,22,20,0.18); }
+.btn-preview  { background: var(--rust); color: #fff; }
+.btn-preview:hover:not(:disabled)  { background: #B24420; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(200,82,42,0.3); }
+.btn-format   { background: var(--success); color: #fff; }
+.btn-format:hover:not(:disabled)   { background: #2d6355; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(58,125,106,0.3); }
+.spinner {
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Status bar ── */
+.status-bar {
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: none;
+  border-bottom: 1px solid var(--border);
+}
+.status-bar.info  { background: var(--cream-mid); color: var(--ink-mid); display: block; }
+.status-bar.error { background: #fee2e2; color: #b91c1c; display: block; }
+.status-bar.ok    { background: #d1fae5; color: #065f46; display: block; }
+
+/* ── Resizer ── */
+.resizer {
+  width: 5px; min-width: 5px;
+  background: var(--border);
+  cursor: col-resize; position: relative; flex-shrink: 0;
+  transition: background 0.15s; z-index: 10;
+}
+.resizer:hover, .resizer.dragging { background: var(--rust); }
+body.is-resizing { cursor: col-resize !important; user-select: none !important; }
+body.is-resizing * { pointer-events: none !important; }
+body.is-resizing .resizer { pointer-events: all !important; }
+
+/* ── Right panel ── */
+.panel-right {
+  flex: 1;
+  background: var(--cream);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ── Preview tabs ── */
+.preview-tabs {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--border);
+  height: 44px;
+  gap: 0;
+}
+.preview-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 16px;
+  height: 100%;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+  position: relative;
+  top: 1px;
+  white-space: nowrap;
+}
+.preview-tab:hover { color: var(--ink-mid); }
+.preview-tab.active { color: var(--rust); border-bottom-color: var(--rust); }
+.tab-spinner {
+  width: 11px; height: 11px;
+  border: 2px solid rgba(200,82,42,0.25);
+  border-top-color: var(--rust);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: none;
+}
+.preview-tab.loading .tab-spinner { display: inline-block; }
+.preview-tab-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+
+.preview-area { flex: 1; overflow: hidden; display: none; flex-direction: column; min-height: 0; }
+.preview-area.active { display: flex; }
+
+#frameOriginal, #frameFormatted {
+  width: 100%; flex: 1; border: none; display: none; min-height: 0;
+}
+#frameOriginal.loaded, #frameFormatted.loaded { display: block; }
+
+.preview-placeholder {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; gap: 10px; color: var(--ink-soft);
+}
+.preview-placeholder .ph-icon { font-size: 3rem; opacity: 0.45; }
+.preview-placeholder p { font-size: 0.88rem; }
+.preview-placeholder strong { color: var(--rust); }
+
+/* ── Legend note ── */
+.legend-note {
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  padding: 6px 13px 8px;
+  font-style: italic;
+  border-top: 1px solid var(--cream-mid);
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ══════════ LEFT PANEL ══════════ -->
+  <div class="panel-left">
+
+    <!-- Fixed header -->
+    <div class="panel-header">
+      <h2>🔤 Font Formatter</h2>
+      <p>Apply consistent fonts &amp; sizes to your document's content</p>
+    </div>
+
+    <!-- Detected element types -->
+    <div class="section">
+      <div class="section-title">📋 Detected Element Types</div>
+      <div class="section-body">
+        <div class="detected-grid" id="detectedGrid">
+          <span class="no-doc-msg">Click "Analyse Document" to detect element types</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-element-type configuration — hidden until analysed -->
+    <div class="section" id="perTypeSection" style="display:none">
+      <div class="section-title">
+        🎨 Font &amp; Size per Element Type
+        <span style="font-weight:400;text-transform:none;font-size:0.7rem;color:var(--ink-soft)">(leave blank to keep original)</span>
+      </div>
+      <div class="section-body" style="overflow-x:auto;padding:8px 8px;">
+        <table class="type-table" id="perTypeTable">
+          <thead>
+            <tr>
+              <th style="min-width:90px">Type</th>
+              <th style="min-width:68px">Current Font</th>
+              <th style="min-width:110px">New Font</th>
+              <th style="width:52px">Size</th>
+            </tr>
+          </thead>
+          <tbody id="perTypeBody"></tbody>
+        </table>
+      </div>
+    <!-- Table header background colour -->
+        <div class="color-picker-row">
+          <div class="bg-default-row">
+            <span class="color-label">Table header background</span>
+            <label class="default-pill-label">
+              <input type="checkbox" id="bgDefault" checked>
+              <span class="default-pill">Keep as-is</span>
+            </label>
+          </div>
+          <div class="color-widget" id="colorWidget">
+            <div class="color-main-row">
+              <input type="color" id="bgPicker" value="#1e3a5f" title="Pick a colour">
+              <input type="text"  id="bgHex" value="#1E3A5F" maxlength="7" placeholder="#1e3a5f" class="hex-input" spellcheck="false">
+              <div class="swatch-preview" id="bgSwatch" style="background:#1E3A5F"></div>
+            </div>
+            <div class="presets-row">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn active" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy"></button>
+              <button class="preset-btn" data-color="#1f4e79" style="background:#1f4e79" title="Dark Blue"></button>
+              <button class="preset-btn" data-color="#2e4057" style="background:#2e4057" title="Steel Blue"></button>
+              <button class="preset-btn" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
+              <button class="preset-btn" data-color="#375623" style="background:#375623" title="Dark Green"></button>
+              <button class="preset-btn" data-color="#7b2d8b" style="background:#7b2d8b" title="Purple"></button>
+              <button class="preset-btn" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
+              <button class="preset-btn" data-color="#000000" style="background:#000000" title="Black"></button>
+              <button class="preset-btn" data-color="#ffffff" style="background:#ffffff" title="White"></button>
+            </div>
+            <!-- DETECTED COLORS FROM DOCUMENT -->
+            <div class="presets-row" id="detectedColorsRow" style="display:none;margin-bottom:8px;">
+              <span class="preset-label">Detected from doc:</span>
+              <div id="detectedColorsList" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table header text colour -->
+        <div class="color-picker-row" style="margin-top:8px;">
+          <div class="bg-default-row">
+            <span class="color-label">Table header text colour</span>
+            <label class="default-pill-label">
+              <input type="checkbox" id="tcDefault" checked>
+              <span class="default-pill">Keep as-is</span>
+            </label>
+          </div>
+          <div class="color-widget" id="tcWidget">
+            <div class="color-main-row">
+              <input type="color" id="tcPicker" value="#ffffff" title="Pick a text colour">
+              <input type="text"  id="tcHex" value="#FFFFFF" maxlength="7" placeholder="#ffffff" class="hex-input" spellcheck="false">
+              <div class="swatch-preview" id="tcSwatch" style="background:#FFFFFF;border:1px solid var(--border);"></div>
+            </div>
+            <div class="presets-row">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn active tc-preset" data-color="#ffffff" style="background:#ffffff;border-color:var(--border);" title="White"></button>
+              <button class="preset-btn tc-preset" data-color="#000000" style="background:#000000" title="Black"></button>
+              <button class="preset-btn tc-preset" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy"></button>
+              <button class="preset-btn tc-preset" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
+              <button class="preset-btn tc-preset" data-color="#375623" style="background:#375623" title="Dark Green"></button>
+              <button class="preset-btn tc-preset" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
+              <button class="preset-btn tc-preset" data-color="#ffd700" style="background:#ffd700" title="Gold"></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paragraph text colour -->
+        <div class="color-picker-row" style="margin-top:8px;">
+          <div class="bg-default-row">
+            <span class="color-label">Paragraph text colour</span>
+            <label class="default-pill-label">
+              <input type="checkbox" id="paraDefault" checked>
+              <span class="default-pill">Keep as-is</span>
+            </label>
+          </div>
+          <div class="color-widget" id="paraWidget">
+            <div class="color-main-row">
+              <input type="color" id="paraPicker" value="#000000" title="Pick a paragraph text colour">
+              <input type="text"  id="paraHex" value="#000000" maxlength="7" placeholder="#000000" class="hex-input" spellcheck="false">
+              <div class="swatch-preview" id="paraSwatch" style="background:#000000;"></div>
+            </div>
+            <div class="presets-row">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn para-preset" data-color="#000000" style="background:#000000" title="Black"></button>
+              <button class="preset-btn para-preset" data-color="#ffffff" style="background:#ffffff;border-color:var(--border);" title="White"></button>
+              <button class="preset-btn para-preset" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy"></button>
+              <button class="preset-btn para-preset" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
+              <button class="preset-btn para-preset" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
+              <button class="preset-btn para-preset" data-color="#375623" style="background:#375623" title="Dark Green"></button>
+              <button class="preset-btn para-preset" data-color="#7b2d8b" style="background:#7b2d8b" title="Purple"></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- List items text colour -->
+        <div class="color-picker-row" style="margin-top:8px;">
+          <div class="bg-default-row">
+            <span class="color-label">List items text colour</span>
+            <label class="default-pill-label">
+              <input type="checkbox" id="listDefault" checked>
+              <span class="default-pill">Keep as-is</span>
+            </label>
+          </div>
+          <div class="color-widget" id="listWidget">
+            <div class="color-main-row">
+              <input type="color" id="listPicker" value="#000000" title="Pick a list items text colour">
+              <input type="text"  id="listHex" value="#000000" maxlength="7" placeholder="#000000" class="hex-input" spellcheck="false">
+              <div class="swatch-preview" id="listSwatch" style="background:#000000;"></div>
+            </div>
+            <div class="presets-row">
+              <span class="preset-label">Presets:</span>
+              <button class="preset-btn list-preset" data-color="#000000" style="background:#000000" title="Black"></button>
+              <button class="preset-btn list-preset" data-color="#ffffff" style="background:#ffffff;border-color:var(--border);" title="White"></button>
+              <button class="preset-btn list-preset" data-color="#1e3a5f" style="background:#1e3a5f" title="Navy"></button>
+              <button class="preset-btn list-preset" data-color="#404040" style="background:#404040" title="Dark Grey"></button>
+              <button class="preset-btn list-preset" data-color="#c00000" style="background:#c00000" title="Dark Red"></button>
+              <button class="preset-btn list-preset" data-color="#375623" style="background:#375623" title="Dark Green"></button>
+              <button class="preset-btn list-preset" data-color="#7b2d8b" style="background:#7b2d8b" title="Purple"></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="legend-note">Cover page, Table of Contents and Table of Figures are detected and preserved automatically — no font changes applied to those sections.</div>
+      </div>
+    <!-- Font Preview -->
+<div class="section" id="fontPreviewSection" style="display:none">
+  <div class="section-title">🔎 Font Preview</div>
+  <div class="section-body">
+    <div class="cfg-row">
+      <label for="previewFontFamily">Font family</label>
+      <select id="previewFontFamily">
+        <option value="">— keep original —</option>
+        <optgroup label="Sans Serif">
+          <option>Arial</option><option>Calibri</option><option>Calibri Light</option>
+          <option>Helvetica</option><option>Tahoma</option><option>Trebuchet MS</option>
+          <option>Verdana</option><option>Gill Sans MT</option><option>Century Gothic</option>
+          <option>Segoe UI</option>
+        </optgroup>
+        <optgroup label="Serif">
+          <option>Times New Roman</option><option>Georgia</option><option>Garamond</option>
+          <option>Book Antiqua</option><option>Palatino Linotype</option><option>Cambria</option>
+        </optgroup>
+        <optgroup label="Monospace">
+          <option>Courier New</option><option>Consolas</option><option>Lucida Console</option>
+        </optgroup>
+        <optgroup label="Corporate / Other">
+          <option>Oracle Sans</option><option>Franklin Gothic Medium</option>
+          <option>Rockwell</option><option>Tw Cen MT</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="cfg-row">
+      <label for="previewFontSize">Font size</label>
+      <input type="number" id="previewFontSize" min="6" max="72" value="12">
+    </div>
+
+    <div
+      id="fontPreviewSample"
+      style="
+        margin-top: 8px;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--cream);
+        color: var(--ink);
+        line-height: 1.5;
+        transition: font-family 0.15s, font-size 0.15s;
+      "
+    >
+      The quick brown fox jumps over the lazy dog
+    </div>
+  </div>
+</div>
+    <!-- Global options -->
+    <div class="section" id="globalSection" style="display:none">
+      <div class="section-title">⚙️ Global Options</div>
+      <div class="section-body">
+        <div class="toggle-row">
+          <label>Bold headings</label>
+          <label class="toggle"><input type="checkbox" id="boldHeadings" checked><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
+        </div>
+        <div class="toggle-row">
+          <label>Bold list items</label>
+          <label class="toggle"><input type="checkbox" id="boldLists"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
+        </div>
+        <div class="toggle-row">
+          <label>Highlight element types
+            <span style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--rust);color:#fff;font-size:0.6rem;font-weight:700;cursor:help" title="Colours each element type in the preview so you can visually verify what was detected.">?</span>
+            </span>
+          </label>
+          <label class="toggle"><input type="checkbox" id="highlightElems"><span class="toggle-slider"><span class="toggle-thumb"></span></span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn btn-analyse" id="btnAnalyse">
+        <div class="spinner" id="spinAnalyse"></div>
+        <span id="lblAnalyse">🔍 Analyse Document</span>
+      </button>
+      <button class="btn btn-preview" id="btnPreview" disabled>
+        <div class="spinner" id="spinPreview"></div>
+        <span id="lblPreview">👁 Preview Changes</span>
+      </button>
+      <button class="btn btn-format" id="btnFormat" disabled>
+        <div class="spinner" id="spinFormat"></div>
+        <span id="lblFormat">✅ Apply Formatting</span>
+      </button>
+    </div>
+  </div><!-- end panel-left -->
+
+  <div class="resizer" id="panelResizer"></div>
+
+  <!-- ══════════ RIGHT PANEL ══════════ -->
+  <div class="panel-right">
+    <div class="preview-tabs">
+      <button class="preview-tab active" id="tabOriginal">
+        <div class="tab-spinner"></div>
+        📄 Original Preview
+      </button>
+      <div class="preview-tab-sep"></div>
+      <button class="preview-tab" id="tabFormatted">
+        <div class="tab-spinner"></div>
+        ✨ Formatted Preview
+      </button>
+    </div>
+
+    <div class="status-bar info" id="statusBar">
+      Document loaded. Click "Analyse Document" to detect element types.
+    </div>
+
+    <div class="preview-area active" id="paneOriginal">
+      <iframe id="frameOriginal" title="Original Document"></iframe>
+      <div class="preview-placeholder" id="placeholderOriginal">
+        <div class="ph-icon">📄</div>
+        <p>Original document preview will appear here</p>
+      </div>
+    </div>
+
+    <div class="preview-area" id="paneFormatted">
+      <iframe id="frameFormatted" title="Formatted Preview"></iframe>
+      <div class="preview-placeholder" id="placeholderFormatted">
+        <div class="ph-icon">✨</div>
+        <p>Click <strong>👁 Preview Changes</strong> to see the formatted result</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end shell -->
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  TYPE METADATA  (colours, labels — must match backend USER_TYPES)
+// ═══════════════════════════════════════════════════════════════
+const TYPE_META = {
+  HEADING_1:  { label: 'Heading 1',  cls: 'c-h1'   },
+  HEADING_2:  { label: 'Heading 2',  cls: 'c-h2'   },
+  HEADING_3:  { label: 'Heading 3',  cls: 'c-h3'   },
+  HEADING_4:  { label: 'Heading 4',  cls: 'c-h4'   },
+  HEADING_5:  { label: 'Heading 5',  cls: 'c-h5'   },
+  HEADING_6:  { label: 'Heading 6',  cls: 'c-h6'   },
+  PARAGRAPH:  { label: 'Paragraph',  cls: 'c-para'  },
+  LIST_ITEM:  { label: 'List Item',  cls: 'c-list'  },
+  TABLE_TEXT: { label: 'Table Text', cls: 'c-table' },
+};
+
+const FONT_OPTIONS = `
+  <option value="">— keep original —</option>
+  <optgroup label="Sans Serif">
+    <option>Arial</option><option>Calibri</option><option>Calibri Light</option>
+    <option>Helvetica</option><option>Tahoma</option><option>Trebuchet MS</option>
+    <option>Verdana</option><option>Gill Sans MT</option><option>Century Gothic</option>
+    <option>Segoe UI</option>
+  </optgroup>
+  <optgroup label="Serif">
+    <option>Times New Roman</option><option>Georgia</option><option>Garamond</option>
+    <option>Book Antiqua</option><option>Palatino Linotype</option><option>Cambria</option>
+  </optgroup>
+  <optgroup label="Monospace">
+    <option>Courier New</option><option>Consolas</option><option>Lucida Console</option>
+  </optgroup>
+  <optgroup label="Corporate / Other">
+    <option>Oracle Sans</option><option>Franklin Gothic Medium</option>
+    <option>Rockwell</option><option>Tw Cen MT</option>
+  </optgroup>`;
+// ═══════════════════════════════════════════════════════════════
+//  FONT PREVIEW
+// ═══════════════════════════════════════════════════════════════
+const fontPreviewSection = document.getElementById('fontPreviewSection');
+const previewFontFamily   = document.getElementById('previewFontFamily');
+const previewFontSize     = document.getElementById('previewFontSize');
+const fontPreviewSample   = document.getElementById('fontPreviewSample');
+
+function updateFontPreview() {
+  const fontFamily = previewFontFamily.value.trim();
+  const fontSize = parseInt(previewFontSize.value, 10) || 12;
+
+  fontPreviewSample.style.fontFamily = fontFamily ? `'${fontFamily}', sans-serif` : '';
+  fontPreviewSample.style.fontSize = fontSize + 'px';
+}
+
+previewFontFamily.addEventListener('change', updateFontPreview);
+previewFontSize.addEventListener('input', updateFontPreview);
+
+updateFontPreview();
+// ═══════════════════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════════════════
+const statusBar      = document.getElementById('statusBar');
+const detectedGrid   = document.getElementById('detectedGrid');
+const perTypeSection = document.getElementById('perTypeSection');
+const globalSection  = document.getElementById('globalSection');
+const perTypeBody    = document.getElementById('perTypeBody');
+const btnAnalyse     = document.getElementById('btnAnalyse');
+const btnPreview     = document.getElementById('btnPreview');
+const btnFormat      = document.getElementById('btnFormat');
+const tabOriginal    = document.getElementById('tabOriginal');
+const tabFormatted   = document.getElementById('tabFormatted');
+const paneOriginal   = document.getElementById('paneOriginal');
+const paneFormatted  = document.getElementById('paneFormatted');
+const frameOriginal  = document.getElementById('frameOriginal');
+const frameFormatted = document.getElementById('frameFormatted');
+const placeholderOrig = document.getElementById('placeholderOriginal');
+const placeholderFmt  = document.getElementById('placeholderFormatted');
+const spinAnalyse    = document.getElementById('spinAnalyse');
+const spinPreview    = document.getElementById('spinPreview');
+const spinFormat     = document.getElementById('spinFormat');
+const lblAnalyse     = document.getElementById('lblAnalyse');
+const lblPreview     = document.getElementById('lblPreview');
+const lblFormat      = document.getElementById('lblFormat');
+
+// ═══════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════
+let analysedData = null;
+
+// ═══════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════
+function showStatus(msg, kind) {
+  statusBar.textContent = msg;
+  statusBar.className = 'status-bar ' + kind;
+}
+
+function setLoading(btn, spin, lbl, on, defaultText) {
+  btn.disabled = on;
+  spin.style.display = on ? 'block' : 'none';
+  lbl.textContent = on ? '' : defaultText;
+}
+
+function switchTab(which) {
+  const isOrig = which === 'original';
+  tabOriginal.classList.toggle('active', isOrig);
+  tabFormatted.classList.toggle('active', !isOrig);
+  paneOriginal.classList.toggle('active', isOrig);
+  paneFormatted.classList.toggle('active', !isOrig);
+}
+
+tabOriginal.addEventListener('click',   () => switchTab('original'));
+tabFormatted.addEventListener('click',  () => switchTab('formatted'));
+
+// ═══════════════════════════════════════════════════════════════
+//  BUILD CONFIG  — what gets sent to /preview and /format
+// ═══════════════════════════════════════════════════════════════
+function buildConfig() {
+  const bgDefault = document.getElementById('bgDefault').checked;
+  const cfg = {
+    bold_headings:        document.getElementById('boldHeadings').checked,
+    bold_lists:           document.getElementById('boldLists').checked,
+    highlight:            document.getElementById('highlightElems').checked,
+  };
+  if (!bgDefault) {
+    cfg.table_heading_bg = document.getElementById('bgHex').value.trim() || '#1E3A5F';
+  }
+  const tcDefault = document.getElementById('tcDefault').checked;
+  if (!tcDefault) {
+    cfg.table_heading_text_color = document.getElementById('tcHex').value.trim() || '#FFFFFF';
+  }
+  const paraDefault = document.getElementById('paraDefault').checked;
+  if (!paraDefault) {
+    cfg.paragraph_text_color = document.getElementById('paraHex').value.trim() || '#000000';
+  }
+  const listDefault = document.getElementById('listDefault').checked;
+  if (!listDefault) {
+    cfg.list_text_color = document.getElementById('listHex').value.trim() || '#000000';
+  }
+  // Per-type overrides from the table rows
+  perTypeBody.querySelectorAll('tr').forEach(row => {
+    const ptype = row.dataset.ptype;
+    if (!ptype) return;
+    const key  = ptype.toLowerCase();
+    const font = row.querySelector('.pt-font').value.trim();
+    const size = row.querySelector('.pt-size').value.trim();
+    if (font) cfg[key + '_font'] = font;
+    if (size) cfg[key + '_size'] = parseInt(size);
+  });
+  return cfg;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  RENDER DETECTED TYPES  (chips + table rows)
+// ═══════════════════════════════════════════════════════════════
+function renderDetectedTypes(data) {
+  detectedGrid.innerHTML = '';
+  data.detected_elements.forEach(t => {
+    const meta  = TYPE_META[t] || { label: t, cls: 'c-para' };
+    const count = data.element_counts[t] || 0;
+    const chip  = document.createElement('span');
+    chip.className = 'det-chip ' + meta.cls;
+    chip.innerHTML = `<span class="dot"></span>${meta.label} ×${count}`;
+    chip.title = data.sample_texts[t] ? '"' + data.sample_texts[t].slice(0, 80) + '…"' : '';
+    detectedGrid.appendChild(chip);
+  });
+}
+
+function renderPerTypeTable(types, currentFonts) {
+  perTypeBody.innerHTML = '';
+  types.forEach(ptype => {
+    const meta     = TYPE_META[ptype] || { label: ptype, cls: 'c-para' };
+    const fontName = currentFonts[ptype] || '';
+    const tr       = document.createElement('tr');
+    tr.dataset.ptype = ptype;
+    tr.innerHTML = `
+      <td>
+        <span class="type-badge ${meta.cls}">
+          <span class="dot"></span>${meta.label}
+        </span>
+      </td>
+      <td>
+        ${fontName
+          ? `<span class="cur-font-badge" title="${fontName}">${fontName}</span>`
+          : `<span class="cur-font-badge unknown">—</span>`}
+      </td>
+      <td>
+        <select class="pt-font" title="New font for ${meta.label}">
+          ${FONT_OPTIONS}
+        </select>
+      </td>
+      <td>
+        <input class="pt-size" type="number" placeholder="—" min="6" max="72"
+               title="Font size for ${meta.label}">
+      </td>`;
+    perTypeBody.appendChild(tr);
+  });
+  perTypeSection.style.display = 'block';
+  globalSection.style.display  = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  POPULATE DETECTED TABLE HEADER COLORS
+// ═══════════════════════════════════════════════════════════════
+function populateDetectedColors(detectedColors) {
+  const row = document.getElementById('detectedColorsRow');
+  const list = document.getElementById('detectedColorsList');
+
+  if (!detectedColors || detectedColors.length === 0) {
+    row.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = '';
+  detectedColors.forEach(hex => {
+    const btn = document.createElement('button');
+    // Add 'bg-detected-preset' so it is caught by the BG-picker's
+    // BG_PRESET_SEL (':not(.tc-preset):not(.para-preset):not(.list-preset)')
+    // and NOT caught by the other pickers' selectors.
+    btn.className = 'preset-btn bg-detected-preset';
+    btn.dataset.color = hex;
+    btn.style.background = hex;
+    btn.title = hex;
+    btn.type = 'button';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      syncAllColors(hex);
+    });
+    list.appendChild(btn);
+  });
+
+  row.style.display = 'flex';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ANALYSE
+// ═══════════════════════════════════════════════════════════════
+btnAnalyse.addEventListener('click', async () => {
+  setLoading(btnAnalyse, spinAnalyse, lblAnalyse, true, '🔍 Analyse Document');
+  showStatus('Analysing document structure…', 'info');
+  try {
+    const res  = await fetch('analyse', { method: 'POST', body: new FormData() });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Analysis failed');
+    analysedData = data;
+    renderDetectedTypes(data);
+    renderPerTypeTable(data.detected_elements, data.current_fonts || {});
+    populateDetectedColors(data.detected_table_bgs || []);
+    fontPreviewSection.style.display = 'block';
+    btnPreview.disabled = false;
+    btnFormat.disabled  = false;
+    const total = Object.values(data.element_counts).reduce((a, b) => a + b, 0);
+    showStatus(
+      `Found ${data.detected_elements.length} element type(s) — ${total} total items. ` +
+      `Cover page, TOC and Table of Figures are automatically excluded.`,
+      'ok');
+    window.parent.postMessage({ type: 'toolDirty' }, '*');
+  } catch (err) {
+    showStatus('Error: ' + err.message, 'error');
+  } finally {
+    setLoading(btnAnalyse, spinAnalyse, lblAnalyse, false, '🔍 Analyse Document');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  PREVIEW
+// ═══════════════════════════════════════════════════════════════
+btnPreview.addEventListener('click', async () => {
+  setLoading(btnPreview, spinPreview, lblPreview, true, '👁 Preview Changes');
+  tabFormatted.classList.add('loading');
+  showStatus('Generating formatted preview…', 'info');
+  try {
+    const fd = new FormData();
+    fd.append('config', JSON.stringify(buildConfig()));
+    const res = await fetch('preview', { method: 'POST', body: fd });
+    if (!res.ok) {
+      let msg = 'Preview failed';
+      try { msg = (await res.json()).error || msg; } catch { msg = (await res.text()).slice(0, 200) || msg; }
+      throw new Error(msg);
+    }
+    const ct  = res.headers.get('Content-Type') || '';
+    const url = ct.includes('application/pdf')
+      ? URL.createObjectURL(await res.blob())
+      : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
+    frameFormatted.src = url;
+    frameFormatted.classList.add('loaded');
+    placeholderFmt.style.display = 'none';
+    switchTab('formatted');
+    showStatus('Formatted preview ready.', 'ok');
+  } catch (err) {
+    showStatus('Preview error: ' + err.message, 'error');
+  } finally {
+    setLoading(btnPreview, spinPreview, lblPreview, false, '👁 Preview Changes');
+    tabFormatted.classList.remove('loading');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  FORMAT (apply + save)
+// ═══════════════════════════════════════════════════════════════
+btnFormat.addEventListener('click', async () => {
+  setLoading(btnFormat, spinFormat, lblFormat, true, '✅ Apply Formatting');
+  showStatus('Applying font formatting…', 'info');
+  try {
+    const fd = new FormData();
+    fd.append('config', JSON.stringify(buildConfig()));
+    const res = await fetch('format', { method: 'POST', body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Format failed' }));
+      throw new Error(err.error || 'Format failed');
+    }
+    await res.blob();
+    showStatus('Formatting applied successfully!', 'ok');
+    window.parent.postMessage({ type: 'toolClean' }, '*');
+    window.parent.postMessage({ type: 'taskComplete' }, '*');
+  } catch (err) {
+    showStatus('Error: ' + err.message, 'error');
+  } finally {
+    setLoading(btnFormat, spinFormat, lblFormat, false, '✅ Apply Formatting');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  tabResumed  — another tool updated the session file
+// ═══════════════════════════════════════════════════════════════
+window.addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'tabResumed') return;
+  analysedData = null;
+  detectedGrid.innerHTML = '<span class="no-doc-msg">Session file updated — click Analyse to reload</span>';
+  perTypeSection.style.display = 'none';
+  globalSection.style.display  = 'none';
+  fontPreviewSection.style.display = 'none';
+  btnPreview.disabled = true;
+  btnFormat.disabled  = true;
+  frameFormatted.src = '';
+  frameFormatted.classList.remove('loaded');
+  placeholderFmt.style.display = 'flex';
+  showStatus('Document was updated by another tool — please re-analyse.', 'info');
+  window.parent.postMessage({ type: 'toolClean' }, '*');
+  (async () => {
+    tabOriginal.classList.add('loading');
+    try {
+      const res = await fetch('original', { method: 'POST', body: new FormData() });
+      if (!res.ok) return;
+      const ct  = res.headers.get('Content-Type') || '';
+      const url = ct.includes('application/pdf')
+        ? URL.createObjectURL(await res.blob())
+        : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
+      frameOriginal.src = url;
+      frameOriginal.classList.add('loaded');
+      placeholderOrig.style.display = 'none';
+      switchTab('original');
+    } catch (e) { /* silent */ } finally {
+      tabOriginal.classList.remove('loading');
+    }
+  })();
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  AUTO-LOAD ORIGINAL PREVIEW ON PAGE LOAD
+// ═══════════════════════════════════════════════════════════════
+(async () => {
+  tabOriginal.classList.add('loading');
+  try {
+    const res = await fetch('original', { method: 'POST', body: new FormData() });
+    if (!res.ok) return;
+    const ct  = res.headers.get('Content-Type') || '';
+    const url = ct.includes('application/pdf')
+      ? URL.createObjectURL(await res.blob())
+      : URL.createObjectURL(new Blob([await res.text()], { type: 'text/html' }));
+    frameOriginal.src = url;
+    frameOriginal.classList.add('loaded');
+    placeholderOrig.style.display = 'none';
+    switchTab('original');
+  } catch (e) { /* silent — no file uploaded yet */ } finally {
+    tabOriginal.classList.remove('loading');
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  TABLE HEADER BACKGROUND COLOUR PICKER
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const picker  = document.getElementById('bgPicker');
+  const hexInp  = document.getElementById('bgHex');
+  const swatch  = document.getElementById('bgSwatch');
+  const defChk  = document.getElementById('bgDefault');
+  const widget  = document.getElementById('colorWidget');
+
+  function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
+
+  // BG-picker-only presets: exclude tc-preset, para-preset, list-preset
+  // to avoid attaching this handler to the other pickers' buttons.
+  const BG_PRESET_SEL = '.preset-btn:not(.tc-preset):not(.para-preset):not(.list-preset)';
+
+  window.syncAllColors = function(hex) {
+    const h = hex.startsWith('#') ? hex : '#' + hex;
+    if (!isValidHex(h)) return;
+    const upper = h.toUpperCase();
+    picker.value  = upper;
+    hexInp.value  = upper;
+    swatch.style.background = upper;
+    // Only mark active on BG picker's own preset buttons
+    document.querySelectorAll(BG_PRESET_SEL).forEach(b => {
+      b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
+    });
+  }
+
+  function applyDefaultState() {
+    widget.classList.toggle('is-default', defChk.checked);
+  }
+
+  picker.addEventListener('input', () => syncAllColors(picker.value));
+  hexInp.addEventListener('input', () => {
+    let v = hexInp.value.trim();
+    if (!v.startsWith('#')) v = '#' + v;
+    if (isValidHex(v)) syncAllColors(v);
+  });
+  hexInp.addEventListener('blur', () => {
+    if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
+    hexInp.value = hexInp.value.toUpperCase();
+  });
+  // Only attach click handler to BG picker's own preset buttons
+  document.querySelectorAll(BG_PRESET_SEL).forEach(b => {
+    b.addEventListener('click', () => syncAllColors(b.dataset.color));
+  });
+  defChk.addEventListener('change', applyDefaultState);
+  syncAllColors(picker.value);
+  applyDefaultState();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  TABLE HEADER TEXT COLOUR PICKER
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const picker  = document.getElementById('tcPicker');
+  const hexInp  = document.getElementById('tcHex');
+  const swatch  = document.getElementById('tcSwatch');
+  const defChk  = document.getElementById('tcDefault');
+  const widget  = document.getElementById('tcWidget');
+
+  function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
+
+  function syncTcColors(hex) {
+    const h = hex.startsWith('#') ? hex : '#' + hex;
+    if (!isValidHex(h)) return;
+    const upper = h.toUpperCase();
+    picker.value = upper;
+    hexInp.value = upper;
+    swatch.style.background = upper;
+    document.querySelectorAll('.tc-preset').forEach(b => {
+      b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
+    });
+  }
+
+  function applyTcDefaultState() {
+    widget.classList.toggle('is-default', defChk.checked);
+  }
+
+  picker.addEventListener('input', () => syncTcColors(picker.value));
+  hexInp.addEventListener('input', () => {
+    let v = hexInp.value.trim();
+    if (!v.startsWith('#')) v = '#' + v;
+    if (isValidHex(v)) syncTcColors(v);
+  });
+  hexInp.addEventListener('blur', () => {
+    if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
+    hexInp.value = hexInp.value.toUpperCase();
+  });
+  document.querySelectorAll('.tc-preset').forEach(b => {
+    b.addEventListener('click', () => syncTcColors(b.dataset.color));
+  });
+  defChk.addEventListener('change', applyTcDefaultState);
+  syncTcColors(picker.value);
+  applyTcDefaultState();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  PARAGRAPH TEXT COLOUR PICKER
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const picker  = document.getElementById('paraPicker');
+  const hexInp  = document.getElementById('paraHex');
+  const swatch  = document.getElementById('paraSwatch');
+  const defChk  = document.getElementById('paraDefault');
+  const widget  = document.getElementById('paraWidget');
+
+  function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
+
+  function syncParaColors(hex) {
+    const h = hex.startsWith('#') ? hex : '#' + hex;
+    if (!isValidHex(h)) return;
+    const upper = h.toUpperCase();
+    picker.value = upper;
+    hexInp.value = upper;
+    swatch.style.background = upper;
+    document.querySelectorAll('.para-preset').forEach(b => {
+      b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
+    });
+  }
+
+  function applyParaDefaultState() {
+    widget.classList.toggle('is-default', defChk.checked);
+  }
+
+  picker.addEventListener('input', () => syncParaColors(picker.value));
+  hexInp.addEventListener('input', () => {
+    let v = hexInp.value.trim();
+    if (!v.startsWith('#')) v = '#' + v;
+    if (isValidHex(v)) syncParaColors(v);
+  });
+  hexInp.addEventListener('blur', () => {
+    if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
+    hexInp.value = hexInp.value.toUpperCase();
+  });
+  document.querySelectorAll('.para-preset').forEach(b => {
+    b.addEventListener('click', () => syncParaColors(b.dataset.color));
+  });
+  defChk.addEventListener('change', applyParaDefaultState);
+  syncParaColors(picker.value);
+  applyParaDefaultState();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  LIST ITEMS TEXT COLOUR PICKER
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const picker  = document.getElementById('listPicker');
+  const hexInp  = document.getElementById('listHex');
+  const swatch  = document.getElementById('listSwatch');
+  const defChk  = document.getElementById('listDefault');
+  const widget  = document.getElementById('listWidget');
+
+  function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
+
+  function syncListColors(hex) {
+    const h = hex.startsWith('#') ? hex : '#' + hex;
+    if (!isValidHex(h)) return;
+    const upper = h.toUpperCase();
+    picker.value = upper;
+    hexInp.value = upper;
+    swatch.style.background = upper;
+    document.querySelectorAll('.list-preset').forEach(b => {
+      b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
+    });
+  }
+
+  function applyListDefaultState() {
+    widget.classList.toggle('is-default', defChk.checked);
+  }
+
+  picker.addEventListener('input', () => syncListColors(picker.value));
+  hexInp.addEventListener('input', () => {
+    let v = hexInp.value.trim();
+    if (!v.startsWith('#')) v = '#' + v;
+    if (isValidHex(v)) syncListColors(v);
+  });
+  hexInp.addEventListener('blur', () => {
+    if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
+    hexInp.value = hexInp.value.toUpperCase();
+  });
+  document.querySelectorAll('.list-preset').forEach(b => {
+    b.addEventListener('click', () => syncListColors(b.dataset.color));
+  });
+  defChk.addEventListener('change', applyListDefaultState);
+  syncListColors(picker.value);
+  applyListDefaultState();
+})();
+
+// ═══════════════════════════════════════════════════════════════
+//  PANEL RESIZER
+// ═══════════════════════════════════════════════════════════════
+(function () {
+  const resizer   = document.getElementById('panelResizer');
+  const leftPanel = document.querySelector('.panel-left');
+  const MIN = 260, MAX = 620;
+  let startX = 0, startW = 0;
+
+  resizer.addEventListener('mousedown', e => {
+    e.preventDefault();
+    startX = e.clientX;
+    startW = leftPanel.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.classList.add('is-resizing');
+
+    const onMove = e => {
+      const w = Math.min(MAX, Math.max(MIN, startW + e.clientX - startX));
+      leftPanel.style.width = leftPanel.style.minWidth = w + 'px';
+    };
+    const onUp = () => {
+      resizer.classList.remove('dragging');
+      document.body.classList.remove('is-resizing');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
+</script>
+</body>
+</html>
