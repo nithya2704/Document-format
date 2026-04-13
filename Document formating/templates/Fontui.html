@@ -1010,7 +1010,10 @@ function populateDetectedColors(detectedColors) {
   list.innerHTML = '';
   detectedColors.forEach(hex => {
     const btn = document.createElement('button');
-    btn.className = 'preset-btn';
+    // Add 'bg-detected-preset' so it is caught by the BG-picker's
+    // BG_PRESET_SEL (':not(.tc-preset):not(.para-preset):not(.list-preset)')
+    // and NOT caught by the other pickers' selectors.
+    btn.className = 'preset-btn bg-detected-preset';
     btn.dataset.color = hex;
     btn.style.background = hex;
     btn.title = hex;
@@ -1182,6 +1185,10 @@ window.addEventListener('message', e => {
 
   function isValidHex(v) { return /^#[0-9A-Fa-f]{6}$/.test(v); }
 
+  // BG-picker-only presets: exclude tc-preset, para-preset, list-preset
+  // to avoid attaching this handler to the other pickers' buttons.
+  const BG_PRESET_SEL = '.preset-btn:not(.tc-preset):not(.para-preset):not(.list-preset)';
+
   window.syncAllColors = function(hex) {
     const h = hex.startsWith('#') ? hex : '#' + hex;
     if (!isValidHex(h)) return;
@@ -1189,7 +1196,8 @@ window.addEventListener('message', e => {
     picker.value  = upper;
     hexInp.value  = upper;
     swatch.style.background = upper;
-    document.querySelectorAll('.preset-btn').forEach(b => {
+    // Only mark active on BG picker's own preset buttons
+    document.querySelectorAll(BG_PRESET_SEL).forEach(b => {
       b.classList.toggle('active', b.dataset.color.toUpperCase() === upper);
     });
   }
@@ -1208,7 +1216,8 @@ window.addEventListener('message', e => {
     if (!isValidHex(hexInp.value)) hexInp.value = picker.value;
     hexInp.value = hexInp.value.toUpperCase();
   });
-  document.querySelectorAll('.preset-btn').forEach(b => {
+  // Only attach click handler to BG picker's own preset buttons
+  document.querySelectorAll(BG_PRESET_SEL).forEach(b => {
     b.addEventListener('click', () => syncAllColors(b.dataset.color));
   });
   defChk.addEventListener('change', applyDefaultState);

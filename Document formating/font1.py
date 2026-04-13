@@ -835,7 +835,68 @@ def _set_color_on_rPr(rPr, rgb_hex: str):
 
 
 def ft_format_docx(input_path: str, elements: list, output_path: str, config: dict):
-    """Format document."""
+    """Format document.
+
+    COLOUR-FIELD ISOLATION
+    ──────────────────────
+    The four colour config keys are intentionally independent and must never
+    fall back to the same value.  Each must come exclusively from its own
+    key in *config*; if the key is absent or empty the feature is simply
+    skipped.  Do NOT add cross-key fallbacks here — doing so is what caused
+    the original bug where changing one colour picker auto-selected the same
+    colour in the other three pickers.
+
+      config key                 UI element id           applies to
+      ─────────────────────────  ──────────────────────  ──────────────────────
+      paragraph_text_color       paragraphTextColor      body PARAGRAPH runs
+      table_heading_bg           tableHeadingBg          table header cell fill
+      table_heading_text_color   tableHeadingTextColor   table header cell text
+      list_text_color            listTextColor           LIST_ITEM runs
+
+    The frontend (fontUI.html) must read each <input type="color"> by its own
+    unique id and write the value under the matching config_key — never share
+    a single JS variable across multiple pickers.
+
+    Correct JS pattern:
+        function getConfig() {
+            return {
+                // ... other fields ...
+                paragraph_text_color:      document.getElementById('paragraphTextColor').value,
+                table_heading_bg:          document.getElementById('tableHeadingBg').value,
+                table_heading_text_color:  document.getElementById('tableHeadingTextColor').value,
+                list_text_color:           document.getElementById('listTextColor').value,
+            };
+        }
+
+    Incorrect (bug) pattern — do NOT do this:
+        let selectedColor = '#000000';
+        document.querySelectorAll('.color-picker').forEach(el => {
+            el.addEventListener('input', e => { selectedColor = e.target.value; });
+        });
+        function getConfig() {
+            return {
+                paragraph_text_color:     selectedColor,  // ← all four end up the same!
+                table_heading_bg:         selectedColor,
+                table_heading_text_color: selectedColor,
+                list_text_color:          selectedColor,
+            };
+        }
+    """
+    # Sanitise: read each colour key independently and normalise to "" if absent
+    _COLOUR_KEYS = (
+        "paragraph_text_color",
+        "table_heading_bg",
+        "table_heading_text_color",
+        "list_text_color",
+        "table_body_text_color",
+    )
+    for _ck in _COLOUR_KEYS:
+        val = config.get(_ck)
+        if not isinstance(val, str):
+            config[_ck] = ""
+        else:
+            config[_ck] = val.strip()
+
     doc = Document(input_path)
 
     # Body paragraph lookup
@@ -1386,6 +1447,37 @@ def ft_analyse():
     try:
         data = ft_analyze_document_structure(path)
         data["standard_table_bgs"] = STANDARD_TABLE_BG_COLORS
+        # Explicit per-field colour metadata so the UI can wire each colour
+        # picker to its own independent config key.  Each entry is intentionally
+        # isolated: the frontend MUST read the value from the element whose id
+        # matches config_key and write it back under that same key — never share
+        # a single variable across multiple pickers.
+        data["color_fields"] = [
+            {
+                "config_key": "paragraph_text_color",
+                "label": "Paragraph Text Color",
+                "input_id": "paragraphTextColor",
+                "default": "#000000",
+            },
+            {
+                "config_key": "table_heading_bg",
+                "label": "Table Header Background",
+                "input_id": "tableHeadingBg",
+                "default": "#4472C4",
+            },
+            {
+                "config_key": "table_heading_text_color",
+                "label": "Table Header Text Color",
+                "input_id": "tableHeadingTextColor",
+                "default": "#FFFFFF",
+            },
+            {
+                "config_key": "list_text_color",
+                "label": "List Item Text Color",
+                "input_id": "listTextColor",
+                "default": "#000000",
+            },
+        ]
         return jsonify(data)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
